@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: asistencias
+      MYSQL_USER: asistuser
+      MYSQL_PASSWORD: asistpass
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "3306:3306" # Solo si querés acceder desde fuera de Docker
+    volumes:
+      - ./db_data:/var/lib/mysql
+    networks:
+      - asist_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: db
+      PMA_USER: asistuser
+      PMA_PASSWORD: asistpass
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    networks:
+      - asist_network
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: always
+    ports:
+      - "1883:1883"   # Puerto MQTT
+      - "9001:9001"   # (Opcional) Websockets MQTT
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - asist_network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: backend
+    restart: always
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DJANGO_DB_HOST=db
+      - DJANGO_DB_NAME=asistencias
+      - DJANGO_DB_USER=asistuser
+      - DJANGO_DB_PASSWORD=asistpass
+      - DJANGO_MQTT_BROKER=mosquitto
+      - DJANGO_MQTT_PORT=1883
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - mosquitto
+    networks:
+      - asist_network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    restart: always
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    networks:
+      - asist_network
+
+networks:
+  asist_network:
+    driver: bridge 
