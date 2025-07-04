@@ -8,6 +8,8 @@ COPY package*.json ./
 # Instalar dependencias
 RUN npm install
 
+
+RUN npm install bootstrap
 # Copiar el resto del código
 COPY . .
 

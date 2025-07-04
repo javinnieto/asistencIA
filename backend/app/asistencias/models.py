@@ -50,4 +50,4 @@ class Asistencia(models.Model):
     verifyResult = models.CharField(max_length=20, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.persona} - {self.fecha_hora} - {self.temperatura}°C"
+        return f"{self.persona} - {self.fechaHora} - {self.temperatura}°C"

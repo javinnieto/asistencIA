@@ -49,7 +49,7 @@ class Command(BaseCommand):
                 estado, _ = EstadoAsistencia.objects.get_or_create(nombre=estado_nombre)
                 Asistencia.objects.create(
                     persona=persona,
-                    fecha_hora=fecha_hora,
+                    fechaHora=fecha_hora,
                     temperatura=temperatura,
                     estado=estado
                 )

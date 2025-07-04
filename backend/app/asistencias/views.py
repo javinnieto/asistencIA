@@ -43,8 +43,8 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['estado', 'persona__tipo', 'maskDetect', 'temperatureAlarm']
     search_fields = ['persona__nombre', 'persona__nombreTerminal', 'persona__idPersona']
-    ordering_fields = ['fecha_hora', 'temperatura', 'persona__nombre', 'persona__idPersona']
-    ordering = ['-fecha_hora']  # Más recientes primero
+    ordering_fields = ['fechaHora', 'temperatura', 'persona__nombre', 'persona__idPersona']
+    ordering = ['-fechaHora']  # Más recientes primero
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
