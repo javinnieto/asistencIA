@@ -23,9 +23,9 @@ class PersonaViewSet(viewsets.ModelViewSet):
     queryset = Persona.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['tipo', 'curso']
-    search_fields = ['nombre', 'apellido', 'identificadorFacial', 'nombreTerminal']
-    ordering_fields = ['apellido', 'nombre', 'identificadorFacial']
-    ordering = ['apellido', 'nombre']
+    search_fields = ['nombre', 'idPersona', 'nombreTerminal']
+    ordering_fields = ['nombre', 'idPersona']
+    ordering = ['nombre']
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -42,8 +42,8 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
     queryset = Asistencia.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['estado', 'persona__tipo', 'maskDetect', 'temperatureAlarm']
-    search_fields = ['persona__nombre', 'persona__apellido', 'persona__nombreTerminal']
-    ordering_fields = ['fecha_hora', 'temperatura', 'persona__apellido']
+    search_fields = ['persona__nombre', 'persona__nombreTerminal', 'persona__idPersona']
+    ordering_fields = ['fecha_hora', 'temperatura', 'persona__nombre', 'persona__idPersona']
     ordering = ['-fecha_hora']  # Más recientes primero
 
     def get_serializer_class(self):

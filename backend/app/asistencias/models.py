@@ -17,21 +17,20 @@ class Curso(models.Model):
         return f"{self.nombre}"
 
 class Persona(models.Model):
-    id = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-    apellido = models.CharField(max_length=100)
+    idPersona = models.IntegerField(primary_key=True)  # Coincide con personId de la terminal
+    nombre = models.CharField(max_length=200) # nombre completo
     tipo = models.ForeignKey(TipoPersona, on_delete=models.PROTECT)
     curso = models.ForeignKey(Curso, null=True, blank=True, on_delete=models.SET_NULL)
-    identificadorFacial = models.CharField(max_length=100, unique=True)
+    cantRegistros = models.IntegerField(default=0) # cantidad de veces que se registró
     nombreTerminal = models.CharField(max_length=100, null=True, blank=True)  # personName del terminal
 
     def __str__(self):
-        if self.nombre and self.apellido:
-            return f"{self.apellido}, {self.nombre} ({self.tipo})"
+        if self.nombre:
+            return f"{self.nombre} ({self.tipo})"
         elif self.nombreTerminal:
             return f"{self.nombreTerminal} (Terminal)"
         else:
-            return f"Persona {self.identificadorFacial}"
+            return f"Persona {self.idPersona}"
 
 class EstadoAsistencia(models.Model):
     idEstadoAsistencia = models.AutoField(primary_key=True)
@@ -42,7 +41,7 @@ class EstadoAsistencia(models.Model):
 class Asistencia(models.Model):
     idAsistencia = models.AutoField(primary_key=True)
     persona = models.ForeignKey(Persona, on_delete=models.CASCADE)
-    fecha_hora = models.DateTimeField()
+    fechaHora = models.DateTimeField()
     temperatura = models.FloatField()
     estado = models.ForeignKey(EstadoAsistencia, on_delete=models.PROTECT)
     # Campos adicionales del payload MQTT
