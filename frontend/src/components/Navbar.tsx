@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import jwt_decode from 'jwt-decode';
 import './Navbar.css';
 
+interface NavbarProps {
+  token: string | null;
+}
+
 interface JwtPayload {
   username?: string;
   nombre?: string;
@@ -10,14 +14,13 @@ interface JwtPayload {
   // Otros campos si los necesitás
 }
 
-const Navbar: React.FC = () => {
+const Navbar: React.FC<NavbarProps> = ({ token }) => {
   const navigate = useNavigate();
-  const token = localStorage.getItem('accessToken');
   let displayName = '';
   if (token) {
     try {
-      const decoded = jwt_decode<JwtPayload>(token);
-      displayName = decoded.nombre || decoded.full_name || decoded.username || '';
+      const decoded = jwt_decode<any>(token);
+      displayName = decoded.username || '';
     } catch (e) {
       displayName = '';
     }
@@ -61,7 +64,7 @@ const Navbar: React.FC = () => {
                 className="navbar-username-btn"
                 onClick={() => setDropdownOpen((open) => !open)}
               >
-                {displayName}
+                Bienvenido {displayName}
                 <span className="dropdown-caret ms-2">▼</span>
               </button>
               {dropdownOpen && (
