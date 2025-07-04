@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -20,20 +20,33 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 };
 
 const App: React.FC = () => {
+  // Estado global para el token
+  const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
   // Estado para saber si el sidebar está colapsado
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
+
+  // Sincronizar token con localStorage al cargar y al cambiar en otras pestañas
+  useEffect(() => {
+    const syncToken = () => {
+      setToken(localStorage.getItem('accessToken'));
+    };
+    window.addEventListener('storage', syncToken);
+    return () => {
+      window.removeEventListener('storage', syncToken);
+    };
+  }, []);
 
   const isLoginRoute = location.pathname === '/login';
 
   if (isLoginRoute) {
     // Solo renderizar el login, sin navbar ni sidebar ni layout
-    return <Routes><Route path="/login" element={<Login />} /></Routes>;
+    return <Routes><Route path="/login" element={<Login setToken={setToken} />} /></Routes>;
   }
 
   return (
     <div className="app-layout">
-      <Navbar />
+      <Navbar token={token} />
       {/* Nuevo wrapper para sidebar + contenido */}
       <div className="layout-content">
         {/* Ocultar Sidebar en /login */}
@@ -43,7 +56,7 @@ const App: React.FC = () => {
         <div className={`main-content${sidebarCollapsed ? ' sidebar-collapsed' : ''}${isLoginRoute ? ' login-page' : ''}`}>
           <div className="page-content">
             <Routes>
-              <Route path="/login" element={<Login />} />
+              <Route path="/login" element={<Login setToken={setToken} />} />
               <Route
                 path="/dashboard"
                 element={

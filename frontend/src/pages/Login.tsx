@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  setToken: (token: string) => void;
+}
+
+const Login: React.FC<LoginProps> = ({ setToken }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +27,9 @@ const Login: React.FC = () => {
         throw new Error(data.detail || 'Error de autenticación');
       }
       const data = await res.json();
-      // Guardar el access token en localStorage
+      // Guardar el access token en localStorage y actualizar el estado global
       localStorage.setItem('accessToken', data.access);
+      setToken(data.access);
       // Redirigir al dashboard
       navigate('/dashboard');
     } catch (err: any) {
