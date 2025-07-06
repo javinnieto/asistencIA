@@ -1,0 +1,717 @@
+/* Estilos para el calendario de asistencias */
+.attendance-calendar-container {
+  background: #23283a;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  color: #e0e6f0;
+}
+
+.calendar-header {
+  border-bottom: 1px solid #181c24;
+  padding-bottom: 15px;
+}
+
+.calendar-legend {
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  font-size: 0.875rem;
+}
+
+.calendar-wrapper {
+  position: relative;
+  margin: 20px 0;
+}
+
+.calendar-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  background: rgba(35, 40, 58, 0.9);
+  padding: 10px;
+  border-radius: 8px;
+}
+
+/* Estilos del calendario react-calendar */
+.attendance-calendar {
+  width: 100% !important;
+  max-width: 100%;
+  background: #23283a;
+  border: 1px solid #181c24;
+  border-radius: 8px;
+  font-family: inherit;
+  color: #e0e6f0;
+}
+
+.attendance-calendar .react-calendar__navigation {
+  background: #181c24;
+  border-bottom: 1px solid #12151c;
+  padding: 10px;
+  border-radius: 8px 8px 0 0;
+}
+
+.attendance-calendar .react-calendar__navigation button {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e0e6f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.attendance-calendar .react-calendar__navigation button:hover {
+  background: #23283a;
+  color: #fff;
+}
+
+.attendance-calendar .react-calendar__navigation button:disabled {
+  color: #6c757d;
+  opacity: 0.5;
+}
+
+.attendance-calendar .react-calendar__month-view__weekdays {
+  background: #181c24;
+  border-bottom: 1px solid #12151c;
+}
+
+.attendance-calendar .react-calendar__month-view__weekdays__weekday {
+  padding: 10px 5px;
+  text-align: center;
+  font-weight: 600;
+  color: #e0e6f0;
+  font-size: 0.875rem;
+}
+
+.attendance-calendar .react-calendar__month-view__days__day {
+  position: relative;
+  padding: 8px 4px;
+  border: 1px solid #181c24;
+  background: #23283a;
+  transition: all 0.2s ease;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  color: #e0e6f0;
+}
+
+.attendance-calendar .react-calendar__month-view__days__day:hover {
+  background: #181c24;
+  border-color: #12151c;
+}
+
+.attendance-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #6c757d;
+  background: #181c24;
+  cursor: pointer;
+}
+
+.attendance-calendar .react-calendar__month-view__days__day--weekend {
+  background: #181c24;
+  cursor: pointer;
+}
+
+.attendance-calendar .react-calendar__month-view__days__day--today {
+  background: #2c3e50;
+  border-color: #3498db;
+  font-weight: bold;
+  color: #fff;
+}
+
+/* Indicadores de asistencia */
+.calendar-day-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px;
+}
+
+.attendance-indicator {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.presente-dot {
+  width: 8px;
+  height: 8px;
+  background: #28a745;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ausente-dot {
+  width: 8px;
+  height: 8px;
+  background: #dc3545;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.attendance-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #e0e6f0;
+  background: #181c24;
+  padding: 1px 4px;
+  border-radius: 3px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Clases para diferentes niveles de asistencia */
+.high-attendance {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%) !important;
+  border-color: #27ae60 !important;
+  color: #fff !important;
+}
+
+.medium-attendance {
+  background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%) !important;
+  border-color: #f39c12 !important;
+  color: #fff !important;
+}
+
+.low-attendance {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+  border-color: #e74c3c !important;
+  color: #fff !important;
+}
+
+/* Información de fecha seleccionada */
+.selected-date-info {
+  border-top: 1px solid #181c24;
+  padding-top: 15px;
+}
+
+.selected-date-info .card {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  background: #23283a;
+  color: #e0e6f0;
+}
+
+.selected-date-info .card-header {
+  background: #181c24;
+  border-bottom: 1px solid #12151c;
+  border-radius: 8px 8px 0 0;
+  padding: 12px 20px;
+  color: #e0e6f0;
+}
+
+.selected-date-info .card-body {
+  padding: 20px;
+  color: #e0e6f0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .attendance-calendar-container {
+    padding: 15px;
+  }
+  
+  .calendar-legend {
+    gap: 10px !important;
+  }
+  
+  .attendance-calendar .react-calendar__month-view__days__day {
+    min-height: 50px;
+    padding: 4px 2px;
+  }
+  
+  .attendance-count {
+    font-size: 0.7rem;
+    min-width: 18px;
+  }
+  
+  .presente-dot,
+  .ausente-dot {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+/* Animaciones */
+.attendance-calendar .react-calendar__month-view__days__day {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Estados de hover mejorados */
+.attendance-calendar .react-calendar__month-view__days__day:hover .attendance-count {
+  background: #12151c;
+  color: #e0e6f0;
+  transform: scale(1.1);
+  transition: all 0.2s ease;
+}
+
+/* Estilos para días con datos */
+.attendance-calendar .react-calendar__month-view__days__day:has(.calendar-day-content) {
+  cursor: pointer;
+}
+
+.attendance-calendar .react-calendar__month-view__days__day:has(.calendar-day-content):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Estilos para vista de meses */
+.attendance-calendar .react-calendar__year-view__months__month,
+.attendance-calendar .react-calendar__decade-view__years__year,
+.attendance-calendar .react-calendar__century-view__decades__decade {
+  background: #23283a;
+  border: 1px solid #181c24;
+  color: #e0e6f0;
+  padding: 15px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  margin: 2px;
+}
+
+.attendance-calendar .react-calendar__year-view__months__month:hover,
+.attendance-calendar .react-calendar__decade-view__years__year:hover,
+.attendance-calendar .react-calendar__century-view__decades__decade:hover {
+  background: #181c24;
+  border-color: #12151c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.attendance-calendar .react-calendar__year-view__months__month--active,
+.attendance-calendar .react-calendar__decade-view__years__year--active,
+.attendance-calendar .react-calendar__century-view__decades__decade--active {
+  background: #2c3e50;
+  border-color: #3498db;
+  color: #fff;
+  font-weight: bold;
+}
+
+.attendance-calendar .react-calendar__year-view__months__month--now,
+.attendance-calendar .react-calendar__decade-view__years__year--now,
+.attendance-calendar .react-calendar__century-view__decades__decade--now {
+  background: #2c3e50;
+  border-color: #3498db;
+  color: #fff;
+  font-weight: bold;
+}
+
+/* Estilos para navegación de meses */
+.attendance-calendar .react-calendar__navigation__label {
+  background: none;
+  border: none;
+  color: #e0e6f0;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.attendance-calendar .react-calendar__navigation__label:hover {
+  background: #23283a;
+  color: #fff;
+}
+
+.attendance-calendar .react-calendar__navigation__label:disabled {
+  color: #6c757d;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Asegurar que todos los elementos del calendario sean clickeables */
+.attendance-calendar button {
+  cursor: pointer;
+}
+
+.attendance-calendar button:disabled {
+  cursor: not-allowed;
+}
+
+/* Estilos específicos para resolver problemas de accesibilidad */
+.attendance-calendar .react-calendar__navigation__arrow {
+  background: none;
+  border: none;
+  color: #e0e6f0;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.attendance-calendar .react-calendar__navigation__arrow:hover {
+  background: #23283a;
+  color: #fff;
+}
+
+.attendance-calendar .react-calendar__navigation__arrow:disabled {
+  color: #6c757d;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Forzar estilos para todos los elementos del calendario */
+.attendance-calendar * {
+  box-sizing: border-box;
+}
+
+.attendance-calendar .react-calendar__tile {
+  background: #23283a;
+  border: 1px solid #181c24;
+  color: #e0e6f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.attendance-calendar .react-calendar__tile:hover {
+  background: #181c24;
+  border-color: #12151c;
+}
+
+.attendance-calendar .react-calendar__tile--active {
+  background: #2c3e50;
+  border-color: #3498db;
+  color: #fff;
+  font-weight: bold;
+}
+
+.attendance-calendar .react-calendar__tile--now {
+  background: #2c3e50;
+  border-color: #3498db;
+  color: #fff;
+  font-weight: bold;
+}
+
+/* Asegurar que los meses en la vista de año sean clickeables */
+.attendance-calendar .react-calendar__year-view__months__month,
+.attendance-calendar .react-calendar__year-view__months__month--active,
+.attendance-calendar .react-calendar__year-view__months__month--now {
+  background: #23283a !important;
+  border: 1px solid #181c24 !important;
+  color: #e0e6f0 !important;
+  cursor: pointer !important;
+  padding: 15px 10px !important;
+  text-align: center !important;
+  transition: all 0.2s ease !important;
+  border-radius: 6px !important;
+  margin: 2px !important;
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+}
+
+.attendance-calendar .react-calendar__year-view__months__month:hover {
+  background: #181c24 !important;
+  border-color: #12151c !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+.attendance-calendar .react-calendar__year-view__months__month--active {
+  background: #2c3e50 !important;
+  border-color: #3498db !important;
+  color: #fff !important;
+  font-weight: bold !important;
+}
+
+.attendance-calendar .react-calendar__year-view__months__month--now {
+  background: #2c3e50 !important;
+  border-color: #3498db !important;
+  color: #fff !important;
+  font-weight: bold !important;
+}
+
+/* Override para asegurar que no haya elementos bloqueando */
+.attendance-calendar .react-calendar__year-view__months__month * {
+  pointer-events: none !important;
+}
+
+.attendance-calendar .react-calendar__year-view__months__month {
+  pointer-events: auto !important;
+}
+
+/* Asegurar que el contenedor del calendario no bloquee eventos */
+.attendance-calendar .react-calendar__year-view,
+.attendance-calendar .react-calendar__year-view__months {
+  pointer-events: auto !important;
+}
+
+/* Debug: hacer visibles todos los elementos para identificar problemas */
+.attendance-calendar .react-calendar__year-view__months__month {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Asegurar que las vistas del calendario sean visibles */
+.attendance-calendar .react-calendar__month-view,
+.attendance-calendar .react-calendar__year-view,
+.attendance-calendar .react-calendar__decade-view,
+.attendance-calendar .react-calendar__century-view {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Estilos específicos para la vista de mes */
+.attendance-calendar .react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 1px !important;
+}
+
+.attendance-calendar .react-calendar__month-view__days__day {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 60px !important;
+  padding: 8px 4px !important;
+  border: 1px solid #181c24 !important;
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+}
+
+/* Asegurar que los días sean clickeables */
+.attendance-calendar .react-calendar__month-view__days__day:hover {
+  background: #181c24 !important;
+  border-color: #12151c !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Estilos para el día actual */
+.attendance-calendar .react-calendar__month-view__days__day--today {
+  background: #2c3e50 !important;
+  border-color: #3498db !important;
+  color: #fff !important;
+  font-weight: bold !important;
+}
+
+/* Estilos para días de otros meses */
+.attendance-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #6c757d !important;
+  background: #181c24 !important;
+} 
+
+/* Quitar barra blanca y cualquier highlight claro en hover/focus/active de meses, años y décadas */
+.attendance-calendar .react-calendar__year-view__months__month:focus,
+.attendance-calendar .react-calendar__year-view__months__month:active,
+.attendance-calendar .react-calendar__year-view__months__month:hover,
+.attendance-calendar .react-calendar__decade-view__years__year:focus,
+.attendance-calendar .react-calendar__decade-view__years__year:active,
+.attendance-calendar .react-calendar__decade-view__years__year:hover,
+.attendance-calendar .react-calendar__century-view__decades__decade:focus,
+.attendance-calendar .react-calendar__century-view__decades__decade:active,
+.attendance-calendar .react-calendar__century-view__decades__decade:hover {
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border: 1px solid #181c24 !important;
+}
+
+.attendance-calendar .react-calendar__year-view__months__month--active,
+.attendance-calendar .react-calendar__decade-view__years__year--active,
+.attendance-calendar .react-calendar__century-view__decades__decade--active {
+  background: #2c3e50 !important;
+  color: #fff !important;
+  border-color: #3498db !important;
+  font-weight: bold !important;
+  box-shadow: none !important;
+  outline: none !important;
+} 
+
+.attendance-calendar .react-calendar__tile:focus,
+.attendance-calendar .react-calendar__tile:active {
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border: 1px solid #181c24 !important;
+} 
+
+/* Quitar barra blanca en la navegación superior del calendario */
+.attendance-calendar .react-calendar__navigation__label,
+.attendance-calendar .react-calendar__navigation__label:focus,
+.attendance-calendar .react-calendar__navigation__label:active,
+.attendance-calendar .react-calendar__navigation__label:hover {
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  border: 1px solid #181c24 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.attendance-calendar .react-calendar__navigation button,
+.attendance-calendar .react-calendar__navigation button:focus,
+.attendance-calendar .react-calendar__navigation button:active,
+.attendance-calendar .react-calendar__navigation button:hover {
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  border: 1px solid #181c24 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.attendance-calendar .react-calendar__navigation input,
+.attendance-calendar .react-calendar__navigation input:focus,
+.attendance-calendar .react-calendar__navigation input:active,
+.attendance-calendar .react-calendar__navigation input:hover {
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  border: 1px solid #181c24 !important;
+  box-shadow: none !important;
+  outline: none !important;
+} 
+
+/* Mejorar alineación y espaciado de la barra de navegación del calendario */
+.attendance-calendar .react-calendar__navigation {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  background: #181c24 !important;
+  border-radius: 8px 8px 0 0 !important;
+  padding: 8px 12px !important;
+  min-height: 48px !important;
+}
+
+.attendance-calendar .react-calendar__navigation__label {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.2rem !important;
+  font-weight: bold !important;
+  letter-spacing: 0.5px !important;
+  padding: 8px 0 !important;
+  margin: 0 8px !important;
+  background: #23283a !important;
+  border-radius: 6px !important;
+  min-height: 32px !important;
+  min-width: 180px !important;
+  text-align: center !important;
+}
+
+.attendance-calendar .react-calendar__navigation button {
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.3rem !important;
+  border-radius: 6px !important;
+  margin: 0 2px !important;
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  border: 1px solid #181c24 !important;
+  transition: background 0.2s, color 0.2s;
+}
+
+.attendance-calendar .react-calendar__navigation button:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.attendance-calendar .react-calendar__navigation button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+} 
+
+/* Highlight de días en modo agregar tarea (reforzado) */
+.calendar-task-selectable {
+  border: 3px solid #2196f3 !important;
+  background: #1a237e !important;
+  color: #fff !important;
+  cursor: pointer !important;
+  position: relative !important;
+  z-index: 10 !important;
+  box-shadow: 0 0 0 2px #1976d2 !important;
+  outline: none !important;
+}
+.calendar-task-selectable:hover {
+  background: #1565c0 !important;
+  border-color: #1976d2 !important;
+  color: #fff !important;
+}
+.calendar-task-selected {
+  border: 3px solid #1976d2 !important;
+  background: #1976d2 !important;
+  color: #fff !important;
+  position: relative !important;
+  z-index: 20 !important;
+  box-shadow: 0 0 0 3px #2196f3 !important;
+  outline: none !important;
+}
+/* Punto azul para días con tarea */
+.calendar-task-has-task {
+  position: relative;
+}
+.calendar-task-has-task::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: #2196f3;
+  border-radius: 50%;
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 4px #2196f3;
+  z-index: 4;
+}
+/* Lista de tareas */
+.calendar-task-list .list-group-item {
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  border: 1px solid #181c24 !important;
+  border-radius: 8px !important;
+}
+.calendar-task-list .fw-bold {
+  color: #fff !important;
+}
+.calendar-task-list .small.text-muted {
+  color: #bfc9da !important;
+}
+.calendar-task-list .small.text-info {
+  color: #4fc3f7 !important;
+}
+.calendar-task-list .badge.bg-primary {
+  background: #2196f3 !important;
+}
+.calendar-task-list .small {
+  color: #e0e6f0 !important;
+} 
