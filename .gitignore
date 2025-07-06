@@ -10,6 +10,8 @@ __pycache__/
 *.env
 .env
 .env.*
+venv/
+.venv/
 
 # Django migrations (opcional, si no querés versionarlas)
 # backend/app/asistencias/migrations/
