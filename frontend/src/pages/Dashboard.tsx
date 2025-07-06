@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { useNavigate } from 'react-router-dom';
+import AttendanceCalendar from '../components/AttendanceCalendar';
+import '../components/AttendanceCalendar.css';
 
 interface Asistencia {
   idAsistencia: number;
@@ -23,7 +25,22 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [resumenDia, setResumenDia] = useState({ total: 0, presentes: 0, ausentes: 0 });
   const [asistenciasPorCurso, setAsistenciasPorCurso] = useState<CursoResumen[]>([]);
+  const [cursoFiltro, setCursoFiltro] = useState<string>('');
   const navigate = useNavigate();
+
+  // Datos de ejemplo para alumnos
+  const alumnosEjemplo = [
+    { nombre: 'María González', asistencia: 'presente' },
+    { nombre: 'Juan Pérez', asistencia: 'ausente' },
+    { nombre: 'Ana Rodríguez', asistencia: 'presente' },
+    { nombre: 'Carlos López', asistencia: 'ausente justificado' },
+    { nombre: 'Laura Martínez', asistencia: 'presente' },
+    { nombre: 'Diego Silva', asistencia: 'ausente' },
+    { nombre: 'Sofía Torres', asistencia: 'presente' },
+    { nombre: 'Miguel Herrera', asistencia: 'presente' },
+    { nombre: 'Valentina Castro', asistencia: 'ausente justificado' },
+    { nombre: 'Andrés Morales', asistencia: 'presente' }
+  ];
 
   useEffect(() => {
     // Obtener asistencias del día actual
@@ -129,6 +146,21 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
+          {/* Accesos rápidos */}
+          <div className="row mb-4">
+            <div className="col-md-8">
+              <div className="card shadow rounded-4">
+                <div className="card-header">
+                  <i className="bi bi-lightning-charge me-2"></i>Accesos rápidos
+                </div>
+                <div className="card-body d-flex gap-3">
+                  <button className="btn btn-outline-primary"><i className="bi bi-list-ul me-2"></i>Ver todas las asistencias</button>
+                  <button className="btn btn-outline-secondary"><i className="bi bi-person-lines-fill me-2"></i>Gestionar personas</button>
+                  <button className="btn btn-outline-success"><i className="bi bi-download me-2"></i>Descargar asistencias</button>
+                </div>
+              </div>
+            </div>
+          </div>
           {/* Personal autorizado (solo si hay datos) */}
           {personalAutorizado && (
             <div className="row mb-4">
@@ -146,47 +178,71 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           )}
+          {/* Calendario de Asistencias */}
+          <div className="row mb-4">
+            <div className="col-12">
+              <AttendanceCalendar 
+                onDateSelect={(date) => {
+                  console.log('Fecha seleccionada:', date);
+                  // Aquí puedes agregar lógica adicional cuando se selecciona una fecha
+                }}
+              />
+            </div>
+          </div>
+
           {/* Asistencias por curso */}
           <div className="row mb-4">
             <div className="col-md-8">
               <div className="card shadow rounded-4">
                 <div className="card-header">
-                  <i className="bi bi-journal-check me-2"></i>Asistencias por curso
+                  <i className="bi bi-journal-check me-2"></i>ASISTENCIAS ALUMNOS
                 </div>
                 <div className="card-body">
-                  <table className="table table-dark table-striped rounded-3 overflow-hidden">
-                    <thead>
-                      <tr>
-                        <th>Curso</th>
-                        <th>Presentes</th>
-                        <th>Ausentes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {asistenciasPorCurso.map((c) => (
-                        <tr key={c.curso}>
-                          <td>{c.curso}</td>
-                          <td>{c.presentes}</td>
-                          <td>{c.ausentes}</td>
+                  <div className="mb-3">
+                    <label className="form-label">Seleccionar curso:</label>
+                    <select
+                      className="form-select"
+                      value={cursoFiltro}
+                      onChange={e => setCursoFiltro(e.target.value)}
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="1er año">1er año</option>
+                      <option value="2do año">2do año</option>
+                      <option value="3er año">3er año</option>
+                      <option value="4to año">4to año</option>
+                      <option value="5to año">5to año</option>
+                      <option value="6to año">6to año</option>
+                      <option value="7mo año">7mo año</option>
+                    </select>
+                  </div>
+                  {cursoFiltro === '2do año' && (
+                    <table className="table table-dark table-striped rounded-3 overflow-hidden">
+                      <thead>
+                        <tr>
+                          <th>Alumno</th>
+                          <th>Asistencia</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Accesos rápidos */}
-          <div className="row mb-4">
-            <div className="col-md-8">
-              <div className="card shadow rounded-4">
-                <div className="card-header">
-                  <i className="bi bi-lightning-charge me-2"></i>Accesos rápidos
-                </div>
-                <div className="card-body d-flex gap-3">
-                  <button className="btn btn-outline-primary"><i className="bi bi-list-ul me-2"></i>Ver todas las asistencias</button>
-                  <button className="btn btn-outline-secondary"><i className="bi bi-person-lines-fill me-2"></i>Gestionar personas</button>
-                  <button className="btn btn-outline-success"><i className="bi bi-download me-2"></i>Descargar asistencias</button>
+                      </thead>
+                      <tbody>
+                        {alumnosEjemplo.map((alumno, index) => (
+                          <tr key={index}>
+                            <td>{alumno.nombre}</td>
+                            <td>
+                              <span className={`badge ${
+                                alumno.asistencia === 'presente' ? 'bg-success' :
+                                alumno.asistencia === 'ausente' ? 'bg-danger' :
+                                'bg-warning'
+                              }`}>
+                                {alumno.asistencia === 'presente' ? 'Presente' :
+                                 alumno.asistencia === 'ausente' ? 'Ausente' :
+                                 'Ausente Justificado'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </div>
