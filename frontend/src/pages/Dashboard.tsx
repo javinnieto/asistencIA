@@ -126,7 +126,24 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid mt-4">
+    <div className="container mt-3" style={{ maxWidth: '900px' }}>
+      {/* Ventana de mensajes deslizantes */}
+      <div className="row mb-3">
+        <div className="col-12">
+          <div className="card bg-gradient-warning border-0 shadow-lg rounded-4 overflow-hidden">
+            <div className="card-body py-3">
+              <div className="d-flex align-items-center">
+                <i className="bi bi-megaphone-fill text-white me-3 fs-4"></i>
+                <div className="marquee-container text-white fw-bold fs-5">
+                  <div className="marquee-content">
+                    Acá van mensajes importantes &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Esto es un RECORDATORIO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; El día 24/04 hay jornada &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Acá van mensajes importantes &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Esto es un RECORDATORIO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; El día 24/04 hay jornada
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="row mb-4">
         <div className="col-md-6">
           <h2 className="mb-0 text-primary fw-bold">
@@ -170,36 +187,36 @@ const Dashboard: React.FC = () => {
       ) : (
         <>
           {/* Resumen del día (Estudiantes) con íconos y tarjetas más atractivas */}
-          <div className="row mb-4 g-4">
+          <div className="row mb-3 g-2">
             <div className="col-md-4">
-              <div className="card shadow-lg border-0 rounded-4 bg-gradient-primary">
-                <div className="card-body d-flex align-items-center">
-                  <i className="bi bi-people-fill display-4 me-3 text-info"></i>
+              <div className="card shadow border-0 rounded-3 bg-gradient-primary">
+                <div className="card-body d-flex align-items-center py-2 px-3">
+                  <i className="bi bi-people-fill fs-2 me-2 text-info"></i>
                   <div>
-                    <div className="fw-bold">Efectivos</div>
-                    <div className="fs-2">{resumenDia.total}</div>
+                    <div className="fw-bold small">Efectivos</div>
+                    <div className="fs-4">{resumenDia.total}</div>
                   </div>
                 </div>
               </div>
             </div>
             <div className="col-md-4">
-              <div className="card shadow-lg border-0 rounded-4 bg-gradient-success">
-                <div className="card-body d-flex align-items-center">
-                  <i className="bi bi-person-check-fill display-4 me-3 text-success"></i>
+              <div className="card shadow border-0 rounded-3 bg-gradient-success">
+                <div className="card-body d-flex align-items-center py-2 px-3">
+                  <i className="bi bi-person-check-fill fs-2 me-2 text-success"></i>
                   <div>
-                    <div className="fw-bold">Presentes</div>
-                    <div className="fs-2">{resumenDia.presentes}</div>
+                    <div className="fw-bold small">Presentes</div>
+                    <div className="fs-4">{resumenDia.presentes}</div>
                   </div>
                 </div>
               </div>
             </div>
             <div className="col-md-4">
-              <div className="card shadow-lg border-0 rounded-4 bg-gradient-danger">
-                <div className="card-body d-flex align-items-center">
-                  <i className="bi bi-person-x-fill display-4 me-3 text-danger"></i>
+              <div className="card shadow border-0 rounded-3 bg-gradient-danger">
+                <div className="card-body d-flex align-items-center py-2 px-3">
+                  <i className="bi bi-person-x-fill fs-2 me-2 text-danger"></i>
                   <div>
-                    <div className="fw-bold">Ausentes</div>
-                    <div className="fs-2">{resumenDia.ausentes}</div>
+                    <div className="fw-bold small">Ausentes</div>
+                    <div className="fs-4">{resumenDia.ausentes}</div>
                   </div>
                 </div>
               </div>
@@ -207,22 +224,22 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Personal autorizado y Asistencias de hoy */}
-          <div className="row mb-4">
-            <div className="col-md-6">
-              <div className="card border-info mb-3 shadow rounded-4">
-                <div className="card-header bg-info text-white rounded-top-4">
+          <div className="row mb-3 g-2">
+            <div className="col-lg-6 col-md-12">
+              <div className="card border-info shadow rounded-3">
+                <div className="card-header bg-info text-white rounded-top-3 py-2">
                   <i className="bi bi-person-badge me-2"></i>Personal autorizado
                 </div>
-                <div className="card-body">
-                  <h5 className="card-title">{personalAutorizado.nombre}</h5>
-                  <p className="card-text">Tipo: {personalAutorizado.tipo}</p>
-                  <p className="card-text">Última asistencia: {personalAutorizado.ultimaAsistencia}</p>
+                <div className="card-body py-2">
+                  <h6 className="card-title mb-1">{personalAutorizado.nombre}</h6>
+                  <p className="card-text small mb-1">Tipo: {personalAutorizado.tipo}</p>
+                  <p className="card-text small mb-0">Última asistencia: {personalAutorizado.ultimaAsistencia}</p>
                 </div>
               </div>
             </div>
-            <div className="col-md-6">
-              <div className="card bg-gradient-primary border-0 shadow-lg rounded-4">
-                <div className="card-header bg-primary text-white rounded-top-4 d-flex justify-content-between align-items-center">
+            <div className="col-lg-6 col-md-12">
+              <div className="card bg-gradient-primary border-0 shadow rounded-3">
+                <div className="card-header bg-primary text-white rounded-top-3 d-flex justify-content-between align-items-center py-2">
                   <div>
                     <i className="bi bi-clock-history me-2"></i>Asistencias de hoy
                   </div>
@@ -282,7 +299,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           {/* Calendario de Asistencias */}
-          <div className="row mb-4">
+          <div className="row mb-3">
             <div className="col-12">
               <AttendanceCalendar 
                 onDateSelect={(date) => {
@@ -293,67 +310,41 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Asistencias por curso */}
-          <div className="row mb-4">
-            <div className="col-md-8">
-              <div className="card shadow rounded-4">
-                <div className="card-header">
-                  <i className="bi bi-journal-check me-2"></i>ASISTENCIAS ALUMNOS
-                </div>
-                <div className="card-body">
-                  <div className="mb-3">
-                    <label className="form-label">Seleccionar curso:</label>
-                    <select
-                      className="form-select"
-                      value={cursoFiltro}
-                      onChange={e => setCursoFiltro(e.target.value)}
-                    >
-                      <option value="">Seleccionar...</option>
-                      <option value="1er año">1er año</option>
-                      <option value="2do año">2do año</option>
-                      <option value="3er año">3er año</option>
-                      <option value="4to año">4to año</option>
-                      <option value="5to año">5to año</option>
-                      <option value="6to año">6to año</option>
-                      <option value="7mo año">7mo año</option>
-                    </select>
-                  </div>
-                  {cursoFiltro === '2do año' && (
-                    <table className="table table-dark table-striped rounded-3 overflow-hidden">
-                      <thead>
-                        <tr>
-                          <th>Alumno</th>
-                          <th>Asistencia</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {alumnosEjemplo.map((alumno, index) => (
-                          <tr key={index}>
-                            <td>{alumno.nombre}</td>
-                            <td>
-                              <span className={`badge ${
-                                alumno.asistencia === 'presente' ? 'bg-success' :
-                                alumno.asistencia === 'ausente' ? 'bg-danger' :
-                                'bg-warning'
-                              }`}>
-                                {alumno.asistencia === 'presente' ? 'Presente' :
-                                 alumno.asistencia === 'ausente' ? 'Ausente' :
-                                 'Ausente Justificado'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+
         </>
       )}
     </div>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;
+
+// Estilos para el marquee de mensajes
+const marqueeStyles = `
+  .marquee-container {
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+  }
+  
+  .marquee-content {
+    display: inline-block;
+    animation: marquee 35s linear infinite;
+    white-space: nowrap;
+  }
+  
+  @keyframes marquee {
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+`;
+
+// Agregar estilos al head del documento
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = marqueeStyles;
+document.head.appendChild(styleSheet); 
