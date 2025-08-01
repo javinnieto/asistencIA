@@ -3,6 +3,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import Notification, { NotificationType } from '../components/Notification';
 import ExportButton from '../components/ExportButton';
+import Reportes from '../components/Reportes';
 import './Asistencias.css';
 
 interface Asistencia {
@@ -147,7 +148,7 @@ const Asistencias: React.FC = () => {
   const [modoSeleccion, setModoSeleccion] = useState(false);
   
   // Nuevos estados para las pestañas
-  const [activeTab, setActiveTab] = useState<'general' | 'secundaria' | 'primaria' | 'profesores' | 'personal'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'secundaria' | 'primaria' | 'profesores' | 'personal' | 'reportes'>('general');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [alumnosSecundaria, setAlumnosSecundaria] = useState<AlumnoSecundaria[]>([]);
   const [loadingSecundaria, setLoadingSecundaria] = useState(false);
@@ -908,6 +909,18 @@ const Asistencias: React.FC = () => {
                   >
                     <i className="bi bi-person-badge me-2" aria-hidden="true"></i>
                     Personal
+                  </button>
+                </li>
+                <li className="nav-item" role="presentation">
+                  <button
+                    className={`nav-link ${activeTab === 'reportes' ? 'active fw-bold' : ''} border-0 py-3`}
+                    onClick={() => setActiveTab('reportes')}
+                    role="tab"
+                    aria-selected={activeTab === 'reportes'}
+                    aria-controls="tab-reportes"
+                  >
+                    <i className="bi bi-graph-up me-2" aria-hidden="true"></i>
+                    Reportes
                   </button>
                 </li>
               </ul>
@@ -2430,6 +2443,16 @@ const Asistencias: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Pestaña Reportes */}
+        <div 
+          className={`tab-pane fade ${activeTab === 'reportes' ? 'show active' : ''}`} 
+          id="tab-reportes" 
+          role="tabpanel" 
+          aria-labelledby="tab-reportes"
+        >
+          <Reportes asistencias={asistencias} />
         </div>
       </div>
     </div>
