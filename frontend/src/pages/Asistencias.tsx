@@ -3,7 +3,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import Notification, { NotificationType } from '../components/Notification';
 import ExportButton from '../components/ExportButton';
-import AsistenciasStats from '../components/AsistenciasStats';
 import './Asistencias.css';
 
 interface Asistencia {
@@ -16,6 +15,10 @@ interface Asistencia {
   fecha_hora: string;
   temperatura: number;
   estado: { idEstadoAsistencia: number; nombre: string };
+  justificacion?: {
+    tipo: 'salud' | 'justificado' | 'varios';
+    comentario?: string;
+  };
 }
 
 interface Persona {
@@ -68,33 +71,80 @@ interface Personal {
 }
 
 const Asistencias: React.FC = () => {
+  // Función para normalizar texto (quitar acentos, convertir a minúsculas)
+  const normalizeText = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, ''); // Remueve acentos
+  };
+
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [filtros, setFiltros] = useState({
-    fecha: '',
-    persona: '',
+    fechaInicio: '',
+    fechaFin: '',
     estado: '',
-    tipo: ''
+    tipo: '',
+    justificacion: '',
+    temperaturaMin: '',
+    temperaturaMax: ''
   });
   const [nuevaAsistencia, setNuevaAsistencia] = useState({
     personaId: '',
     temperatura: '',
-    estado: '1' // Presente por defecto
+    estado: '1', // Presente por defecto
+    justificacion: {
+      tipo: 'salud' as 'salud' | 'justificado' | 'varios',
+      comentario: ''
+    }
   });
   const [notification, setNotification] = useState<{ message: string; type: NotificationType } | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingData, setEditingData] = useState<{ temperatura: string; estado: string }>({ temperatura: '', estado: '1' });
+  const [editingData, setEditingData] = useState<{ 
+    temperatura: string; 
+    estado: string;
+    justificacion?: {
+      tipo: 'salud' | 'justificado' | 'varios';
+      comentario?: string;
+    };
+  }>({ 
+    temperatura: '', 
+    estado: '1',
+    justificacion: {
+      tipo: 'salud',
+      comentario: ''
+    }
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showStats, setShowStats] = useState(false);
+  const [searchTermDebounced, setSearchTermDebounced] = useState('');
+  // const [showStats, setShowStats] = useState(false); // Comentado para uso futuro
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: 'asc' | 'desc';
   } | null>(null);
+  
+  // Estados para vista de tabla mejorada
+  const [columnasVisibles, setColumnasVisibles] = useState({
+    persona: true,
+    tipo: true,
+    fecha: true,
+    temperatura: true,
+    estado: true,
+    justificacion: true,
+    acciones: true
+  });
+  const [vistaCompacta, setVistaCompacta] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
+  
+  // Estados para acciones masivas
+  const [asistenciasSeleccionadas, setAsistenciasSeleccionadas] = useState<Set<number>>(new Set());
+  const [modoSeleccion, setModoSeleccion] = useState(false);
   
   // Nuevos estados para las pestañas
   const [activeTab, setActiveTab] = useState<'general' | 'secundaria' | 'primaria' | 'profesores' | 'personal'>('general');
@@ -371,26 +421,57 @@ const Asistencias: React.FC = () => {
     }, 1000);
   }, []);
 
+
+
+  // Debounce para búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTermDebounced(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const handleFiltroChange = (campo: string, valor: string) => {
     setFiltros(prev => ({ ...prev, [campo]: valor }));
   };
 
   const asistenciasFiltradas = asistencias.filter(asistencia => {
-    const fechaMatch = !filtros.fecha || asistencia.fecha_hora.includes(filtros.fecha);
-    const personaMatch = !filtros.persona || asistencia.persona.nombre.toLowerCase().includes(filtros.persona.toLowerCase());
+    // Filtro por rango de fechas
+    const fechaAsistencia = new Date(asistencia.fecha_hora);
+    const fechaInicio = filtros.fechaInicio ? new Date(filtros.fechaInicio) : null;
+    const fechaFin = filtros.fechaFin ? new Date(filtros.fechaFin + 'T23:59:59') : null;
+    
+    const fechaMatch = (!fechaInicio || fechaAsistencia >= fechaInicio) && 
+                      (!fechaFin || fechaAsistencia <= fechaFin);
+    
+    // Filtro por estado
     const estadoMatch = !filtros.estado || asistencia.estado.nombre === filtros.estado;
+    
+    // Filtro por tipo
     const tipoMatch = !filtros.tipo || 
       (filtros.tipo === 'alumno' && asistencia.persona.curso) ||
       (filtros.tipo === 'profesor' && !asistencia.persona.curso && asistencia.persona.nombre.includes('Prof')) ||
       (filtros.tipo === 'personal' && !asistencia.persona.curso && !asistencia.persona.nombre.includes('Prof'));
     
-    const searchMatch = !searchTerm || 
-      asistencia.persona.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (asistencia.persona.curso && asistencia.persona.curso.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      asistencia.estado.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asistencia.temperatura.toString().includes(searchTerm);
+    // Filtro por justificación
+    const justificacionMatch = !filtros.justificacion || 
+      (asistencia.justificacion && asistencia.justificacion.tipo === filtros.justificacion);
     
-    return fechaMatch && personaMatch && estadoMatch && tipoMatch && searchMatch;
+    // Filtro por temperatura
+    const tempMin = filtros.temperaturaMin ? parseFloat(filtros.temperaturaMin) : null;
+    const tempMax = filtros.temperaturaMax ? parseFloat(filtros.temperaturaMax) : null;
+    const temperaturaMatch = (!tempMin || asistencia.temperatura >= tempMin) && 
+                           (!tempMax || asistencia.temperatura <= tempMax);
+    
+    // Búsqueda global
+    const searchMatch = !searchTermDebounced || 
+      normalizeText(asistencia.persona.nombre).includes(normalizeText(searchTermDebounced)) ||
+      (asistencia.persona.curso && normalizeText(asistencia.persona.curso.nombre).includes(normalizeText(searchTermDebounced))) ||
+      normalizeText(asistencia.estado.nombre).includes(normalizeText(searchTermDebounced)) ||
+      asistencia.temperatura.toString().includes(searchTermDebounced);
+    
+    return fechaMatch && estadoMatch && tipoMatch && justificacionMatch && temperaturaMatch && searchMatch;
   });
 
   const getSortedData = (data: Asistencia[]) => {
@@ -401,8 +482,8 @@ const Asistencias: React.FC = () => {
 
       switch (sortConfig.key) {
         case 'persona':
-          aValue = a.persona.nombre.toLowerCase();
-          bValue = b.persona.nombre.toLowerCase();
+          aValue = normalizeText(a.persona.nombre);
+          bValue = normalizeText(b.persona.nombre);
           break;
         case 'tipo':
           aValue = a.persona.curso ? 'alumno' : a.persona.nombre.includes('Prof') ? 'profesor' : 'personal';
@@ -417,8 +498,8 @@ const Asistencias: React.FC = () => {
           bValue = b.estado.nombre === 'Ausente' ? -1 : b.temperatura;
           break;
         case 'estado':
-          aValue = a.estado.nombre.toLowerCase();
-          bValue = b.estado.nombre.toLowerCase();
+          aValue = normalizeText(a.estado.nombre);
+          bValue = normalizeText(b.estado.nombre);
           break;
         default:
           return 0;
@@ -479,11 +560,20 @@ const Asistencias: React.FC = () => {
       estado: {
         idEstadoAsistencia: parseInt(nuevaAsistencia.estado),
         nombre: nuevaAsistencia.estado === '1' ? 'Presente' : 'Ausente'
-      }
+      },
+      justificacion: nuevaAsistencia.estado === '2' ? nuevaAsistencia.justificacion : undefined
     };
 
     setAsistencias(prev => [nuevaAsistenciaObj, ...prev]);
-    setNuevaAsistencia({ personaId: '', temperatura: '', estado: '1' });
+    setNuevaAsistencia({ 
+      personaId: '', 
+      temperatura: '', 
+      estado: '1',
+      justificacion: {
+        tipo: 'salud',
+        comentario: ''
+      }
+    });
     setShowForm(false);
     showNotification('Asistencia registrada exitosamente', 'success');
   };
@@ -502,7 +592,11 @@ const Asistencias: React.FC = () => {
     setEditingId(asistencia.idAsistencia);
     setEditingData({
       temperatura: asistencia.estado.nombre === 'Ausente' ? '0' : asistencia.temperatura.toString(),
-      estado: asistencia.estado.idEstadoAsistencia.toString()
+      estado: asistencia.estado.idEstadoAsistencia.toString(),
+      justificacion: asistencia.justificacion || {
+        tipo: 'salud',
+        comentario: ''
+      }
     });
   };
 
@@ -519,18 +613,33 @@ const Asistencias: React.FC = () => {
       estado: {
         idEstadoAsistencia: parseInt(editingData.estado),
         nombre: isPresente ? 'Presente' : 'Ausente'
-      }
+      },
+      justificacion: isPresente ? undefined : editingData.justificacion
     };
 
     setAsistencias(updatedAsistencias);
     setEditingId(null);
-    setEditingData({ temperatura: '', estado: '1' });
+    setEditingData({ 
+      temperatura: '', 
+      estado: '1',
+      justificacion: {
+        tipo: 'salud',
+        comentario: ''
+      }
+    });
     showNotification('Asistencia actualizada exitosamente', 'success');
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditingData({ temperatura: '', estado: '1' });
+    setEditingData({ 
+      temperatura: '', 
+      estado: '1',
+      justificacion: {
+        tipo: 'salud',
+        comentario: ''
+      }
+    });
   };
 
   const handleDelete = (id: number) => {
@@ -546,6 +655,65 @@ const Asistencias: React.FC = () => {
     } else {
       showNotification(`Archivo exportado exitosamente en formato ${type.toUpperCase()}`, 'success');
     }
+  };
+
+  // Funciones para acciones masivas
+  const toggleSeleccion = (idAsistencia: number) => {
+    setAsistenciasSeleccionadas(prev => {
+      const nuevo = new Set(prev);
+      if (nuevo.has(idAsistencia)) {
+        nuevo.delete(idAsistencia);
+      } else {
+        nuevo.add(idAsistencia);
+      }
+      return nuevo;
+    });
+  };
+
+  const seleccionarTodas = () => {
+    setAsistenciasSeleccionadas(new Set(currentAsistencias.map(a => a.idAsistencia)));
+  };
+
+  const deseleccionarTodas = () => {
+    setAsistenciasSeleccionadas(new Set());
+  };
+
+  const toggleModoSeleccion = () => {
+    setModoSeleccion(!modoSeleccion);
+    if (modoSeleccion) {
+      setAsistenciasSeleccionadas(new Set());
+    }
+  };
+
+  const eliminarSeleccionadas = () => {
+    if (asistenciasSeleccionadas.size === 0) return;
+    
+    if (window.confirm(`¿Estás seguro de que quieres eliminar ${asistenciasSeleccionadas.size} asistencias?`)) {
+      setAsistencias(prev => prev.filter(a => !asistenciasSeleccionadas.has(a.idAsistencia)));
+      setAsistenciasSeleccionadas(new Set());
+      showNotification(`${asistenciasSeleccionadas.size} asistencias eliminadas exitosamente`, 'success');
+    }
+  };
+
+  const cambiarEstadoSeleccionadas = (nuevoEstado: '1' | '2') => {
+    if (asistenciasSeleccionadas.size === 0) return;
+    
+    setAsistencias(prev => prev.map(asistencia => {
+      if (asistenciasSeleccionadas.has(asistencia.idAsistencia)) {
+        return {
+          ...asistencia,
+          estado: {
+            idEstadoAsistencia: parseInt(nuevoEstado),
+            nombre: nuevoEstado === '1' ? 'Presente' : 'Ausente'
+          },
+          temperatura: nuevoEstado === '1' ? asistencia.temperatura : 0,
+          justificacion: nuevoEstado === '1' ? undefined : asistencia.justificacion
+        };
+      }
+      return asistencia;
+    }));
+    
+    showNotification(`${asistenciasSeleccionadas.size} asistencias actualizadas exitosamente`, 'success');
   };
 
   // Funciones para la pestaña Secundaria
@@ -651,6 +819,7 @@ const Asistencias: React.FC = () => {
         </div>
         <div className="col-md-6 text-end">
           <div className="d-flex gap-2 flex-wrap">
+            {/* Botón de estadísticas comentado para uso futuro
             <button 
               className={`btn ${showStats ? 'btn-success' : 'btn-outline-success'} shadow-sm fw-bold`}
               onClick={() => setShowStats(!showStats)}
@@ -661,6 +830,7 @@ const Asistencias: React.FC = () => {
               <i className="bi bi-graph-up me-2 fs-5" aria-hidden="true"></i>
               {showStats ? 'Ocultar' : 'Mostrar'} Estadísticas
             </button>
+            */}
             <button 
               className="btn btn-primary shadow-sm"
               onClick={() => setShowForm(!showForm)}
@@ -810,6 +980,48 @@ const Asistencias: React.FC = () => {
                           </select>
                         </div>
                       </div>
+                      
+                      {/* Campos de justificación (solo se muestran si es ausente) */}
+                      {nuevaAsistencia.estado === '2' && (
+                        <div className="row g-3 mt-2">
+                          <div className="col-md-6">
+                            <label className="form-label">Tipo de Justificación</label>
+                            <select
+                              className="form-select"
+                              value={nuevaAsistencia.justificacion.tipo}
+                              onChange={(e) => setNuevaAsistencia(prev => ({ 
+                                ...prev, 
+                                justificacion: { 
+                                  tipo: e.target.value as 'salud' | 'justificado' | 'varios',
+                                  comentario: prev.justificacion.comentario
+                                } 
+                              }))}
+                              required
+                            >
+                              <option value="salud">Salud</option>
+                              <option value="justificado">Justificado</option>
+                              <option value="varios">Varios</option>
+                            </select>
+                          </div>
+                          <div className="col-md-6">
+                            <label className="form-label">Comentario (Opcional)</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              placeholder="Agregar comentario..."
+                              value={nuevaAsistencia.justificacion.comentario}
+                              onChange={(e) => setNuevaAsistencia(prev => ({ 
+                                ...prev, 
+                                justificacion: { 
+                                  tipo: prev.justificacion.tipo,
+                                  comentario: e.target.value 
+                                } 
+                              }))}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="mt-3">
                         <button type="submit" className="btn btn-success me-2">
                           <i className="bi bi-check-circle me-1"></i>Guardar
@@ -829,7 +1041,7 @@ const Asistencias: React.FC = () => {
             </div>
           )}
 
-          {/* Estadísticas */}
+          {/* Estadísticas comentadas para uso futuro
           {showStats && (
             <div className="row mb-4" id="estadisticas-panel" role="region" aria-label="Panel de estadísticas">
               <div className="col-12">
@@ -837,6 +1049,7 @@ const Asistencias: React.FC = () => {
               </div>
             </div>
           )}
+          */}
 
       {/* Búsqueda global y filtros */}
       <div className="row mb-4">
@@ -880,22 +1093,21 @@ const Asistencias: React.FC = () => {
               {/* Filtros específicos */}
               <div className="row g-3">
                 <div className="col-md-3">
-                  <label className="form-label">Fecha</label>
+                  <label className="form-label">Fecha Inicio</label>
                   <input
                     type="date"
                     className="form-control"
-                    value={filtros.fecha}
-                    onChange={(e) => handleFiltroChange('fecha', e.target.value)}
+                    value={filtros.fechaInicio}
+                    onChange={(e) => handleFiltroChange('fechaInicio', e.target.value)}
                   />
                 </div>
                 <div className="col-md-3">
-                  <label className="form-label">Persona</label>
+                  <label className="form-label">Fecha Fin</label>
                   <input
-                    type="text"
+                    type="date"
                     className="form-control"
-                    placeholder="Buscar por nombre..."
-                    value={filtros.persona}
-                    onChange={(e) => handleFiltroChange('persona', e.target.value)}
+                    value={filtros.fechaFin}
+                    onChange={(e) => handleFiltroChange('fechaFin', e.target.value)}
                   />
                 </div>
                 <div className="col-md-3">
@@ -923,6 +1135,65 @@ const Asistencias: React.FC = () => {
                     <option value="personal">Personal</option>
                   </select>
                 </div>
+                <div className="col-md-3">
+                  <label className="form-label">Justificación</label>
+                  <select
+                    className="form-select"
+                    value={filtros.justificacion}
+                    onChange={(e) => handleFiltroChange('justificacion', e.target.value)}
+                  >
+                    <option value="">Todas</option>
+                    <option value="salud">Salud</option>
+                    <option value="justificado">Justificado</option>
+                    <option value="varios">Varios</option>
+                  </select>
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label">Temp. Mínima (°C)</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    placeholder="35.0"
+                    step="0.1"
+                    min="35"
+                    max="42"
+                    value={filtros.temperaturaMin}
+                    onChange={(e) => handleFiltroChange('temperaturaMin', e.target.value)}
+                  />
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label">Temp. Máxima (°C)</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    placeholder="42.0"
+                    step="0.1"
+                    min="35"
+                    max="42"
+                    value={filtros.temperaturaMax}
+                    onChange={(e) => handleFiltroChange('temperaturaMax', e.target.value)}
+                  />
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label">Limpiar Filtros</label>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary w-100"
+                    onClick={() => {
+                      setFiltros({
+                        fechaInicio: '',
+                        fechaFin: '',
+                        estado: '',
+                        tipo: '',
+                        justificacion: '',
+                        temperaturaMin: '',
+                        temperaturaMax: ''
+                      });
+                    }}
+                  >
+                    <i className="bi bi-x-circle me-1"></i>Limpiar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -937,21 +1208,139 @@ const Asistencias: React.FC = () => {
               <h3 className="h6 mb-0">
                 <i className="bi bi-list-ul me-2" aria-hidden="true"></i>Asistencias ({asistenciasFiltradas.length})
               </h3>
-              <div className="d-flex align-items-center gap-2">
-                <div className="d-flex align-items-center">
-                  <label className="form-label mb-0 me-2 small">Mostrar:</label>
-                  <select
-                    className="form-select form-select-sm"
-                    style={{ width: '70px' }}
-                    value={itemsPerPage}
-                    onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+                                            <div className="d-flex align-items-center gap-2">
+                {/* Controles de selección masiva */}
+                {modoSeleccion && asistenciasSeleccionadas.size > 0 && (
+                    <div className="btn-group btn-group-sm" role="group">
+                      <button
+                        type="button"
+                        className="btn btn-outline-success"
+                        onClick={() => cambiarEstadoSeleccionadas('1')}
+                        title="Marcar como presentes"
+                      >
+                        <i className="bi bi-check-circle me-1"></i>
+                        Presente
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-warning"
+                        onClick={() => cambiarEstadoSeleccionadas('2')}
+                        title="Marcar como ausentes"
+                      >
+                        <i className="bi bi-x-circle me-1"></i>
+                        Ausente
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-danger"
+                        onClick={eliminarSeleccionadas}
+                        title="Eliminar seleccionadas"
+                      >
+                        <i className="bi bi-trash me-1"></i>
+                        Eliminar
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Controles de vista */}
+                  <div className="btn-group btn-group-sm" role="group">
+                    <button
+                      type="button"
+                      className={`btn ${!vistaCompacta ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setVistaCompacta(false)}
+                      title="Vista detallada"
+                    >
+                      <i className="bi bi-list-ul"></i>
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${vistaCompacta ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setVistaCompacta(true)}
+                      title="Vista compacta"
+                    >
+                      <i className="bi bi-list"></i>
+                    </button>
+                  </div>
+                
+                {/* Selector de columnas */}
+                <div className="dropdown">
+                  <button
+                    className="btn btn-outline-secondary btn-sm dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    title="Columnas visibles"
                   >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                  </select>
+                    <i className="bi bi-columns"></i>
+                  </button>
+                  <ul className="dropdown-menu">
+                    {Object.entries(columnasVisibles).map(([columna, visible]) => (
+                      <li key={columna}>
+                        <label className="dropdown-item">
+                          <input
+                            type="checkbox"
+                            className="form-check-input me-2"
+                            checked={visible}
+                            onChange={(e) => setColumnasVisibles(prev => ({
+                              ...prev,
+                              [columna]: e.target.checked
+                            }))}
+                          />
+                          {columna.charAt(0).toUpperCase() + columna.slice(1)}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+                
+                                  <div className="d-flex align-items-center gap-2">
+                    {/* Botón de modo selección */}
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${modoSeleccion ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={toggleModoSeleccion}
+                      title="Modo selección múltiple"
+                    >
+                      <i className="bi bi-check-square me-1"></i>
+                      {modoSeleccion ? 'Salir' : 'Seleccionar'}
+                    </button>
+                    
+                    {/* Controles de selección */}
+                    {modoSeleccion && (
+                      <div className="btn-group btn-group-sm">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          onClick={seleccionarTodas}
+                          title="Seleccionar todas"
+                        >
+                          <i className="bi bi-check-all"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          onClick={deseleccionarTodas}
+                          title="Deseleccionar todas"
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      </div>
+                    )}
+                    
+                    <div className="d-flex align-items-center">
+                      <label className="form-label mb-0 me-2 small">Mostrar:</label>
+                      <select
+                        className="form-select form-select-sm"
+                        style={{ width: '70px' }}
+                        value={itemsPerPage}
+                        onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+                  </div>
                 <ExportButton 
                   data={asistenciasFiltradas}
                   filename={`asistencias_${new Date().toISOString().split('T')[0]}`}
@@ -961,179 +1350,288 @@ const Asistencias: React.FC = () => {
             </div>
             <div className="card-body p-0">
               <div className="table-responsive">
-                <table className="table table-hover mb-0" role="table" aria-label="Lista de asistencias">
+                <table className={`table ${vistaCompacta ? 'table-sm' : ''} table-hover mb-0`} role="table" aria-label="Lista de asistencias">
                   <thead className="table-light">
                     <tr>
-                      <th>
-                        <button 
-                          className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
-                          onClick={() => handleSort('persona')}
-                        >
-                          Persona
-                          {sortConfig?.key === 'persona' && (
-                            <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
-                          )}
-                        </button>
-                      </th>
-                      <th>
-                        <button 
-                          className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
-                          onClick={() => handleSort('tipo')}
-                        >
-                          Tipo
-                          {sortConfig?.key === 'tipo' && (
-                            <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
-                          )}
-                        </button>
-                      </th>
-                      <th>
-                        <button 
-                          className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
-                          onClick={() => handleSort('fecha')}
-                        >
-                          Fecha y Hora
-                          {sortConfig?.key === 'fecha' && (
-                            <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
-                          )}
-                        </button>
-                      </th>
-                      <th>
-                        <button 
-                          className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
-                          onClick={() => handleSort('temperatura')}
-                        >
-                          Temperatura
-                          {sortConfig?.key === 'temperatura' && (
-                            <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
-                          )}
-                        </button>
-                      </th>
-                      <th>
-                        <button 
-                          className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
-                          onClick={() => handleSort('estado')}
-                        >
-                          Estado
-                          {sortConfig?.key === 'estado' && (
-                            <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
-                          )}
-                        </button>
-                      </th>
-                      <th>Acciones</th>
+                      {modoSeleccion && (
+                        <th style={{ width: '40px' }}>
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={asistenciasSeleccionadas.size === currentAsistencias.length && currentAsistencias.length > 0}
+                            onChange={(e) => e.target.checked ? seleccionarTodas() : deseleccionarTodas()}
+                            title="Seleccionar todas"
+                          />
+                        </th>
+                      )}
+                      {columnasVisibles.persona && (
+                        <th>
+                          <button 
+                            className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                            onClick={() => handleSort('persona')}
+                          >
+                            {vistaCompacta ? 'Persona' : 'Persona'}
+                            {sortConfig?.key === 'persona' && (
+                              <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
+                            )}
+                          </button>
+                        </th>
+                      )}
+                      {columnasVisibles.tipo && (
+                        <th>
+                          <button 
+                            className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                            onClick={() => handleSort('tipo')}
+                          >
+                            Tipo
+                            {sortConfig?.key === 'tipo' && (
+                              <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
+                            )}
+                          </button>
+                        </th>
+                      )}
+                      {columnasVisibles.fecha && (
+                        <th>
+                          <button 
+                            className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                            onClick={() => handleSort('fecha')}
+                          >
+                            {vistaCompacta ? 'Fecha' : 'Fecha y Hora'}
+                            {sortConfig?.key === 'fecha' && (
+                              <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
+                            )}
+                          </button>
+                        </th>
+                      )}
+                      {columnasVisibles.temperatura && (
+                        <th>
+                          <button 
+                            className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                            onClick={() => handleSort('temperatura')}
+                          >
+                            {vistaCompacta ? 'Temp.' : 'Temperatura'}
+                            {sortConfig?.key === 'temperatura' && (
+                              <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
+                            )}
+                          </button>
+                        </th>
+                      )}
+                      {columnasVisibles.estado && (
+                        <th>
+                          <button 
+                            className="btn btn-link p-0 text-decoration-none text-dark fw-bold"
+                            onClick={() => handleSort('estado')}
+                          >
+                            Estado
+                            {sortConfig?.key === 'estado' && (
+                              <i className={`bi ms-1 ${sortConfig.direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i>
+                            )}
+                          </button>
+                        </th>
+                      )}
+                      {columnasVisibles.justificacion && (
+                        <th>Justificación</th>
+                      )}
+                      {columnasVisibles.acciones && (
+                        <th>Acciones</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {currentAsistencias.map(asistencia => (
-                      <tr key={asistencia.idAsistencia}>
-                        <td>
-                          <div>
-                            <div className="fw-bold">{asistencia.persona.nombre}</div>
-                            {asistencia.persona.curso && (
-                              <small className="text-muted">{asistencia.persona.curso.nombre}</small>
-                            )}
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`badge ${getTipoBadge(asistencia.persona)}`}>
-                            {asistencia.persona.curso ? 'Alumno' : 
-                             asistencia.persona.nombre.includes('Prof') ? 'Profesor' : 'Personal'}
-                          </span>
-                        </td>
-                        <td>
-                          {asistencia.estado.nombre === 'Ausente' ? (
-                            <span className="text-muted">-</span>
-                          ) : (
-                            new Date(asistencia.fecha_hora).toLocaleString('es-ES', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          )}
-                        </td>
-                        <td>
-                          {editingId === asistencia.idAsistencia ? (
-                            asistencia.estado.nombre === 'Ausente' ? (
-                              <span className="text-muted small">No aplica</span>
-                            ) : (
-                              <input
-                                type="number"
-                                className="form-control form-control-sm"
-                                step="0.1"
-                                min="35"
-                                max="42"
-                                value={editingData.temperatura}
-                                onChange={(e) => setEditingData(prev => ({ ...prev, temperatura: e.target.value }))}
-                                style={{ width: '80px' }}
-                              />
-                            )
-                          ) : (
-                            asistencia.estado.nombre === 'Ausente' ? (
+                      <tr key={asistencia.idAsistencia} className={vistaCompacta ? 'table-sm' : ''}>
+                        {modoSeleccion && (
+                          <td>
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              checked={asistenciasSeleccionadas.has(asistencia.idAsistencia)}
+                              onChange={() => toggleSeleccion(asistencia.idAsistencia)}
+                              title="Seleccionar esta asistencia"
+                            />
+                          </td>
+                        )}
+                        {columnasVisibles.persona && (
+                          <td>
+                            <div>
+                              <div className="fw-bold">{asistencia.persona.nombre}</div>
+                              {!vistaCompacta && asistencia.persona.curso && (
+                                <small className="text-muted">{asistencia.persona.curso.nombre}</small>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                        {columnasVisibles.tipo && (
+                          <td>
+                            <span className={`badge ${getTipoBadge(asistencia.persona)}`}>
+                              {asistencia.persona.curso ? 'Alumno' : 
+                               asistencia.persona.nombre.includes('Prof') ? 'Profesor' : 'Personal'}
+                            </span>
+                          </td>
+                        )}
+                        {columnasVisibles.fecha && (
+                          <td>
+                            {asistencia.estado.nombre === 'Ausente' ? (
                               <span className="text-muted">-</span>
                             ) : (
-                              <span className={`fw-bold ${asistencia.temperatura > 37 ? 'text-danger' : 'text-success'}`}>
-                                {asistencia.temperatura}°C
-                              </span>
-                            )
-                          )}
-                        </td>
-                        <td>
-                          {editingId === asistencia.idAsistencia ? (
-                            <select
-                              className="form-select form-select-sm"
-                              value={editingData.estado}
-                              onChange={(e) => setEditingData(prev => ({ ...prev, estado: e.target.value }))}
-                              style={{ width: '100px' }}
-                            >
-                              <option value="1">Presente</option>
-                              <option value="2">Ausente</option>
-                            </select>
-                          ) : (
-                            <span className={`badge ${getEstadoBadge(asistencia.estado.nombre)}`}>
-                              {asistencia.estado.nombre}
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          <div className="btn-group btn-group-sm">
-                            {editingId === asistencia.idAsistencia ? (
-                              <>
-                                <button 
-                                  className="btn btn-outline-success"
-                                  onClick={() => handleSaveEdit(asistencia.idAsistencia)}
-                                  title="Guardar"
-                                >
-                                  <i className="bi bi-check"></i>
-                                </button>
-                                <button 
-                                  className="btn btn-outline-secondary"
-                                  onClick={handleCancelEdit}
-                                  title="Cancelar"
-                                >
-                                  <i className="bi bi-x"></i>
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button 
-                                  className="btn btn-outline-primary"
-                                  onClick={() => handleEdit(asistencia)}
-                                  title="Editar"
-                                >
-                                  <i className="bi bi-pencil"></i>
-                                </button>
-                                <button 
-                                  className="btn btn-outline-danger"
-                                  onClick={() => handleDelete(asistencia.idAsistencia)}
-                                  title="Eliminar"
-                                >
-                                  <i className="bi bi-trash"></i>
-                                </button>
-                              </>
+                              vistaCompacta ? 
+                                new Date(asistencia.fecha_hora).toLocaleDateString('es-ES') :
+                                new Date(asistencia.fecha_hora).toLocaleString('es-ES', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
                             )}
-                          </div>
-                        </td>
+                          </td>
+                        )}
+                        {columnasVisibles.temperatura && (
+                          <td>
+                            {editingId === asistencia.idAsistencia ? (
+                              asistencia.estado.nombre === 'Ausente' ? (
+                                <span className="text-muted small">No aplica</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  className="form-control form-control-sm"
+                                  step="0.1"
+                                  min="35"
+                                  max="42"
+                                  value={editingData.temperatura}
+                                  onChange={(e) => setEditingData(prev => ({ ...prev, temperatura: e.target.value }))}
+                                  style={{ width: '80px' }}
+                                />
+                              )
+                            ) : (
+                              asistencia.estado.nombre === 'Ausente' ? (
+                                <span className="text-muted">-</span>
+                              ) : (
+                                <span className={`fw-bold ${asistencia.temperatura > 37 ? 'text-danger' : 'text-success'}`}>
+                                  {asistencia.temperatura}°C
+                                </span>
+                              )
+                            )}
+                          </td>
+                        )}
+                        {columnasVisibles.estado && (
+                          <td>
+                            {editingId === asistencia.idAsistencia ? (
+                              <select
+                                className="form-select form-select-sm"
+                                value={editingData.estado}
+                                onChange={(e) => setEditingData(prev => ({ ...prev, estado: e.target.value }))}
+                                style={{ width: '100px' }}
+                              >
+                                <option value="1">Presente</option>
+                                <option value="2">Ausente</option>
+                              </select>
+                            ) : (
+                              <span className={`badge ${getEstadoBadge(asistencia.estado.nombre)}`}>
+                                {asistencia.estado.nombre}
+                              </span>
+                            )}
+                          </td>
+                        )}
+                        {columnasVisibles.justificacion && (
+                          <td>
+                            {editingId === asistencia.idAsistencia ? (
+                              editingData.estado === '2' ? (
+                                <div>
+                                  <select
+                                    className="form-select form-select-sm mb-1"
+                                    value={editingData.justificacion?.tipo || 'salud'}
+                                    onChange={(e) => setEditingData(prev => ({ 
+                                      ...prev, 
+                                      justificacion: { 
+                                        tipo: e.target.value as 'salud' | 'justificado' | 'varios',
+                                        comentario: prev.justificacion?.comentario || ''
+                                      } 
+                                    }))}
+                                    style={{ width: '120px' }}
+                                  >
+                                    <option value="salud">Salud</option>
+                                    <option value="justificado">Justificado</option>
+                                    <option value="varios">Varios</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    className="form-control form-control-sm"
+                                    placeholder="Comentario..."
+                                    value={editingData.justificacion?.comentario || ''}
+                                    onChange={(e) => setEditingData(prev => ({ 
+                                      ...prev, 
+                                      justificacion: { 
+                                        tipo: prev.justificacion?.tipo || 'salud',
+                                        comentario: e.target.value 
+                                      } 
+                                    }))}
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-muted small">No aplica</span>
+                              )
+                            ) : (
+                              asistencia.estado.nombre === 'Ausente' ? (
+                                asistencia.justificacion ? (
+                                  <div>
+                                    <span className={`badge bg-${asistencia.justificacion.tipo === 'salud' ? 'danger' : asistencia.justificacion.tipo === 'justificado' ? 'warning' : 'info'} me-1`}>
+                                      {asistencia.justificacion.tipo}
+                                    </span>
+                                    {!vistaCompacta && asistencia.justificacion.comentario && (
+                                      <small className="text-muted d-block">{asistencia.justificacion.comentario}</small>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted small">Sin justificación</span>
+                                )
+                              ) : (
+                                <span className="text-muted small">-</span>
+                              )
+                            )}
+                          </td>
+                        )}
+                        {columnasVisibles.acciones && (
+                          <td>
+                            <div className="btn-group btn-group-sm">
+                              {editingId === asistencia.idAsistencia ? (
+                                <>
+                                  <button 
+                                    className="btn btn-outline-success"
+                                    onClick={() => handleSaveEdit(asistencia.idAsistencia)}
+                                    title="Guardar"
+                                  >
+                                    <i className="bi bi-check"></i>
+                                  </button>
+                                  <button 
+                                    className="btn btn-outline-secondary"
+                                    onClick={handleCancelEdit}
+                                    title="Cancelar"
+                                  >
+                                    <i className="bi bi-x"></i>
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button 
+                                    className="btn btn-outline-primary"
+                                    onClick={() => handleEdit(asistencia)}
+                                    title="Editar"
+                                  >
+                                    <i className="bi bi-pencil"></i>
+                                  </button>
+                                  <button 
+                                    className="btn btn-outline-danger"
+                                    onClick={() => handleDelete(asistencia.idAsistencia)}
+                                    title="Eliminar"
+                                  >
+                                    <i className="bi bi-trash"></i>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

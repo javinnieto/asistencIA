@@ -78,6 +78,7 @@ services:
     restart: always
     volumes:
       - ./frontend:/app
+      - /app/node_modules   # <- esta línea evita que se sobreescriba node_modules
     ports:
       - "3000:3000"
     environment:
