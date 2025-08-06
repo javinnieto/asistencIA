@@ -31,8 +31,8 @@ const PoloTecnologico: React.FC = () => {
   return (
     <div className="polo-tecnologico-container">
       <div className="polo-header">
-        <h1>Polo Tecnológico</h1>
-        <p>Cursos Extraprogramáticos - Gestión Integral</p>
+        <h1>Tecno Aliados</h1>
+        <p>Gestión de cursos extraprogramáticos</p>
       </div>
 
       <div className="polo-tabs">
