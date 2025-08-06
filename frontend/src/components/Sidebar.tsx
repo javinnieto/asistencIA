@@ -29,6 +29,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
         <li className={location.pathname === '/reportes' ? 'active' : ''}>
           <Link to="/reportes"><i className="bi bi-bar-chart"></i> <span>Reportes</span></Link>
         </li>
+        <li className={location.pathname === '/polo-tecnologico' ? 'active' : ''}>
+          <Link to="/polo-tecnologico"><i className="bi bi-cpu"></i> <span>Polo Tecnológico</span></Link>
+        </li>
       </ul>
     </nav>
   );
