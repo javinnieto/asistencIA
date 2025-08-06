@@ -79,8 +79,8 @@
   z-index: 1;
 }
 
-/* Botones profesionales */
-.btn {
+/* Botones profesionales - específicos para PersonasTable */
+.personas-table-container .btn {
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -97,7 +97,7 @@
   letter-spacing: 0.3px;
 }
 
-.btn::before {
+.personas-table-container .btn::before {
   content: '';
   position: absolute;
   top: 0;
@@ -108,30 +108,30 @@
   transition: left 0.6s;
 }
 
-.btn:hover::before {
+.personas-table-container .btn:hover::before {
   left: 100%;
 }
 
-.btn-primary {
+.personas-table-container .btn-primary {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
   box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
 }
 
-.btn-primary:hover {
+.personas-table-container .btn-primary:hover {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
   transform: translateY(-2px);
   box-shadow: 0 12px 35px rgba(16, 185, 129, 0.4);
 }
 
-.btn-secondary {
+.personas-table-container .btn-secondary {
   background: rgba(255, 255, 255, 0.15);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
 }
 
-.btn-secondary:hover {
+.personas-table-container .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
@@ -509,7 +509,7 @@
   background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent);
 }
 
-.btn-page {
+.personas-table-container .btn-page {
   padding: 12px 16px;
   border: 2px solid rgba(226, 232, 240, 0.8);
   background: rgba(255, 255, 255, 0.8);
@@ -525,21 +525,21 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.btn-page:hover:not(:disabled) {
+.personas-table-container .btn-page:hover:not(:disabled) {
   background: white;
   border-color: #667eea;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
 }
 
-.btn-page.active {
+.personas-table-container .btn-page.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-color: #667eea;
   color: white;
   box-shadow: 0 8px 25px rgba(102, 126, 234, 0.25);
 }
 
-.btn-page:disabled {
+.personas-table-container .btn-page:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
