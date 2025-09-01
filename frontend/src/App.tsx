@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Personas from './pages/Personas';
 import Asistencias from './pages/Asistencias';
 import Reportes from './pages/Reportes';
+import PoloTecnologico from './pages/PoloTecnologico';
 import Login from './pages/Login';
 import './App.css';
 
@@ -86,6 +87,14 @@ const App: React.FC = () => {
                 element={
                   <PrivateRoute>
                     <Reportes />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/polo-tecnologico"
+                element={
+                  <PrivateRoute>
+                    <PoloTecnologico />
                   </PrivateRoute>
                 }
               />
