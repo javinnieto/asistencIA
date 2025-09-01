@@ -11,9 +11,9 @@ services:
       MYSQL_PASSWORD: asistpass
       MYSQL_ROOT_PASSWORD: rootpass
     ports:
-      - "3306:3306" # Solo si querés acceder desde fuera de Docker
+      - "3306:3306"
     volumes:
-      - ./db_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
     networks:
       - asist_network
 
@@ -37,12 +37,8 @@ services:
     container_name: mosquitto
     restart: always
     ports:
-      - "1883:1883"   # Puerto MQTT
-      - "9001:9001"   # (Opcional) Websockets MQTT
-    volumes:
-      - ./mosquitto/config:/mosquitto/config
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
+      - "1883:1883"
+      - "9001:9001"
     networks:
       - asist_network
 
@@ -51,11 +47,6 @@ services:
       context: ./backend
     container_name: backend
     restart: always
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - ./backend:/app
     environment:
       - DJANGO_DB_HOST=db
       - DJANGO_DB_NAME=asistencias
@@ -87,6 +78,9 @@ services:
       - backend
     networks:
       - asist_network
+
+volumes:
+  db_data:
 
 networks:
   asist_network:
