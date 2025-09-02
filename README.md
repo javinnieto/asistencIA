@@ -1,4 +1,4 @@
-# AsistencIA - Sistema de Gestión de Asistencias
+á b# AsistencIA - Sistema de Gestión de Asistencias
 
 Sistema automático de gestión de asistencias para instituciones educativas que utiliza reconocimiento facial y medición de temperatura.
 
@@ -36,8 +36,8 @@ cp backend/.env.example backend/.env
 ./start.sh
 
 # Opción 2: Comandos manuales
-docker-compose build
-docker-compose up -d
+docker compose build
+docker compose up -d
 ```
 
 ### 4. Acceder a los servicios
@@ -75,28 +75,28 @@ asistencIA/
 ### Ver logs
 ```bash
 # Todos los servicios
-docker-compose logs -f
+docker compose logs -f
 
 # Servicio específico
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 ```
 
 ### Detener servicios
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Reconstruir un servicio
 ```bash
-docker-compose build backend
-docker-compose up -d backend
+docker compose build backend
+docker compose up -d backend
 ```
 
 ### Acceder a un contenedor
 ```bash
-docker-compose exec backend bash
-docker-compose exec frontend sh
+docker compose exec backend bash
+docker compose exec frontend sh
 ```
 
 ## 📝 Modelos de Datos
@@ -152,15 +152,24 @@ El sistema está preparado para recibir datos del terminal biométrico vía MQTT
 
 ### Backend (Django)
 ```bash
-docker-compose exec backend bash
-python manage.py makemigrations
-python manage.py migrate
-python manage.py createsuperuser
+docker compose exec backend bash
+python app/manage.py makemigrations
+python app/manage.py migrate
+python app/manage.py createsuperuser
+
+# Comandos específicos del proyecto
+python app/manage.py populate_db     # Poblar BD con datos de ejemplo
+python app/manage.py mqtt_listener   # Escuchar mensajes MQTT
 ```
+
+### Superusuario por defecto
+- **Usuario**: javinnieto
+- **Contraseña**: admin123
+- **Acceso**: http://localhost:8000/admin
 
 ### Frontend (React)
 ```bash
-docker-compose exec frontend sh
+docker compose exec frontend sh
 npm install
 npm start
 ```

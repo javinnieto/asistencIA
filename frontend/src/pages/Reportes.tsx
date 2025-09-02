@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveAs } from 'file-saver';
+import { apiRequest } from '../config/api';
 import DashboardStats from '../components/DashboardStats';
 
 interface Asistencia {
@@ -280,280 +281,41 @@ const Reportes: React.FC = () => {
     return true;
   });
 
-  // Simular datos de asistencias para el demo
+  // Cargar datos reales de asistencias desde el backend
   useEffect(() => {
-    // Datos de ejemplo para mostrar los reportes con primaria y secundaria
-    const datosEjemplo: Asistencia[] = [
-      // PRIMARIA - 1er a 7mo grado
-      {
-        idAsistencia: 1,
+    const cargarAsistencias = async () => {
+      setLoading(true);
+      try {
+        const response = await apiRequest('/asistencias/');
+        if (response.ok) {
+          const data = await response.json();
+          // Transformar datos para que coincidan con la interfaz esperada
+          const asistenciasTransformadas = data.results.map((asistencia: any) => ({
+            idAsistencia: asistencia.idAsistencia,
         persona: {
-          idPersona: 1,
-          nombre: "Juan Pérez",
-          curso: { idCurso: 1, nombre: "1er Grado" }
-        },
-        fecha_hora: "2024-01-15T08:30:00",
-        temperatura: 36.5,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 2,
-        persona: {
-          idPersona: 2,
-          nombre: "María García",
-          curso: { idCurso: 1, nombre: "1er Grado" }
-        },
-        fecha_hora: "2024-01-15T08:35:00",
-        temperatura: 36.8,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 3,
-        persona: {
-          idPersona: 3,
-          nombre: "Carlos López",
-          curso: { idCurso: 2, nombre: "2do Grado" }
-        },
-        fecha_hora: "2024-01-15T08:40:00",
-        temperatura: 0,
-        estado: { idEstadoAsistencia: 2, nombre: "Ausente" },
-        justificacion: {
-          tipo: "salud",
-          comentario: "Fiebre"
+              idPersona: asistencia.persona.idPersona,
+              nombre: asistencia.persona.nombre,
+              curso: asistencia.persona.curso
+            },
+            fecha_hora: asistencia.fechaHora,
+            temperatura: asistencia.temperatura,
+            estado: asistencia.estado,
+            justificacion: asistencia.justificacion || undefined
+          }));
+          setAsistencias(asistenciasTransformadas);
+        } else {
+          console.error('Error al cargar asistencias:', response.status);
+          setAsistencias([]);
         }
-      },
-      {
-        idAsistencia: 4,
-        persona: {
-          idPersona: 4,
-          nombre: "Ana Silva",
-          curso: { idCurso: 3, nombre: "3er Grado" }
-        },
-        fecha_hora: "2024-01-15T08:45:00",
-        temperatura: 36.2,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 5,
-        persona: {
-          idPersona: 5,
-          nombre: "Luis Rodríguez",
-          curso: { idCurso: 4, nombre: "4to Grado" }
-        },
-        fecha_hora: "2024-01-15T08:50:00",
-        temperatura: 36.7,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 6,
-        persona: {
-          idPersona: 6,
-          nombre: "Sofía Martínez",
-          curso: { idCurso: 5, nombre: "5to Grado" }
-        },
-        fecha_hora: "2024-01-15T08:55:00",
-        temperatura: 0,
-        estado: { idEstadoAsistencia: 2, nombre: "Ausente" },
-        justificacion: {
-          tipo: "justificado",
-          comentario: "Cita médica"
-        }
-      },
-      {
-        idAsistencia: 7,
-        persona: {
-          idPersona: 7,
-          nombre: "Diego Torres",
-          curso: { idCurso: 6, nombre: "6to Grado" }
-        },
-        fecha_hora: "2024-01-15T09:00:00",
-        temperatura: 36.9,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 8,
-        persona: {
-          idPersona: 8,
-          nombre: "Valentina Herrera",
-          curso: { idCurso: 7, nombre: "7mo Grado" }
-        },
-        fecha_hora: "2024-01-15T09:05:00",
-        temperatura: 36.3,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      // SECUNDARIA - 1er a 5to año
-      {
-        idAsistencia: 9,
-        persona: {
-          idPersona: 9,
-          nombre: "Roberto Jiménez",
-          curso: { idCurso: 8, nombre: "1er Año" }
-        },
-        fecha_hora: "2024-01-15T07:30:00",
-        temperatura: 36.4,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 10,
-        persona: {
-          idPersona: 10,
-          nombre: "Camila Rojas",
-          curso: { idCurso: 8, nombre: "1er Año" }
-        },
-        fecha_hora: "2024-01-15T07:35:00",
-        temperatura: 36.6,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 11,
-        persona: {
-          idPersona: 11,
-          nombre: "Felipe Morales",
-          curso: { idCurso: 9, nombre: "2do Año" }
-        },
-        fecha_hora: "2024-01-15T07:40:00",
-        temperatura: 0,
-        estado: { idEstadoAsistencia: 2, nombre: "Ausente" },
-        justificacion: {
-          tipo: "salud",
-          comentario: "Gripe"
-        }
-      },
-      {
-        idAsistencia: 12,
-        persona: {
-          idPersona: 12,
-          nombre: "Isabella Castro",
-          curso: { idCurso: 10, nombre: "3er Año" }
-        },
-        fecha_hora: "2024-01-15T07:45:00",
-        temperatura: 36.8,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 13,
-        persona: {
-          idPersona: 13,
-          nombre: "Matías Fuentes",
-          curso: { idCurso: 11, nombre: "4to Año" }
-        },
-        fecha_hora: "2024-01-15T07:50:00",
-        temperatura: 36.1,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 14,
-        persona: {
-          idPersona: 14,
-          nombre: "Javiera Soto",
-          curso: { idCurso: 12, nombre: "5to Año" }
-        },
-        fecha_hora: "2024-01-15T07:55:00",
-        temperatura: 36.5,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      // DOCENTES
-      {
-        idAsistencia: 15,
-        persona: {
-          idPersona: 15,
-          nombre: "Prof. Ana Martínez",
-          curso: null
-        },
-        fecha_hora: "2024-01-15T08:00:00",
-        temperatura: 36.2,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 16,
-        persona: {
-          idPersona: 16,
-          nombre: "Prof. Luis Rodríguez",
-          curso: null
-        },
-        fecha_hora: "2024-01-15T08:15:00",
-        temperatura: 0,
-        estado: { idEstadoAsistencia: 2, nombre: "Ausente" },
-        justificacion: {
-          tipo: "justificado",
-          comentario: "Cita médica"
-        }
-      },
-      {
-        idAsistencia: 17,
-        persona: {
-          idPersona: 17,
-          nombre: "Prof. Carmen Silva",
-          curso: null
-        },
-        fecha_hora: "2024-01-15T08:20:00",
-        temperatura: 36.4,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 18,
-        persona: {
-          idPersona: 18,
-          nombre: "Prof. Roberto Vargas",
-          curso: null
-        },
-        fecha_hora: "2024-01-15T08:25:00",
-        temperatura: 36.7,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      // PERSONAL NO DOCENTE
-      {
-        idAsistencia: 19,
-        persona: {
-          idPersona: 19,
-          nombre: "Personal Limpieza",
-          curso: null
-        },
-        fecha_hora: "2024-01-15T07:30:00",
-        temperatura: 36.0,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 20,
-        persona: {
-          idPersona: 20,
-          nombre: "Seguridad Escolar",
-          curso: null
-        },
-        fecha_hora: "2024-01-15T07:00:00",
-        temperatura: 36.3,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 21,
-        persona: {
-          idPersona: 21,
-          nombre: "Secretaria Administrativa",
-          curso: null
-        },
-        fecha_hora: "2024-01-15T08:10:00",
-        temperatura: 36.1,
-        estado: { idEstadoAsistencia: 1, nombre: "Presente" }
-      },
-      {
-        idAsistencia: 22,
-        persona: {
-          idPersona: 22,
-          nombre: "Mantenimiento",
-          curso: null
-        },
-        fecha_hora: "2024-01-15T07:45:00",
-        temperatura: 0,
-        estado: { idEstadoAsistencia: 2, nombre: "Ausente" },
-        justificacion: {
-          tipo: "salud",
-          comentario: "Gripe"
-        }
+      } catch (error) {
+        console.error('Error cargando asistencias:', error);
+        setAsistencias([]);
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
 
-    setAsistencias(datosEjemplo);
-    setLoading(false);
+    cargarAsistencias();
   }, []);
 
   if (loading) {

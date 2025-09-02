@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../config/api';
 
 interface Asistencia {
   idAsistencia: number;
@@ -46,15 +47,12 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({ onDateSelect })
   // Función para obtener datos de asistencias para un rango de fechas
   const fetchAttendanceData = async (startDate: Date, endDate: Date) => {
     setLoading(true);
-    const token = localStorage.getItem('accessToken');
     
     try {
       const startStr = startDate.toISOString().slice(0, 10);
       const endStr = endDate.toISOString().slice(0, 10);
       
-      const response = await fetch(`/api/asistencias/?fecha_hora__date__gte=${startStr}&fecha_hora__date__lte=${endStr}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
+      const response = await apiRequest(`/asistencias/?fecha_hora__date__gte=${startStr}&fecha_hora__date__lte=${endStr}`);
 
       if (!response.ok) {
         if (response.status === 401) {

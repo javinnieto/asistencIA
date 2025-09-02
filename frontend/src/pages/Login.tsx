@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginRequest } from '../config/api';
 
 interface LoginProps {
   setToken: (token: string) => void;
@@ -17,11 +18,7 @@ const Login: React.FC<LoginProps> = ({ setToken }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/token/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
+      const res = await loginRequest(username, password);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.detail || 'Error de autenticación');

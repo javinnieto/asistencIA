@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PersonasTable from '../components/PersonasTable';
 import PersonaForm from '../components/PersonaForm';
 import PersonaDetails from '../components/PersonaDetails';
+import { apiRequest } from '../config/api';
 import './Personas.css';
 
 interface Person {
@@ -188,15 +189,40 @@ const Personas: React.FC = () => {
   ];
 
   useEffect(() => {
-    // Simular carga de datos
+    // Cargar datos reales del backend
     const loadPersonas = async () => {
       setIsLoading(true);
       try {
-        // Simular delay de red
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setPersonas(mockPersonas);
+        const response = await apiRequest('/personas/');
+        if (response.ok) {
+          const data = await response.json();
+          // Transformar datos del backend al formato esperado por el frontend
+          const personasTransformadas = data.results.map((persona: any) => ({
+            id: persona.idPersona.toString(),
+            nombre: persona.nombre.split(' ')[0] || persona.nombre,
+            apellido: persona.nombre.split(' ').slice(1).join(' ') || '',
+            email: `${persona.nombre.toLowerCase().replace(/\s+/g, '.')}@institucion.com`,
+            telefono: '+1 (555) 000-0000',
+            departamento: persona.tipo.nombre === 'Estudiante' ? 'Alumnos' : 
+                         persona.tipo.nombre === 'Profesor' ? 'Docentes' : 'Personal No Docente',
+            cargo: persona.tipo.nombre === 'Estudiante' ? 'Estudiante' :
+                   persona.tipo.nombre === 'Profesor' ? 'Profesor' : persona.tipo.nombre,
+            fechaIngreso: '2023-01-01',
+            estado: 'activo' as const,
+            nivelEducativo: persona.curso ? (persona.curso.nombre.includes('Año') ? 'Secundaria' : 'Primaria') : undefined,
+            grado: persona.curso?.nombre || undefined,
+            foto: `https://via.placeholder.com/150x150/667eea/ffffff?text=${persona.nombre.split(' ').map((n: string) => n[0]).join('')}`
+          }));
+          setPersonas(personasTransformadas);
+        } else {
+          console.error('Error al cargar personas:', response.status);
+          // Fallback a datos mock si falla la API
+          setPersonas(mockPersonas);
+        }
       } catch (error) {
         console.error('Error cargando personas:', error);
+        // Fallback a datos mock si falla la API
+        setPersonas(mockPersonas);
       } finally {
         setIsLoading(false);
       }

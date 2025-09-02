@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../config/api';
 import './PoloTecnologico.css';
 
 const PoloTecnologico: React.FC = () => {
@@ -13,29 +14,55 @@ const PoloTecnologico: React.FC = () => {
     temperatura: ''
   });
 
-  // Datos de ejemplo para cursos extraprogramáticos
-  const cursosExtraprogramaticos = [
-    { id: 1, nombre: 'Programación Python', instructor: 'Dr. García', horario: 'Lun-Mié 18:00-20:00', participantes: 25, estado: 'activo' },
-    { id: 2, nombre: 'Robótica Avanzada', instructor: 'Ing. Martínez', horario: 'Mar-Jue 19:00-21:00', participantes: 18, estado: 'activo' },
-    { id: 3, nombre: 'Inteligencia Artificial', instructor: 'Dra. López', horario: 'Vie 16:00-19:00', participantes: 22, estado: 'activo' },
-    { id: 4, nombre: 'Desarrollo Web', instructor: 'Lic. Rodríguez', horario: 'Sáb 10:00-13:00', participantes: 30, estado: 'activo' }
-  ];
+  // Estados para datos reales
+  const [cursosExtraprogramaticos, setCursosExtraprogramaticos] = useState<any[]>([]);
+  const [personalAutorizado, setPersonalAutorizado] = useState<any[]>([]);
+  const [asistenciasHoy, setAsistenciasHoy] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const asistenciasHoy = [
-    { id: 1, nombre: 'Juan Pérez', curso: 'Programación Python', hora: '18:15', estado: 'presente', temperatura: 36.5 },
-    { id: 2, nombre: 'María González', curso: 'Robótica Avanzada', hora: '19:02', estado: 'presente', temperatura: 36.8 },
-    { id: 3, nombre: 'Carlos Ruiz', curso: 'Inteligencia Artificial', hora: '16:05', estado: 'presente', temperatura: 36.2 },
-    { id: 4, nombre: 'Ana Silva', curso: 'Desarrollo Web', hora: '10:30', estado: 'ausente', temperatura: null },
-    { id: 5, nombre: 'Luis Torres', curso: 'Programación Python', hora: '18:25', estado: 'presente', temperatura: 36.7 }
-  ];
+  // Cargar datos reales del backend
+  useEffect(() => {
+    const cargarDatos = async () => {
+      setLoading(true);
+      try {
+        // Cargar cursos extraprogramáticos
+        const responseCursos = await apiRequest('/cursos-extraprogramaticos/');
+        if (responseCursos.ok) {
+          const dataCursos = await responseCursos.json();
+          setCursosExtraprogramaticos(dataCursos.results);
+        }
 
-  const personalAutorizado = [
-    { id: 1, nombre: 'Dr. Carlos García', cargo: 'Instructor Principal', especialidad: 'Programación', estado: 'activo' },
-    { id: 2, nombre: 'Ing. María Martínez', cargo: 'Instructora', especialidad: 'Robótica', estado: 'activo' },
-    { id: 3, nombre: 'Dra. Ana López', cargo: 'Instructora', especialidad: 'IA/ML', estado: 'activo' },
-    { id: 4, nombre: 'Lic. Roberto Rodríguez', cargo: 'Instructor', especialidad: 'Desarrollo Web', estado: 'activo' },
-    { id: 5, nombre: 'Prof. Laura Sánchez', cargo: 'Asistente', especialidad: 'Soporte Técnico', estado: 'activo' }
-  ];
+        // Cargar instructores (personal autorizado)
+        const responseInstructores = await apiRequest('/instructores-tecno/');
+        if (responseInstructores.ok) {
+          const dataInstructores = await responseInstructores.json();
+          setPersonalAutorizado(dataInstructores.results);
+        }
+
+        // Cargar asistencias de hoy
+        const hoy = new Date().toISOString().slice(0, 10);
+        const responseAsistencias = await apiRequest(`/asistencias-tecno/?fechaHora__date=${hoy}`);
+        if (responseAsistencias.ok) {
+          const dataAsistencias = await responseAsistencias.json();
+          const asistenciasTransformadas = dataAsistencias.results.map((asistencia: any) => ({
+            id: asistencia.idAsistencia,
+            nombre: asistencia.estudiante.nombre,
+            curso: asistencia.curso.nombre,
+            hora: new Date(asistencia.fechaHora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            estado: asistencia.estado.nombre.toLowerCase(),
+            temperatura: asistencia.temperatura
+          }));
+          setAsistenciasHoy(asistenciasTransformadas);
+        }
+      } catch (error) {
+        console.error('Error cargando datos de TecnoAliados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDatos();
+  }, []);
 
   const handleCursoClick = (curso: any) => {
     setSelectedCurso(curso);
@@ -102,68 +129,59 @@ const PoloTecnologico: React.FC = () => {
       </div>
 
       <div className="polo-content">
-        {activeTab === 'dashboard' && (
-          <div className="dashboard-section">
-            {/* EPA Section */}
-            <div className="epa-section">
-              <h2>EPA - Indicadores de Rendimiento</h2>
-              <div className="epa-grid">
-                <div className="epa-card">
-                  <div className="epa-icon">
-                    <i className="bi bi-graph-up"></i>
-                  </div>
-                  <div className="epa-info">
-                    <h3>85%</h3>
-                    <p>Tasa de Asistencia</p>
-                  </div>
-                </div>
-                <div className="epa-card">
-                  <div className="epa-icon">
-                    <i className="bi bi-star"></i>
-                  </div>
-                  <div className="epa-info">
-                    <h3>4.8/5</h3>
-                    <p>Satisfacción Estudiantes</p>
-                  </div>
-                </div>
-                <div className="epa-card">
-                  <div className="epa-icon">
-                    <i className="bi bi-trophy"></i>
-                  </div>
-                  <div className="epa-info">
-                    <h3>92%</h3>
-                    <p>Tasa de Finalización</p>
-                  </div>
-                </div>
-                <div className="epa-card efectivos">
-                  <div className="epa-icon">
-                    <i className="bi bi-people-fill"></i>
-                  </div>
-                  <div className="epa-info">
-                    <h3>95</h3>
-                    <p>Efectivos</p>
-                  </div>
-                </div>
-                <div className="epa-card presentes">
-                  <div className="epa-icon">
-                    <i className="bi bi-check-circle"></i>
-                  </div>
-                  <div className="epa-info">
-                    <h3>81</h3>
-                    <p>Presentes</p>
-                  </div>
-                </div>
-                <div className="epa-card ausentes">
-                  <div className="epa-icon">
-                    <i className="bi bi-x-circle"></i>
-                  </div>
-                  <div className="epa-info">
-                    <h3>14</h3>
-                    <p>Ausentes</p>
-                  </div>
-                </div>
-              </div>
+        {loading ? (
+          <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Cargando...</span>
             </div>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'dashboard' && (
+              <div className="dashboard-section">
+                {/* EPA Section */}
+                <div className="epa-section">
+                  <h2>Indicadores de Rendimiento</h2>
+                  <div className="epa-grid">
+                    <div className="epa-card">
+                      <div className="epa-icon">
+                        <i className="bi bi-graph-up"></i>
+                      </div>
+                      <div className="epa-info">
+                        <h3>{asistenciasHoy.length > 0 ? Math.round((asistenciasHoy.filter(a => a.estado === 'presente').length / asistenciasHoy.length) * 100) : 0}%</h3>
+                        <p>Tasa de Asistencia</p>
+                      </div>
+                    </div>
+
+                    <div className="epa-card efectivos">
+                      <div className="epa-icon">
+                        <i className="bi bi-people-fill"></i>
+                      </div>
+                      <div className="epa-info">
+                        <h3>{cursosExtraprogramaticos.reduce((total, curso) => total + curso.participantes, 0)}</h3>
+                        <p>Efectivos</p>
+                      </div>
+                    </div>
+                    <div className="epa-card presentes">
+                      <div className="epa-icon">
+                        <i className="bi bi-check-circle"></i>
+                      </div>
+                      <div className="epa-info">
+                        <h3>{asistenciasHoy.filter(a => a.estado === 'presente').length}</h3>
+                        <p>Presentes</p>
+                      </div>
+                    </div>
+                    <div className="epa-card ausentes">
+                      <div className="epa-icon">
+                        <i className="bi bi-x-circle"></i>
+                      </div>
+                      <div className="epa-info">
+                        <h3>{asistenciasHoy.filter(a => a.estado === 'ausente').length}</h3>
+                        <p>Ausentes</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
             {/* Asistencias de Hoy */}
             <div className="asistencias-hoy-section">
@@ -222,7 +240,7 @@ const PoloTecnologico: React.FC = () => {
               <h2>Personal Autorizado</h2>
               <div className="personal-grid">
                 {personalAutorizado.map(persona => (
-                  <div key={persona.id} className="personal-card">
+                  <div key={persona.idInstructor} className="personal-card">
                     <div className="personal-avatar">
                       <i className="bi bi-person-circle"></i>
                     </div>
@@ -246,7 +264,7 @@ const PoloTecnologico: React.FC = () => {
             <h2>Cursos Extraprogramáticos</h2>
             <div className="cursos-grid">
               {cursosExtraprogramaticos.map(curso => (
-                <div key={curso.id} className="curso-card" onClick={() => handleCursoClick(curso)}>
+                <div key={curso.idCurso} className="curso-card" onClick={() => handleCursoClick(curso)}>
                   <div className="curso-header">
                     <h3>{curso.nombre}</h3>
                     <span className={`estado-badge ${curso.estado}`}>
@@ -254,7 +272,7 @@ const PoloTecnologico: React.FC = () => {
                     </span>
                   </div>
                   <div className="curso-info">
-                    <p><i className="bi bi-person"></i> {curso.instructor}</p>
+                    <p><i className="bi bi-person"></i> {curso.instructor.nombre}</p>
                     <p><i className="bi bi-clock"></i> {curso.horario}</p>
                     <p><i className="bi bi-people"></i> {curso.participantes} participantes</p>
                   </div>
@@ -269,6 +287,8 @@ const PoloTecnologico: React.FC = () => {
             <h2>Gestión de Personal Autorizado</h2>
             <p>Contenido detallado de personal próximamente...</p>
           </div>
+            )}
+          </>
         )}
       </div>
 

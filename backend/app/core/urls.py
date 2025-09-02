@@ -19,13 +19,18 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from .token_serializers import CustomTokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.schemas import get_schema_view
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+# Vista para documentación de API
+schema_view = get_schema_view(title='AsistencIA API', description='API para el sistema de asistencias automático')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('asistencias.urls')),
     path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/schema/', schema_view, name='api_schema'),
 ]
