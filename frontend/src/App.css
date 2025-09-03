@@ -1,3 +1,92 @@
+body, #root {
+  background: #12151c !important;
+  color: #e0e6f0;
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+/* Navbar fijo arriba */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 200;
+}
+
+/* Wrapper para sidebar + contenido */
+.layout-content {
+  display: flex;
+  width: 100vw;
+  min-height: 100vh;
+  background: #12151c;
+  padding-top: 56px; /* altura del navbar */
+}
+
+.sidebar-dark {
+  background: #181c24;
+  color: #fff;
+  min-width: 220px;
+  max-width: 220px;
+  height: calc(100vh - 56px);
+  position: sticky;
+  top: 56px;
+  left: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transition: max-width 0.2s, min-width 0.2s;
+}
+.sidebar-dark.collapsed {
+  min-width: 60px;
+  max-width: 60px;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 0px;
+  width: 100%;
+  transition: margin-left 0.2s;
+  background: #12151c;
+  min-height: calc(100vh - 56px);
+}
+
+.sidebar-dark.collapsed ~ .main-content,
+.layout-content .main-content.sidebar-collapsed {
+  margin-left: 60px;
+}
+
+.page-content {
+  padding: 32px 40px;
+}
+
+.card, .table, .card-header, .card-body {
+  background: #23283a !important;
+  color: #e0e6f0 !important;
+  border: none;
+}
+
+.card-header {
+  font-weight: bold;
+  background: #23283a !important;
+  border-bottom: 1px solid #23283a !important;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: #181c24 !important;
+}
+
+.btn {
+  font-weight: 500;
+}
+
 .App {
   text-align: center;
 }
@@ -33,4 +122,36 @@ main {
   color: #333;
   border-bottom: 2px solid #007bff;
   padding-bottom: 10px;
+}
+
+/* Fondo con imagen y overlay para login */
+.login-outer-wrapper {
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.login-outer-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(18, 21, 28, 0.75); /* overlay oscuro */
+  z-index: 1;
+}
+.login-inner-wrapper {
+  background: #23283a;
+  padding: 40px 32px 32px 32px;
+  border-radius: 18px;
+  box-shadow: 0 4px 32px 0 #0003;
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 } 

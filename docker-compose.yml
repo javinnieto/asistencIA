@@ -6,14 +6,17 @@ services:
     container_name: mysql
     restart: always
     environment:
-      MYSQL_DATABASE: asistencias
-      MYSQL_USER: asistuser
-      MYSQL_PASSWORD: asistpass
-      MYSQL_ROOT_PASSWORD: rootpass
+      - MYSQL_DATABASE=asistencias
+      - MYSQL_ROOT_PASSWORD=1234
     ports:
-      - "3306:3306" # Solo si querés acceder desde fuera de Docker
+      - "3306:3306"
     volumes:
-      - ./db_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      start_period: 30s
     networks:
       - asist_network
 
@@ -23,8 +26,12 @@ services:
     restart: always
     environment:
       PMA_HOST: db
-      PMA_USER: asistuser
-      PMA_PASSWORD: asistpass
+      UPLOAD_LIMIT: 100M
+      MEMORY_LIMIT: 512M
+      MAX_EXECUTION_TIME: 300
+      # URL base para phpMyAdmin
+      PMA_ABSOLUTE_URI: http://localhost/pma/
+      
     ports:
       - "8080:80"
     depends_on:
@@ -33,16 +40,12 @@ services:
       - asist_network
 
   mosquitto:
-    image: eclipse-mosquitto:2
+    image: eclipse-mosquitto:1.6
     container_name: mosquitto
     restart: always
     ports:
-      - "1883:1883"   # Puerto MQTT
-      - "9001:9001"   # (Opcional) Websockets MQTT
-    volumes:
-      - ./mosquitto/config:/mosquitto/config
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
+      - "1883:1883"
+      - "9001:9001"
     networks:
       - asist_network
 
@@ -50,43 +53,58 @@ services:
     build:
       context: ./backend
     container_name: backend
-    restart: always
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - ./backend:/app
+    restart: on-failure:3
     environment:
       - DJANGO_DB_HOST=db
       - DJANGO_DB_NAME=asistencias
-      - DJANGO_DB_USER=asistuser
-      - DJANGO_DB_PASSWORD=asistpass
+      - DJANGO_DB_USER=root
+      - DJANGO_DB_PASSWORD=1234
       - DJANGO_MQTT_BROKER=mosquitto
       - DJANGO_MQTT_PORT=1883
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app
     depends_on:
-      - db
-      - mosquitto
+      db:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
     networks:
       - asist_network
 
   frontend:
     build:
       context: ./frontend
+      args:
+        - REACT_APP_API_URL=http://localhost/api
     container_name: frontend
     restart: always
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - "3000:3000"
-    environment:
-      - REACT_APP_API_URL=http://localhost:8000/api
     depends_on:
       - backend
     networks:
       - asist_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+      - phpmyadmin
+    networks:
+      - asist_network
+
+volumes:
+  db_data:
 
 networks:
   asist_network:
