@@ -1,226 +1,201 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from asistencias.models import TipoPersona, Curso, Persona, EstadoAsistencia, Asistencia
+from asistencias.models import (
+    Institucion, TipoPersona, Curso, Persona, PersonaInstitucion, 
+    EstadoAsistencia, Asistencia
+)
 from datetime import datetime, timedelta
 import random
 
 
 class Command(BaseCommand):
-    help = 'Pobla la base de datos con datos de ejemplo para AsistencIA'
+    help = 'Pobla la base de datos con datos de ejemplo para AsistencIA (modelo genérico)'
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            '--clear',
-            action='store_true',
-            help='Limpiar datos existentes antes de poblar'
-        )
+        parser.add_argument('--clear', action='store_true', help='Limpiar datos existentes antes de poblar')
 
     def handle(self, *args, **options):
         if options['clear']:
             self.stdout.write('🧹 Limpiando datos existentes...')
             Asistencia.objects.all().delete()
+            PersonaInstitucion.objects.all().delete()
             Persona.objects.all().delete()
             Curso.objects.all().delete()
             TipoPersona.objects.all().delete()
+            Institucion.objects.all().delete()
             EstadoAsistencia.objects.all().delete()
             self.stdout.write(self.style.SUCCESS('✅ Datos limpiados'))
 
-        self.stdout.write('🌱 Poblando base de datos...')
+        self.stdout.write('🌱 Poblando base de datos con modelo genérico...')
 
-        # 1. Crear Tipos de Persona
-        tipos_persona = self.create_tipos_persona()
-        
-        # 2. Crear Cursos
-        cursos = self.create_cursos()
-        
-        # 3. Crear Estados de Asistencia
-        estados = self.create_estados_asistencia()
-        
-        # 4. Crear Personas
-        personas = self.create_personas(tipos_persona, cursos)
-        
-        # 5. Crear Asistencias de ejemplo
-        self.create_asistencias_ejemplo(personas, estados)
-
-        self.stdout.write(
-            self.style.SUCCESS('🎉 Base de datos poblada exitosamente!')
+        # 1. Crear Instituciones
+        self.stdout.write('📚 Creando instituciones...')
+        isae, _ = Institucion.objects.get_or_create(
+            nombre='ISAE',
+            defaults={'descripcion': 'Instituto Superior de Enseñanza', 'activa': True}
+        )
+        tecno, _ = Institucion.objects.get_or_create(
+            nombre='TecnoAliados',
+            defaults={'descripcion': 'Cursos Extraprogramáticos de Tecnología', 'activa': True}
         )
 
-    def create_tipos_persona(self):
-        tipos = [
-            {'nombre': 'Estudiante'},
-            {'nombre': 'Profesor'},
-            {'nombre': 'Personal Administrativo'},
-            {'nombre': 'Personal de Mantenimiento'},
-            {'nombre': 'Director'}
+        # 2. Crear Tipos de Persona por Institución
+        self.stdout.write('👥 Creando tipos de persona...')
+        
+        # Tipos ISAE
+        estudiante_isae, _ = TipoPersona.objects.get_or_create(
+            nombre='Estudiante', institucion=isae, defaults={'activo': True})
+        profesor_isae, _ = TipoPersona.objects.get_or_create(
+            nombre='Profesor', institucion=isae, defaults={'activo': True})
+        admin_isae, _ = TipoPersona.objects.get_or_create(
+            nombre='Administrativo', institucion=isae, defaults={'activo': True})
+        director_isae, _ = TipoPersona.objects.get_or_create(
+            nombre='Director', institucion=isae, defaults={'activo': True})
+        
+        # Tipos TecnoAliados
+        estudiante_tecno, _ = TipoPersona.objects.get_or_create(
+            nombre='Estudiante', institucion=tecno, defaults={'activo': True})
+        instructor_tecno, _ = TipoPersona.objects.get_or_create(
+            nombre='Instructor', institucion=tecno, defaults={'activo': True})
+
+        # 3. Crear Cursos por Institución
+        self.stdout.write('📖 Creando cursos...')
+        
+        # Cursos ISAE
+        cursos_isae = []
+        for grado in ['1er Año', '2do Año', '3er Año', '4to Año', '5to Año', '6to Año']:
+            curso, _ = Curso.objects.get_or_create(
+                nombre=grado, institucion=isae, defaults={'activo': True})
+            cursos_isae.append(curso)
+        
+        # Cursos TecnoAliados
+        cursos_tecno = []
+        for curso_nombre in ['Programación Python', 'Desarrollo Web', 'Diseño Gráfico', 'Robótica', 'Marketing Digital']:
+            curso, _ = Curso.objects.get_or_create(
+                nombre=curso_nombre, institucion=tecno, defaults={'activo': True})
+            cursos_tecno.append(curso)
+
+        # 4. Estados de Asistencia
+        self.stdout.write('📊 Creando estados de asistencia...')
+        presente, _ = EstadoAsistencia.objects.get_or_create(
+            nombre='Presente', defaults={'descripcion': 'Asistencia registrada correctamente'})
+        ausente, _ = EstadoAsistencia.objects.get_or_create(
+            nombre='Ausente', defaults={'descripcion': 'No se registró asistencia'})
+        tarde, _ = EstadoAsistencia.objects.get_or_create(
+            nombre='Tarde', defaults={'descripcion': 'Llegada tardía'})
+
+        # 5. Crear Personas y sus roles
+        self.stdout.write('👤 Creando personas...')
+        
+        # Javier Nieto (rol múltiple: estudiante ISAE + instructor TecnoAliados)
+        javier, created = Persona.objects.get_or_create(
+            idPersona=47, defaults={'nombre': 'Javier Nieto', 'activo': True})
+        PersonaInstitucion.objects.get_or_create(
+            persona=javier, institucion=isae, tipo=estudiante_isae, 
+            curso=cursos_isae[4], defaults={'activo': True})  # 5to año
+        PersonaInstitucion.objects.get_or_create(
+            persona=javier, institucion=tecno, tipo=instructor_tecno, 
+            curso=cursos_tecno[0], defaults={'activo': True})  # Python
+
+        # Estudiantes ISAE
+        estudiantes_isae = [
+            (1, 'Juan Pérez'), (2, 'María García'), (3, 'Carlos López'), 
+            (4, 'Ana Martínez'), (5, 'Luis Rodríguez')
         ]
-        
-        tipos_creados = []
-        for tipo_data in tipos:
-            tipo, created = TipoPersona.objects.get_or_create(
-                nombre=tipo_data['nombre']
-            )
-            if created:
-                self.stdout.write(f'✅ Creado tipo: {tipo.nombre}')
-            tipos_creados.append(tipo)
-        
-        return tipos_creados
+        for id_persona, nombre in estudiantes_isae:
+            persona, _ = Persona.objects.get_or_create(
+                idPersona=id_persona, defaults={'nombre': nombre, 'activo': True})
+            PersonaInstitucion.objects.get_or_create(
+                persona=persona, institucion=isae, tipo=estudiante_isae,
+                curso=random.choice(cursos_isae), defaults={'activo': True})
 
-    def create_cursos(self):
-        cursos_primaria = [
-            '1er Grado', '2do Grado', '3er Grado', 
-            '4to Grado', '5to Grado', '6to Grado', '7mo Grado'
-        ]
-        
-        cursos_secundaria = [
-            '1er Año', '2do Año', '3er Año', '4to Año', '5to Año'
-        ]
-        
-        cursos = []
-        for curso_nombre in cursos_primaria + cursos_secundaria:
-            curso, created = Curso.objects.get_or_create(nombre=curso_nombre)
-            if created:
-                self.stdout.write(f'✅ Creado curso: {curso.nombre}')
-            cursos.append(curso)
-        
-        return cursos
+        # Profesores ISAE
+        profesores_isae = [(10, 'Prof. Roberto Silva'), (11, 'Prof. Carmen Vega')]
+        for id_persona, nombre in profesores_isae:
+            persona, _ = Persona.objects.get_or_create(
+                idPersona=id_persona, defaults={'nombre': nombre, 'activo': True})
+            PersonaInstitucion.objects.get_or_create(
+                persona=persona, institucion=isae, tipo=profesor_isae,
+                defaults={'activo': True})
 
-    def create_estados_asistencia(self):
-        estados = [
-            {'nombre': 'Presente', 'descripcion': 'Asistió a clase'},
-            {'nombre': 'Ausente', 'descripcion': 'No asistió a clase'},
-            {'nombre': 'Tardanza', 'descripcion': 'Llegó tarde a clase'},
-            {'nombre': 'Justificado', 'descripcion': 'Ausencia justificada'},
-            {'nombre': 'Enfermedad', 'descripcion': 'Ausencia por enfermedad'}
-        ]
+        # Personal administrativo y directivo ISAE
+        admin, _ = Persona.objects.get_or_create(
+            idPersona=20, defaults={'nombre': 'Admin. Patricia Ruiz', 'activo': True})
+        PersonaInstitucion.objects.get_or_create(
+            persona=admin, institucion=isae, tipo=admin_isae, defaults={'activo': True})
+
+        director, _ = Persona.objects.get_or_create(
+            idPersona=30, defaults={'nombre': 'Dir. Miguel Torres', 'activo': True})
+        PersonaInstitucion.objects.get_or_create(
+            persona=director, institucion=isae, tipo=director_isae, defaults={'activo': True})
+
+        # Instructores TecnoAliados
+        instructores_tecno = [(40, 'Instructor Python'), (41, 'Instructor Web')]
+        for i, (id_persona, nombre) in enumerate(instructores_tecno):
+            persona, _ = Persona.objects.get_or_create(
+                idPersona=id_persona, defaults={'nombre': nombre, 'activo': True})
+            PersonaInstitucion.objects.get_or_create(
+                persona=persona, institucion=tecno, tipo=instructor_tecno,
+                curso=cursos_tecno[i], defaults={'activo': True})
+
+        # Estudiantes TecnoAliados
+        estudiantes_tecno = [(50, 'Tech Student 1'), (51, 'Tech Student 2')]
+        for id_persona, nombre in estudiantes_tecno:
+            persona, _ = Persona.objects.get_or_create(
+                idPersona=id_persona, defaults={'nombre': nombre, 'activo': True})
+            PersonaInstitucion.objects.get_or_create(
+                persona=persona, institucion=tecno, tipo=estudiante_tecno,
+                curso=random.choice(cursos_tecno), defaults={'activo': True})
+
+        # 6. Crear Asistencias de los últimos 30 días
+        self.stdout.write('📅 Creando asistencias...')
         
-        estados_creados = []
-        for estado_data in estados:
-            estado, created = EstadoAsistencia.objects.get_or_create(
-                nombre=estado_data['nombre'],
-                defaults={'descripcion': estado_data['descripcion']}
-            )
-            if created:
-                self.stdout.write(f'✅ Creado estado: {estado.nombre}')
-            estados_creados.append(estado)
+        personas_todas = Persona.objects.all()
+        estados = [presente, tarde]
         
-        return estados_creados
-
-    def create_personas(self, tipos_persona, cursos):
-        # Mapear tipos por nombre
-        tipo_estudiante = next(t for t in tipos_persona if t.nombre == 'Estudiante')
-        tipo_profesor = next(t for t in tipos_persona if t.nombre == 'Profesor')
-        tipo_admin = next(t for t in tipos_persona if t.nombre == 'Personal Administrativo')
-        tipo_mantenimiento = next(t for t in tipos_persona if t.nombre == 'Personal de Mantenimiento')
-        tipo_director = next(t for t in tipos_persona if t.nombre == 'Director')
-
-        personas = []
-
-        # Estudiantes
-        nombres_estudiantes = [
-            'María González', 'Juan Pérez', 'Ana Rodríguez', 'Carlos López',
-            'Laura Martínez', 'Diego Silva', 'Sofía Torres', 'Miguel Herrera',
-            'Valentina Castro', 'Andrés Morales', 'Camila Ruiz', 'Lucas Fernández',
-            'Isabella Jiménez', 'Mateo Vargas', 'Emma Castro', 'Santiago Morales'
-        ]
-        
-        for i, nombre in enumerate(nombres_estudiantes, 1):
-            curso = random.choice(cursos)
-            persona = Persona.objects.create(
-                idPersona=1000 + i,
-                nombre=nombre,
-                tipo=tipo_estudiante,
-                curso=curso,
-                cantRegistros=0
-            )
-            personas.append(persona)
-            self.stdout.write(f'✅ Creado estudiante: {nombre} - {curso.nombre}')
-
-        # Profesores
-        nombres_profesores = [
-            'Prof. Carmen Ruiz', 'Prof. Roberto Silva', 'Prof. Elena Martínez',
-            'Prof. Pedro Rodríguez', 'Prof. Nora Herrera', 'Prof. Héctor Torres'
-        ]
-        
-        for i, nombre in enumerate(nombres_profesores, 1):
-            persona = Persona.objects.create(
-                idPersona=2000 + i,
-                nombre=nombre,
-                tipo=tipo_profesor,
-                cantRegistros=0
-            )
-            personas.append(persona)
-            self.stdout.write(f'✅ Creado profesor: {nombre}')
-
-        # Personal Administrativo
-        nombres_admin = [
-            'Roberto Silva', 'Carmen López', 'Pedro Rodríguez', 'Elena Martínez'
-        ]
-        
-        for i, nombre in enumerate(nombres_admin, 1):
-            persona = Persona.objects.create(
-                idPersona=3000 + i,
-                nombre=nombre,
-                tipo=tipo_admin,
-                cantRegistros=0
-            )
-            personas.append(persona)
-            self.stdout.write(f'✅ Creado administrativo: {nombre}')
-
-        # Director
-        director = Persona.objects.create(
-            idPersona=4000,
-            nombre='Dr. Carlos García',
-            tipo=tipo_director,
-            cantRegistros=0
-        )
-        personas.append(director)
-        self.stdout.write(f'✅ Creado director: {director.nombre}')
-
-        return personas
-
-    def create_asistencias_ejemplo(self, personas, estados):
-        # Obtener estados por nombre
-        presente = next(e for e in estados if e.nombre == 'Presente')
-        ausente = next(e for e in estados if e.nombre == 'Ausente')
-        tardanza = next(e for e in estados if e.nombre == 'Tardanza')
-        
-        # Crear asistencias para los últimos 7 días
-        hoy = timezone.now().date()
-        
-        for dias_atras in range(7):
-            fecha = hoy - timedelta(days=dias_atras)
+        for i in range(30):
+            fecha = timezone.now() - timedelta(days=i)
+            personas_del_dia = random.sample(list(personas_todas), k=int(len(personas_todas) * 0.8))
             
-            for persona in personas:
-                # 80% de probabilidad de estar presente
-                if random.random() < 0.8:
-                    estado = presente
-                    temperatura = round(random.uniform(36.0, 37.2), 1)
-                    hora = random.randint(7, 8)  # Entre 7:00 y 8:00
-                else:
-                    if random.random() < 0.3:  # 30% de los ausentes son tardanzas
-                        estado = tardanza
-                        temperatura = round(random.uniform(36.0, 37.2), 1)
-                        hora = random.randint(8, 9)  # Entre 8:00 y 9:00
-                    else:
-                        estado = ausente
-                        temperatura = 0.0
-                        hora = 7
+            for persona in personas_del_dia:
+                temperatura = round(random.uniform(36.0, 37.5), 1)
+                hora_random = random.randint(7*60, 8*60 + 30)
+                fecha_con_hora = fecha.replace(
+                    hour=hora_random // 60, minute=hora_random % 60, second=random.randint(0, 59))
                 
-                fecha_hora = datetime.combine(fecha, datetime.min.time().replace(hour=hora))
-                
-                asistencia = Asistencia.objects.create(
-                    persona=persona,
-                    fechaHora=fecha_hora,
-                    temperatura=temperatura,
-                    estado=estado,
-                    maskDetect=random.choice([True, False]),
-                    temperatureAlarm=False,
-                    verifyResult='success'
-                )
-                
-                # Actualizar contador de registros
-                persona.cantRegistros += 1
-                persona.save()
+                Asistencia.objects.get_or_create(
+                    persona=persona, fechaHora=fecha_con_hora,
+                    defaults={
+                        'temperatura': temperatura, 'estado': random.choice(estados),
+                        'institucion': isae if persona.idPersona < 40 else tecno
+                    })
 
-        self.stdout.write(f'✅ Creadas asistencias para los últimos 7 días')
+        # Estadísticas finales
+        stats = {
+            'instituciones': Institucion.objects.count(),
+            'tipos': TipoPersona.objects.count(),
+            'cursos': Curso.objects.count(),
+            'personas': Persona.objects.count(),
+            'roles': PersonaInstitucion.objects.count(),
+            'asistencias': Asistencia.objects.count()
+        }
+
+        self.stdout.write(self.style.SUCCESS(f'''
+🎉 ¡Base de datos poblada exitosamente!
+
+📊 ESTADÍSTICAS:
+   • Instituciones: {stats['instituciones']}
+   • Tipos de Persona: {stats['tipos']}
+   • Cursos: {stats['cursos']}
+   • Personas: {stats['personas']}
+   • Roles (PersonaInstitucion): {stats['roles']}
+   • Asistencias: {stats['asistencias']}
+
+🔧 MODELO GENÉRICO IMPLEMENTADO:
+   • Instituciones: ISAE, TecnoAliados
+   • Roles flexibles por institución
+   • Personas con múltiples roles
+   • Escalable para futuras instituciones
+
+✅ Sistema listo para pruebas!
+        '''))

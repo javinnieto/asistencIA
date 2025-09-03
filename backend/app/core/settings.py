@@ -88,8 +88,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get('DJANGO_DB_NAME', 'asistencias'),
-        'USER': os.environ.get('DJANGO_DB_USER', 'asistuser'),
-        'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', 'asistpass'),
+        'USER': os.environ.get('DJANGO_DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', '1234'),
         'HOST': os.environ.get('DJANGO_DB_HOST', 'db'),
         'PORT': os.environ.get('DJANGO_DB_PORT', '3306'),
     }
@@ -137,9 +137,15 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Configuración para MQTT (a futuro)
+# Configuración para MQTT
 MQTT_BROKER = os.environ.get('DJANGO_MQTT_BROKER', 'mosquitto')
 MQTT_PORT = int(os.environ.get('DJANGO_MQTT_PORT', 1883))
+MQTT_USER = os.environ.get('DJANGO_MQTT_USER', None)
+MQTT_PASSWORD = os.environ.get('DJANGO_MQTT_PASSWORD', None)
+
+# Configuración para nginx reverse proxy
+USE_X_FORWARDED_HOST = True
+FORCE_SCRIPT_NAME = '/back'
 
 # Django REST Framework
 REST_FRAMEWORK = {

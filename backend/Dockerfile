@@ -16,4 +16,4 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY . .
 
-CMD ["sh", "-c", "python app/manage.py migrate && python app/manage.py runserver 0.0.0.0:8000"] 
+CMD ["sh", "-c", "python app/manage.py migrate && python app/manage.py runserver 0.0.0.0:8000 & sleep 5 && python app/manage.py mqtt_listener"] 

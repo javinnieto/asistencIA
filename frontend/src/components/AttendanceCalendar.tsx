@@ -447,7 +447,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({ onDateSelect })
           <h6 className="mb-2"><i className="bi bi-list-task me-2"></i>Tareas</h6>
           <ul className="list-group">
             {tasks.map((task, idx) => (
-              <li className="list-group-item bg-dark text-light mb-2 d-flex justify-content-between align-items-start" key={idx}>
+              <li className="list-group-item bg-dark text-li mb-2 d-flex justify-content-between align-items-start" key={idx}>
                 <div>
                   <div className="fw-bold">{task.title} <span className="badge bg-primary ms-2">{task.type}</span></div>
                   <div className="small text-muted">Día asignado: {task.date}</div>

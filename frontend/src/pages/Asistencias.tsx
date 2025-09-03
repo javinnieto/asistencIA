@@ -70,18 +70,37 @@ const Asistencias: React.FC = () => {
         const responseAsistencias = await apiRequest('/asistencias/');
         if (responseAsistencias.ok) {
           const dataAsistencias = await responseAsistencias.json();
-          const asistenciasTransformadas = dataAsistencias.results.map((asistencia: any) => ({
-            idAsistencia: asistencia.idAsistencia,
-            persona: {
-              idPersona: asistencia.persona.idPersona,
-              nombre: asistencia.persona.nombre,
-              curso: asistencia.persona.curso
-            },
-            fecha_hora: asistencia.fechaHora,
-            temperatura: asistencia.temperatura,
-            estado: asistencia.estado,
-            justificacion: asistencia.justificacion || undefined
-          }));
+          const asistenciasTransformadas = dataAsistencias.results.map((asistencia: any) => {
+            // Obtener información de la persona desde los roles
+            let curso = null;
+            let tipo = 'personal';
+            
+            if (asistencia.persona.roles && asistencia.persona.roles.length > 0) {
+              const primerRol = asistencia.persona.roles[0];
+              curso = primerRol.curso;
+              if (primerRol.tipo_persona && primerRol.tipo_persona.nombre) {
+                if (primerRol.tipo_persona.nombre === 'Estudiante') {
+                  tipo = 'alumno';
+                } else if (primerRol.tipo_persona.nombre === 'Profesor') {
+                  tipo = 'profesor';
+                }
+              }
+            }
+            
+            return {
+              idAsistencia: asistencia.idAsistencia,
+              persona: {
+                idPersona: asistencia.persona.idPersona,
+                nombre: asistencia.persona.nombre,
+                curso: curso,
+                tipo: tipo
+              },
+              fecha_hora: asistencia.fechaHora,
+              temperatura: asistencia.temperatura,
+              estado: asistencia.estado,
+              justificacion: asistencia.justificacion || undefined
+            };
+          });
           setAsistencias(asistenciasTransformadas);
         }
       } catch (error) {

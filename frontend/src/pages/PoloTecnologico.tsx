@@ -25,33 +25,69 @@ const PoloTecnologico: React.FC = () => {
     const cargarDatos = async () => {
       setLoading(true);
       try {
-        // Cargar cursos extraprogramáticos
-        const responseCursos = await apiRequest('/cursos-extraprogramaticos/');
+        // Cargar cursos de TecnoAliados (institución TecnoAliados)
+        const responseCursos = await apiRequest('/cursos/');
         if (responseCursos.ok) {
           const dataCursos = await responseCursos.json();
-          setCursosExtraprogramaticos(dataCursos.results);
+          // Filtrar solo cursos de TecnoAliados
+          const cursosTecno = dataCursos.results.filter((curso: any) => 
+            curso.institucion && curso.institucion.nombre === 'TecnoAliados'
+          );
+          setCursosExtraprogramaticos(cursosTecno);
         }
 
-        // Cargar instructores (personal autorizado)
-        const responseInstructores = await apiRequest('/instructores-tecno/');
-        if (responseInstructores.ok) {
-          const dataInstructores = await responseInstructores.json();
-          setPersonalAutorizado(dataInstructores.results);
+        // Cargar instructores (personas con rol de instructor en TecnoAliados)
+        const responsePersonas = await apiRequest('/personas/');
+        if (responsePersonas.ok) {
+          const dataPersonas = await responsePersonas.json();
+          console.log('Personas recibidas:', dataPersonas.results); // Debug
+          
+                    // Filtrar personas que estén en los cursos de TecnoAliados
+          const personasEnCursos = dataPersonas.results.filter((persona: any) => {
+            console.log('Persona:', persona.nombre, 'Roles:', persona.roles); // Debug
+            
+            if (!persona.roles || persona.roles.length === 0) return false;
+            
+            return persona.roles.some((rol: any) => {
+              console.log('Rol:', rol); // Debug
+              return rol.institucion && 
+                     rol.institucion.nombre === 'TecnoAliados' &&
+                     rol.curso; // Solo personas que estén en un curso específico
+            });
+          });
+          
+          console.log('Personas en cursos de TecnoAliados:', personasEnCursos); // Debug
+          setPersonalAutorizado(personasEnCursos);
         }
 
-        // Cargar asistencias de hoy
+        // Cargar asistencias de hoy (filtrar por institución TecnoAliados)
         const hoy = new Date().toISOString().slice(0, 10);
-        const responseAsistencias = await apiRequest(`/asistencias-tecno/?fechaHora__date=${hoy}`);
+        const responseAsistencias = await apiRequest(`/asistencias/?fechaHora__date=${hoy}`);
         if (responseAsistencias.ok) {
           const dataAsistencias = await responseAsistencias.json();
-          const asistenciasTransformadas = dataAsistencias.results.map((asistencia: any) => ({
-            id: asistencia.idAsistencia,
-            nombre: asistencia.estudiante.nombre,
-            curso: asistencia.curso.nombre,
-            hora: new Date(asistencia.fechaHora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-            estado: asistencia.estado.nombre.toLowerCase(),
-            temperatura: asistencia.temperatura
-          }));
+          // Filtrar asistencias de personas de TecnoAliados
+          const asistenciasTecno = dataAsistencias.results.filter((asistencia: any) => 
+            asistencia.persona.roles && asistencia.persona.roles.some((rol: any) => 
+              rol.institucion && rol.institucion.nombre === 'TecnoAliados'
+            )
+          );
+          
+          const asistenciasTransformadas = asistenciasTecno.map((asistencia: any) => {
+            // Obtener curso del rol de TecnoAliados
+            const rolTecno = asistencia.persona.roles.find((rol: any) => 
+              rol.institucion && rol.institucion.nombre === 'TecnoAliados'
+            );
+            const curso = rolTecno ? rolTecno.curso : null;
+            
+            return {
+              id: asistencia.idAsistencia,
+              nombre: asistencia.persona.nombre,
+              curso: curso ? curso.nombre : 'Sin curso',
+              hora: new Date(asistencia.fechaHora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+              estado: asistencia.estado.nombre.toLowerCase(),
+              temperatura: asistencia.temperatura
+            };
+          });
           setAsistenciasHoy(asistenciasTransformadas);
         }
       } catch (error) {
@@ -137,51 +173,51 @@ const PoloTecnologico: React.FC = () => {
           </div>
         ) : (
           <>
-            {activeTab === 'dashboard' && (
-              <div className="dashboard-section">
-                {/* EPA Section */}
-                <div className="epa-section">
+        {activeTab === 'dashboard' && (
+          <div className="dashboard-section">
+            {/* EPA Section */}
+            <div className="epa-section">
                   <h2>Indicadores de Rendimiento</h2>
-                  <div className="epa-grid">
-                    <div className="epa-card">
-                      <div className="epa-icon">
-                        <i className="bi bi-graph-up"></i>
-                      </div>
-                      <div className="epa-info">
+              <div className="epa-grid">
+                <div className="epa-card">
+                  <div className="epa-icon">
+                    <i className="bi bi-graph-up"></i>
+                  </div>
+                  <div className="epa-info">
                         <h3>{asistenciasHoy.length > 0 ? Math.round((asistenciasHoy.filter(a => a.estado === 'presente').length / asistenciasHoy.length) * 100) : 0}%</h3>
-                        <p>Tasa de Asistencia</p>
-                      </div>
-                    </div>
-
-                    <div className="epa-card efectivos">
-                      <div className="epa-icon">
-                        <i className="bi bi-people-fill"></i>
-                      </div>
-                      <div className="epa-info">
-                        <h3>{cursosExtraprogramaticos.reduce((total, curso) => total + curso.participantes, 0)}</h3>
-                        <p>Efectivos</p>
-                      </div>
-                    </div>
-                    <div className="epa-card presentes">
-                      <div className="epa-icon">
-                        <i className="bi bi-check-circle"></i>
-                      </div>
-                      <div className="epa-info">
-                        <h3>{asistenciasHoy.filter(a => a.estado === 'presente').length}</h3>
-                        <p>Presentes</p>
-                      </div>
-                    </div>
-                    <div className="epa-card ausentes">
-                      <div className="epa-icon">
-                        <i className="bi bi-x-circle"></i>
-                      </div>
-                      <div className="epa-info">
-                        <h3>{asistenciasHoy.filter(a => a.estado === 'ausente').length}</h3>
-                        <p>Ausentes</p>
-                      </div>
-                    </div>
+                    <p>Tasa de Asistencia</p>
                   </div>
                 </div>
+
+                <div className="epa-card efectivos">
+                  <div className="epa-icon">
+                    <i className="bi bi-people-fill"></i>
+                  </div>
+                  <div className="epa-info">
+                        <h3>{personalAutorizado.length}</h3>
+                    <p>Efectivos</p>
+                  </div>
+                </div>
+                <div className="epa-card presentes">
+                  <div className="epa-icon">
+                    <i className="bi bi-check-circle"></i>
+                  </div>
+                  <div className="epa-info">
+                        <h3>{asistenciasHoy.filter(a => a.estado === 'presente').length}</h3>
+                    <p>Presentes</p>
+                  </div>
+                </div>
+                <div className="epa-card ausentes">
+                  <div className="epa-icon">
+                    <i className="bi bi-x-circle"></i>
+                  </div>
+                  <div className="epa-info">
+                        <h3>{asistenciasHoy.filter(a => a.estado === 'ausente').length}</h3>
+                    <p>Ausentes</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Asistencias de Hoy */}
             <div className="asistencias-hoy-section">
@@ -272,9 +308,9 @@ const PoloTecnologico: React.FC = () => {
                     </span>
                   </div>
                   <div className="curso-info">
-                    <p><i className="bi bi-person"></i> {curso.instructor.nombre}</p>
-                    <p><i className="bi bi-clock"></i> {curso.horario}</p>
-                    <p><i className="bi bi-people"></i> {curso.participantes} participantes</p>
+                    <p><i className="bi bi-person"></i> Instructor asignado</p>
+                    <p><i className="bi bi-clock"></i> Horario disponible</p>
+                    <p><i className="bi bi-people"></i> Curso activo</p>
                   </div>
                 </div>
               ))}

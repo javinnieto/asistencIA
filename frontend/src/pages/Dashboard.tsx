@@ -147,22 +147,22 @@ const Dashboard: React.FC = () => {
     <div className="container-fluid px-3 px-md-4 mt-3">
       {/* Header minimalista */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h3 mb-0 text-dark">
+        <h1 className="h3 mb-0 text-white">
           <i className="bi bi-speedometer2 me-2 text-primary"></i>Dashboard
         </h1>
         <div className="text-end">
           <div className="text-muted small">
-            {currentDateTime.toLocaleDateString('es-ES', { 
-              weekday: 'long', 
+                  {currentDateTime.toLocaleDateString('es-ES', { 
+                    weekday: 'long', 
               day: 'numeric',
               month: 'long'
-            })}
+                  })}
           </div>
           <div className="text-primary fw-bold">
-            {currentDateTime.toLocaleTimeString('es-ES', { 
-              hour: '2-digit', 
+                  {currentDateTime.toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
               minute: '2-digit'
-            })}
+                  })}
           </div>
         </div>
       </div>
@@ -186,7 +186,7 @@ const Dashboard: React.FC = () => {
                   <p className="mb-0 small">Total Efectivos</p>
                 </div>
               </div>
-            </div>
+                  </div>
             <div className="col-lg-3 col-md-6">
               <div className="card shadow border-0 rounded-3" style={{background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
                 <div className="card-body text-center py-3 text-white">
@@ -223,7 +223,7 @@ const Dashboard: React.FC = () => {
                 <div className="card-body text-center py-4">
                   <div className="mb-3">
                     <i className="bi bi-person-badge fs-1 text-primary"></i>
-                  </div>
+                </div>
                   <h6 className="fw-bold mb-2">Personal Autorizado</h6>
                   {personalAutorizado ? (
                     <>
@@ -239,10 +239,10 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             <div className="col-md-8">
-              <div className="card h-100 shadow-sm border-0">
-                <div className="card-header bg-light border-0 py-3">
+              <div className="card h-100 shadow-sm border-0" style={{backgroundColor: '#2c3e50', color: 'white'}}>
+                <div className="card-header border-0 py-3" style={{backgroundColor: '#34495e', color: 'white'}}>
                   <div className="d-flex justify-content-between align-items-center">
-                    <h6 className="mb-0 fw-bold">
+                    <h6 className="mb-0 fw-bold text-white">
                       <i className="bi bi-clock-history me-2 text-primary"></i>Últimos Ingresos
                     </h6>
                     <span className="badge bg-primary">Últimos 5</span>
@@ -250,9 +250,9 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="card-body p-0">
                   {ultimosIngresos.length > 0 ? (
-                    <div className="list-group list-group-flush">
+                  <div className="list-group list-group-flush">
                       {ultimosIngresos.map((asistencia, index) => (
-                        <div key={index} className="list-group-item d-flex justify-content-between align-items-center border-0 py-3">
+                        <div key={index} className="list-group-item d-flex justify-content-between align-items-center border-0 py-3" style={{backgroundColor: '#2c3e50', color: 'white', borderBottom: '1px solid #34495e'}}>
                           <div className="d-flex align-items-center">
                             <div className={`me-3 rounded-circle d-flex align-items-center justify-content-center ${
                               asistencia.tipo === 'profesor' ? 'bg-warning' : 
@@ -263,24 +263,24 @@ const Dashboard: React.FC = () => {
                                 asistencia.tipo === 'alumno' ? 'bi-person' : 'bi-gear'
                               } text-white`}></i>
                             </div>
-                            <div>
-                              <div className="fw-bold">{asistencia.nombre}</div>
-                              <small className="text-muted">
-                                {asistencia.tipo === 'profesor' ? 'Profesor' : 
+                        <div>
+                          <div className="fw-bold text-white">{asistencia.nombre}</div>
+                              <small className="text-light">
+                            {asistencia.tipo === 'profesor' ? 'Profesor' : 
                                  asistencia.tipo === 'alumno' ? 'Alumno' : 'Personal'}
-                              </small>
-                            </div>
+                          </small>
+                        </div>
                           </div>
                           <span className={`badge ${asistencia.tardanza ? 'bg-warning' : 'bg-success'} fs-6`}>
-                            {asistencia.hora}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                          {asistencia.hora}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                   ) : (
                     <div className="text-center py-5">
-                      <i className="bi bi-clock fs-1 text-muted mb-3"></i>
-                      <p className="text-muted">No hay ingresos registrados hoy</p>
+                      <i className="bi bi-clock fs-1 text-light mb-3"></i>
+                      <p className="text-light">No hay ingresos registrados hoy</p>
                     </div>
                   )}
                 </div>
@@ -299,12 +299,12 @@ const Dashboard: React.FC = () => {
                   </h6>
                 </div>
                 <div className="card-body">
-                  <AttendanceCalendar 
-                    onDateSelect={(date) => {
+              <AttendanceCalendar 
+                onDateSelect={(date) => {
                       // Lógica para cuando se selecciona una fecha en el calendario
-                      console.log('Fecha seleccionada:', date);
-                    }}
-                  />
+                  console.log('Fecha seleccionada:', date);
+                }}
+              />
                 </div>
               </div>
             </div>
