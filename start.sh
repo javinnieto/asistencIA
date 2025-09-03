@@ -60,8 +60,21 @@ install_docker() {
             echo "🔧 Usando instalación para Ubuntu/Debian/Linux Mint..."
             sudo apt-get update
             sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+            
+            # Forzar el uso de jammy para Linux Mint
+            BASE_CODENAME="jammy"
+            if [ -f /etc/os-release ]; then
+                . /etc/os-release
+                if [ "$ID" = "linuxmint" ]; then
+                    echo "🔧 Detectado Linux Mint, usando base Ubuntu jammy"
+                    BASE_CODENAME="jammy"
+                else
+                    BASE_CODENAME=$(lsb_release -cs)
+                fi
+            fi
+            
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $BASE_CODENAME stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
             sudo apt-get update
             sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
             sudo usermod -aG docker $USER
@@ -179,4 +192,4 @@ echo ""
 echo "📊 Para ver los logs: $COMPOSE_CMD logs -f"
 echo "🛑 Para detener: $COMPOSE_CMD down"
 echo ""
-echo "💡 Si tienes problemas, ejecuta: ./start.sh --clean" 
+echo "💡 Si tienes problemas, ejecuta: ./start.sh --clean"
