@@ -4,7 +4,7 @@ services:
   db:
     image: mysql:8.0
     container_name: mysql
-    restart: always
+    restart: unless-stopped
     environment:
       - MYSQL_DATABASE=asistencias
       - MYSQL_ROOT_PASSWORD=1234
@@ -12,7 +12,6 @@ services:
       - "3307:3306"  # ✅ Ya cambiado - sin conflicto
     volumes:
       - db_data:/var/lib/mysql
-      - ./mysql/run:/var/run/mysqld
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
@@ -20,12 +19,11 @@ services:
       start_period: 30s
     networks:
       - asist_network
-    command: --socket=/var/run/mysqld/mysqld.sock --pid-file=/var/run/mysqld/mysqld.pid
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: phpmyadmin
-    restart: always
+    restart: unless-stopped
     environment:
       PMA_HOST: db
       UPLOAD_LIMIT: 100M
@@ -42,7 +40,7 @@ services:
   mosquitto:
     image: eclipse-mosquitto:1.6
     container_name: mosquitto
-    restart: always
+    restart: unless-stopped
     ports:
       - "1884:1883"  # ✅ Cambiado de 1883 a 1884
       - "9002:9001"  # ✅ Cambiado de 9001 a 9002
@@ -53,7 +51,7 @@ services:
     build:
       context: ./backend
     container_name: backend
-    restart: on-failure:3
+    restart: unless-stopped
     environment:
       - DJANGO_DB_HOST=db
       - DJANGO_DB_NAME=asistencias
@@ -79,7 +77,7 @@ services:
       args:
         - REACT_APP_API_URL=http://localhost:8001/api  # ✅ Actualizado con nuevo puerto
     container_name: frontend
-    restart: always
+    restart: unless-stopped
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -91,7 +89,7 @@ services:
   nginx:
     image: nginx:alpine
     container_name: nginx
-    restart: always
+    restart: unless-stopped
     ports:
       - "8088:8088"  # ✅ Cambiado de 80 a 8088
     volumes:
