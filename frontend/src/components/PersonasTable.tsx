@@ -1,14 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import './PersonasTable.css';
 
-// Iconos simples como componentes
-const FaEdit = ({ className }: { className?: string }) => <span className={className}>✏️</span>;
-const FaTrash = ({ className }: { className?: string }) => <span className={className}>🗑️</span>;
-const FaEye = ({ className }: { className?: string }) => <span className={className}>👁️</span>;
-const FaSearch = ({ className }: { className?: string }) => <span className={className}>🔍</span>;
-const FaFilter = ({ className }: { className?: string }) => <span className={className}>🔧</span>;
-const FaPlus = ({ className }: { className?: string }) => <span className={className}>➕</span>;
-const FaDownload = ({ className }: { className?: string }) => <span className={className}>📥</span>;
+const FaEdit = () => <span>✏️</span>;
+const FaTrash = () => <span>🗑️</span>;
+const FaEye = () => <span>👁️</span>;
+const FaSearch = () => <span>🔍</span>;
+const FaDownload = () => <span>📥</span>;
 
 interface Person {
   id: string;
@@ -21,7 +18,7 @@ interface Person {
   fechaIngreso: string;
   estado: 'activo' | 'inactivo';
   foto?: string;
-  nivelEducativo?: 'Primaria' | 'Secundaria';
+  roles?: any[];
   grado?: string;
 }
 
@@ -30,108 +27,50 @@ interface PersonasTableProps {
   onEdit: (person: Person) => void;
   onDelete: (id: string) => void;
   onView: (person: Person) => void;
-  onAdd: () => void;
 }
 
 const PersonasTable: React.FC<PersonasTableProps> = ({
   personas,
   onEdit,
   onDelete,
-  onView,
-  onAdd
+  onView
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
-  const [filterNivelEducativo, setFilterNivelEducativo] = useState('');
-  const [filterGrado, setFilterGrado] = useState('');
-  const [filterEstado, setFilterEstado] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<keyof Person>('nombre');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const itemsPerPage = 10;
 
-  // Opciones de filtros
-  const categorias = ['Alumnos', 'Docentes', 'Personal No Docente'];
-  const nivelesEducativos = ['Primaria', 'Secundaria'];
-  const gradosPrimaria = ['1er grado', '2do grado', '3er grado', '4to grado', '5to grado', '6to grado', '7mo grado'];
-  const gradosSecundaria = ['1er año', '2do año', '3er año', '4to año', '5to año'];
+  // Categorías disponibles
+  const categorias = ['Alumno', 'Docente', 'No Docente'];
 
-  // Obtener grados disponibles según el nivel educativo seleccionado
-  const gradosDisponibles = useMemo(() => {
-    if (filterNivelEducativo === 'Primaria') {
-      return gradosPrimaria;
-    } else if (filterNivelEducativo === 'Secundaria') {
-      return gradosSecundaria;
-    }
-    return [];
-  }, [filterNivelEducativo]);
-
-  // Filtrar y ordenar datos
-  const filteredAndSortedData = useMemo(() => {
-    let filtered = personas.filter(person => {
-      const matchesSearch = 
+  // Filtrar datos
+  const filteredData = useMemo(() => {
+    return personas.filter(person => {
+      const matchesSearch =
         person.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.telefono.includes(searchTerm);
-      
+        person.apellido.toLowerCase().includes(searchTerm.toLowerCase());
+
       const matchesCategoria = !filterCategoria || person.departamento === filterCategoria;
-      const matchesNivelEducativo = !filterNivelEducativo || person.nivelEducativo === filterNivelEducativo;
-      const matchesGrado = !filterGrado || person.grado === filterGrado;
-      const matchesEstado = !filterEstado || person.estado === filterEstado;
-      
-      return matchesSearch && matchesCategoria && matchesNivelEducativo && matchesGrado && matchesEstado;
-    });
 
-    // Ordenar
-    filtered.sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-      
-      if (sortDirection === 'asc') {
-        return (aValue || '') < (bValue || '') ? -1 : (aValue || '') > (bValue || '') ? 1 : 0;
-      } else {
-        return (aValue || '') > (bValue || '') ? -1 : (aValue || '') < (bValue || '') ? 1 : 0;
-      }
+      return matchesSearch && matchesCategoria;
     });
-
-    return filtered;
-  }, [personas, searchTerm, filterCategoria, filterNivelEducativo, filterGrado, filterEstado, sortField, sortDirection]);
+  }, [personas, searchTerm, filterCategoria]);
 
   // Paginación
-  const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = filteredAndSortedData.slice(startIndex, endIndex);
+  const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
-  const handleSort = (field: keyof Person) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
+  const handlePageChange = (page: number) => setCurrentPage(page);
 
   const exportToCSV = () => {
-    const headers = ['ID', 'Nombre', 'Apellido', 'Email', 'Teléfono', 'Departamento', 'Cargo', 'Fecha Ingreso', 'Estado'];
+    const headers = ['ID', 'Nombre', 'Apellido', 'Categoría', 'Cursos'];
     const csvContent = [
       headers.join(','),
-      ...filteredAndSortedData.map(person => [
-        person.id,
-        person.nombre,
-        person.apellido,
-        person.email,
-        person.telefono,
-        person.departamento,
-        person.cargo,
-        person.fechaIngreso,
-        person.estado
-      ].join(','))
+      ...filteredData.map(person => {
+        const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean).join('; ') || '';
+        return [person.id, person.nombre, person.apellido, person.departamento, cursos].join(',');
+      })
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -151,10 +90,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         <div className="empty-state">
           <div className="empty-icon">👥</div>
           <h3>No hay personas registradas</h3>
-          <p>Comienza agregando la primera persona a tu sistema de gestión.</p>
-          <button className="btn btn-primary" onClick={onAdd}>
-            <FaPlus /> Agregar Primera Persona
-          </button>
+          <p>Las personas se registran automáticamente cuando usan el terminal de reconocimiento facial.</p>
         </div>
       </div>
     );
@@ -162,103 +98,46 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 
   return (
     <div className="personas-table-container">
-      {/* Header con controles */}
+      {/* Header */}
       <div className="table-header">
         <div className="header-left">
           <h2>Gestión de Personas</h2>
           <span className="results-count">
-            Mostrando {currentData.length} de {filteredAndSortedData.length} personas
+            Mostrando {currentData.length} de {filteredData.length} personas
           </span>
         </div>
         <div className="header-right">
-          <button className="btn btn-primary" onClick={onAdd}>
-            <FaPlus /> Agregar Persona
-          </button>
           <button className="btn btn-secondary" onClick={exportToCSV}>
             <FaDownload /> Exportar
           </button>
         </div>
       </div>
 
-      {/* Filtros y búsqueda */}
+      {/* Filtros */}
       <div className="table-filters">
         <div className="search-box">
           <FaSearch className="search-icon" />
           <input
             type="text"
-            placeholder="Buscar por nombre, apellido, email o teléfono..."
+            placeholder="Buscar por nombre o apellido..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
         </div>
-        
+
         <div className="filter-controls">
           <div className="filter-group">
             <label>Categoría:</label>
             <select
               value={filterCategoria}
-              onChange={(e) => {
-                setFilterCategoria(e.target.value);
-                setFilterNivelEducativo('');
-                setFilterGrado('');
-              }}
+              onChange={(e) => setFilterCategoria(e.target.value)}
               className="filter-select"
             >
               <option value="">Todas las categorías</option>
               {categorias.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
-            </select>
-          </div>
-          
-          {filterCategoria === 'Alumnos' && (
-            <>
-              <div className="filter-group">
-                <label>Nivel Educativo:</label>
-                <select
-                  value={filterNivelEducativo}
-                  onChange={(e) => {
-                    setFilterNivelEducativo(e.target.value);
-                    setFilterGrado('');
-                  }}
-                  className="filter-select"
-                >
-                  <option value="">Todos los niveles</option>
-                  {nivelesEducativos.map(nivel => (
-                    <option key={nivel} value={nivel}>{nivel}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {filterNivelEducativo && (
-                <div className="filter-group">
-                  <label>Grado:</label>
-                  <select
-                    value={filterGrado}
-                    onChange={(e) => setFilterGrado(e.target.value)}
-                    className="filter-select"
-                  >
-                    <option value="">Todos los grados</option>
-                    {gradosDisponibles.map(grado => (
-                      <option key={grado} value={grado}>{grado}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </>
-          )}
-          
-          <div className="filter-group">
-            <label>Estado:</label>
-            <select
-              value={filterEstado}
-              onChange={(e) => setFilterEstado(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Todos los estados</option>
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
             </select>
           </div>
         </div>
@@ -269,85 +148,78 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         <table className="personas-table">
           <thead>
             <tr>
-              <th style={{ width: '23%' }} onClick={() => handleSort('nombre')} className="sortable">
-                Nombre
-                <span className={`sort-indicator ${sortField === 'nombre' ? sortDirection : ''}`}>
-                  {sortField === 'nombre' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                </span>
-              </th>
-              <th style={{ width: '20%' }} onClick={() => handleSort('apellido')} className="sortable">
-                Apellido
-                <span className={`sort-indicator ${sortField === 'apellido' ? sortDirection : ''}`}>
-                  {sortField === 'apellido' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                </span>
-              </th>
-              <th style={{ width: '18%' }} onClick={() => handleSort('departamento')} className="sortable">
-                Departamento
-                <span className={`sort-indicator ${sortField === 'departamento' ? sortDirection : ''}`}>
-                  {sortField === 'departamento' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                </span>
-              </th>
-              <th style={{ width: '21%' }} onClick={() => handleSort('cargo')} className="sortable">
-                Cargo
-                <span className={`sort-indicator ${sortField === 'cargo' ? sortDirection : ''}`}>
-                  {sortField === 'cargo' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                </span>
-              </th>
-              <th style={{ width: '18%' }}>Acciones</th>
+              <th style={{ width: '60px' }}>Foto</th>
+              <th style={{ width: '20%' }}>Nombre</th>
+              <th style={{ width: '20%' }}>Apellido</th>
+              <th style={{ width: '15%' }}>Categoría</th>
+              <th style={{ width: '25%' }}>Cursos</th>
+              <th style={{ width: '15%' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {currentData.map((person) => (
-              <tr key={person.id} className={person.estado === 'inactivo' ? 'inactive-row' : ''}>
-                <td>
-                  <div className="person-info">
-                    <img 
-                      src={person.foto || 'https://via.placeholder.com/42x42/667eea/ffffff?text=' + person.nombre.charAt(0)} 
+            {currentData.map((person) => {
+              // Mostrar todos los cursos de la persona
+              const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
+              const cursosText = cursos.length > 0 ? cursos.join(', ') : '-';
+
+              return (
+                <tr key={person.id}>
+                  <td>
+                    <img
+                      src={person.foto || `https://via.placeholder.com/42x42/667eea/ffffff?text=${person.nombre.charAt(0)}`}
                       alt={`${person.nombre} ${person.apellido}`}
                       className="person-avatar"
+                      style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
                     />
-                    <div>
-                      <strong>{person.nombre}</strong>
+                  </td>
+                  <td><strong>{person.nombre}</strong></td>
+                  <td>{person.apellido}</td>
+                  <td>
+                    <span className="department-badge" style={{
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      background: person.departamento === 'Alumno' ? '#dbeafe' :
+                        person.departamento === 'Docente' ? '#fef3c7' : '#f3e8ff',
+                      color: person.departamento === 'Alumno' ? '#1e40af' :
+                        person.departamento === 'Docente' ? '#92400e' : '#6b21a8'
+                    }}>
+                      {person.departamento}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: '13px', color: '#64748b' }}>{cursosText}</td>
+                  <td>
+                    <div className="action-buttons" style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        className="btn-icon btn-view"
+                        onClick={() => onView(person)}
+                        title="Ver detalles"
+                        style={{ cursor: 'pointer', border: 'none', background: '#f0f9ff', padding: '6px 10px', borderRadius: '6px' }}
+                      >
+                        <FaEye />
+                      </button>
+                      <button
+                        className="btn-icon btn-edit"
+                        onClick={() => onEdit(person)}
+                        title="Editar"
+                        style={{ cursor: 'pointer', border: 'none', background: '#fefce8', padding: '6px 10px', borderRadius: '6px' }}
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        className="btn-icon btn-delete"
+                        onClick={() => onDelete(person.id)}
+                        title="Eliminar"
+                        style={{ cursor: 'pointer', border: 'none', background: '#fee2e2', padding: '6px 10px', borderRadius: '6px' }}
+                      >
+                        <FaTrash />
+                      </button>
                     </div>
-                  </div>
-                </td>
-                <td>{person.apellido}</td>
-                <td>
-                  <span className="department-badge">
-                    {person.departamento === 'Alumnos' 
-                      ? person.grado
-                      : person.departamento
-                    }
-                  </span>
-                </td>
-                <td>{person.cargo}</td>
-                <td>
-                  <div className="action-buttons">
-                    <button
-                      className="btn-icon btn-view"
-                      onClick={() => onView(person)}
-                      title="Ver detalles"
-                    >
-                      <FaEye />
-                    </button>
-                    <button
-                      className="btn-icon btn-edit"
-                      onClick={() => onEdit(person)}
-                      title="Editar"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      className="btn-icon btn-delete"
-                      onClick={() => onDelete(person.id)}
-                      title="Eliminar"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -362,7 +234,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           >
             ← Anterior
           </button>
-          
+
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
             <button
               key={page}
@@ -372,7 +244,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
               {page}
             </button>
           ))}
-          
+
           <button
             className="btn-page"
             onClick={() => handlePageChange(currentPage + 1)}
@@ -386,4 +258,4 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   );
 };
 
-export default PersonasTable; 
+export default PersonasTable;

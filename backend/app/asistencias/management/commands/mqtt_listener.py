@@ -175,14 +175,31 @@ class Command(BaseCommand):
                     # PERSONA NO EXISTE EN NUESTRA BD - CREAR SIN CLASIFICAR
                     self.stdout.write(self.style.WARNING(f'⚠️ Persona nueva detectada (ID: {person_id}) - Creando en BD'))
                     
+                    # Intentar obtener foto del payload
+                    foto_file = None
+                    face_image_b64 = info.get('faceImage') or info.get('picture') # Posibles keys
+                    if face_image_b64:
+                        try:
+                            import base64
+                            from django.core.files.base import ContentFile
+                            format, imgstr = 'jpeg', face_image_b64
+                            if ';base64,' in face_image_b64:
+                                format, imgstr = face_image_b64.split(';base64,') 
+                            data = base64.b64decode(imgstr)
+                            file_name = f'persona_{person_id}_{int(timezone.now().timestamp())}.jpg'
+                            foto_file = ContentFile(data, name=file_name)
+                        except Exception as e:
+                            self.stdout.write(self.style.ERROR(f'Error decodificando foto: {e}'))
+
                     # Crear persona genérica sin clasificar
                     persona = Persona.objects.create(
                         idPersona=person_id,
                         nombre=nombre,
-                        activo=True
+                        activo=True,
+                        foto=foto_file
                     )
                     
-                    self.stdout.write(self.style.SUCCESS(f'✅ Nueva persona creada: {nombre} (ID: {person_id}) - NECESITA CLASIFICACIÓN MANUAL'))
+                    self.stdout.write(self.style.SUCCESS(f'✅ Nueva persona creada: {nombre} (ID: {person_id}) - FOTO: {"SI" if foto_file else "NO"} - NECESITA CLASIFICACIÓN MANUAL'))
                 
                 # Obtener estado de asistencia usando constantes
                 estado, _ = EstadoAsistencia.objects.get_or_create(

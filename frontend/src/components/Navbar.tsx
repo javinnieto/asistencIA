@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import jwt_decode from 'jwt-decode';
+import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 interface NavbarProps {
@@ -14,15 +15,18 @@ interface JwtPayload {
   // Otros campos si los necesitás
 }
 
-const Navbar: React.FC<NavbarProps> = ({ token }) => {
+const Navbar: React.FC<NavbarProps> = () => {
   const navigate = useNavigate();
+  const { token, logout } = useAuth();
+
   let displayName = '';
   if (token) {
     try {
       const decoded = jwt_decode<any>(token);
-      displayName = decoded.username || '';
+      displayName = decoded.username || decoded.user_id || 'Usuario';
     } catch (e) {
-      displayName = '';
+      console.error('Error decoding token:', e);
+      displayName = 'Usuario';
     }
   }
 
@@ -48,7 +52,7 @@ const Navbar: React.FC<NavbarProps> = ({ token }) => {
   }, [dropdownOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
+    logout();
     setDropdownOpen(false);
     navigate('/login');
   };
@@ -58,7 +62,7 @@ const Navbar: React.FC<NavbarProps> = ({ token }) => {
       <div className="container-fluid">
         <span className="navbar-brand">AsistencIA</span>
         <div className="navbar-user-actions">
-          {token && displayName ? (
+          {token ? (
             <div className="navbar-dropdown-wrapper" ref={dropdownRef}>
               <button
                 className="navbar-username-btn"

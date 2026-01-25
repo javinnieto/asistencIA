@@ -11,11 +11,12 @@ interface Person {
   apellido: string;
   email: string;
   telefono: string;
-  departamento: string;
+  departamento: string; // Used for primary role display
   cargo: string;
   fechaIngreso: string;
   estado: 'activo' | 'inactivo';
   foto?: string;
+  roles?: any[]; // Full roles data for modal
   nivelEducativo?: 'Primaria' | 'Secundaria';
   grado?: string;
 }
@@ -197,22 +198,42 @@ const Personas: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           // Transformar datos del backend al formato esperado por el frontend
-          const personasTransformadas = data.results.map((persona: any) => ({
-            id: persona.idPersona.toString(),
-            nombre: persona.nombre.split(' ')[0] || persona.nombre,
-            apellido: persona.nombre.split(' ').slice(1).join(' ') || '',
-            email: `${persona.nombre.toLowerCase().replace(/\s+/g, '.')}@institucion.com`,
-            telefono: '+1 (555) 000-0000',
-            departamento: persona.tipo.nombre === 'Estudiante' ? 'Alumnos' : 
-                         persona.tipo.nombre === 'Profesor' ? 'Docentes' : 'Personal No Docente',
-            cargo: persona.tipo.nombre === 'Estudiante' ? 'Estudiante' :
-                   persona.tipo.nombre === 'Profesor' ? 'Profesor' : persona.tipo.nombre,
-            fechaIngreso: '2023-01-01',
-            estado: 'activo' as const,
-            nivelEducativo: persona.curso ? (persona.curso.nombre.includes('Año') ? 'Secundaria' : 'Primaria') : undefined,
-            grado: persona.curso?.nombre || undefined,
-            foto: `https://via.placeholder.com/150x150/667eea/ffffff?text=${persona.nombre.split(' ').map((n: string) => n[0]).join('')}`
-          }));
+          const personasTransformadas = data.results.map((persona: any) => {
+            const nombreCompleto = persona.nombre || 'Sin Nombre';
+            const nombreParts = nombreCompleto.split(' ');
+            const primerNombre = nombreParts[0] || '';
+            const apellido = nombreParts.slice(1).join(' ') || '-';
+
+            // Safe access to nested properties
+            const roles = persona.roles || [];
+            let primaryRole = 'Sin asignar';
+            let primaryCourse = '';
+
+            if (roles.length > 0) {
+              // Try to find the most relevant role (e.g., Alumno or Docente)
+              const mainRole = roles.find((r: any) => r.tipo.nombre !== 'No Docente') || roles[0];
+              primaryRole = mainRole.tipo.nombre;
+              if (mainRole.curso) {
+                primaryCourse = mainRole.curso.nombre;
+              }
+            }
+
+            return {
+              id: persona.idPersona?.toString() || '0',
+              nombre: primerNombre,
+              apellido: apellido,
+              email: persona.email || `${nombreCompleto.toLowerCase().replace(/\s+/g, '.')}@institucion.com`,
+              telefono: persona.telefono || '+1 (555) 000-0000',
+              departamento: primaryRole,
+              cargo: primaryRole, // Map cargo to primary role type
+              fechaIngreso: persona.fechaRegistro || '2023-01-01',
+              estado: (persona.activo !== false ? 'activo' : 'inactivo') as const,
+              foto: persona.foto || `https://via.placeholder.com/150x150/667eea/ffffff?text=${primerNombre.charAt(0)}`,
+              roles: roles,
+              grado: primaryCourse, // Display primary course in table
+              nivelEducativo: primaryCourse.includes('Año') ? 'Secundaria' : 'Primaria'
+            };
+          });
           setPersonas(personasTransformadas);
         } else {
           console.error('Error al cargar personas:', response.status);
@@ -231,11 +252,16 @@ const Personas: React.FC = () => {
     loadPersonas();
   }, []);
 
+  // ELIMINADO: handleAddPerson ya que la creación es vía dispositivo
+  /* 
   const handleAddPerson = () => {
+    console.log('handleAddPerson called');
     setFormMode('add');
     setSelectedPerson(null);
     setIsFormOpen(true);
+    console.log('isFormOpen set to true');
   };
+  */
 
   const handleEditPerson = (person: Person) => {
     setFormMode('edit');
@@ -251,39 +277,82 @@ const Personas: React.FC = () => {
   const handleDeletePerson = async (id: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta persona?')) {
       try {
-        // Simular eliminación
-        setPersonas(prev => prev.filter(p => p.id !== id));
-        // Aquí iría la llamada real a la API
+        const response = await apiRequest(`/personas/${id}/`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          setPersonas(prev => prev.filter(p => p.id !== id));
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Error al eliminar:', errorData);
+          alert('Error al eliminar la persona: ' + (errorData.detail || response.statusText));
+        }
       } catch (error) {
         console.error('Error eliminando persona:', error);
-        alert('Error al eliminar la persona');
+        alert('Error de red al eliminar la persona');
       }
     }
   };
 
   const handleSavePerson = async (personData: Omit<Person, 'id'>) => {
     try {
-      if (formMode === 'add') {
-        // Simular creación
-        const newPerson: Person = {
-          ...personData,
-          id: `EMP${String(personas.length + 1).padStart(3, '0')}`
+      if (formMode === 'edit' && selectedPerson) {
+        // Preparar payload para el backend (nombre completo y roles)
+        const payload = {
+          nombre: `${personData.nombre} ${personData.apellido}`.trim(),
+          activo: personData.estado === 'activo',
+          foto: personData.foto,
+          roles: personData.roles // El backend ya sabe manejar esto ahora
         };
-        setPersonas(prev => [...prev, newPerson]);
-      } else {
-        // Simular actualización
-        setPersonas(prev => 
-          prev.map(p => 
-            p.id === selectedPerson?.id 
-              ? { ...personData, id: p.id }
-              : p
-          )
-        );
+
+        const response = await apiRequest(`/personas/${selectedPerson.id}/`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const updatedPersonFromBE = await response.json();
+          // Transformar de vuelta al formato UI
+          const nombreParts = updatedPersonFromBE.nombre.split(' ');
+          const primerNombre = nombreParts[0] || '';
+          const apellido = nombreParts.slice(1).join(' ') || '-';
+          const roles = updatedPersonFromBE.roles || [];
+          let primaryRole = 'Sin asignar';
+          let primaryCourse = '';
+          if (roles.length > 0) {
+            const mainRole = roles.find((r: any) => r.tipo.nombre !== 'No Docente') || roles[0];
+            primaryRole = mainRole.tipo.nombre;
+            if (mainRole.curso) primaryCourse = mainRole.curso.nombre;
+          }
+
+          const transformed: Person = {
+            id: updatedPersonFromBE.idPersona.toString(),
+            nombre: primerNombre,
+            apellido: apellido,
+            email: personData.email,
+            telefono: personData.telefono,
+            departamento: primaryRole,
+            cargo: primaryRole,
+            fechaIngreso: personData.fechaIngreso,
+            estado: updatedPersonFromBE.activo ? 'activo' : 'inactivo',
+            foto: updatedPersonFromBE.foto,
+            roles: roles,
+            grado: primaryCourse,
+            nivelEducativo: primaryCourse.includes('Año') ? 'Secundaria' : 'Primaria'
+          };
+
+          setPersonas(prev => prev.map(p => p.id === transformed.id ? transformed : p));
+          setIsFormOpen(false);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Error al guardar:', errorData);
+          alert('Error al guardar cambios: ' + (errorData.detail || JSON.stringify(errorData)));
+        }
       }
-      setIsFormOpen(false);
     } catch (error) {
       console.error('Error guardando persona:', error);
-      alert('Error al guardar la persona');
+      alert('Error de red al guardar la persona');
     }
   };
 
@@ -306,7 +375,6 @@ const Personas: React.FC = () => {
     <div className="personas-page">
       <PersonasTable
         personas={personas}
-        onAdd={handleAddPerson}
         onEdit={handleEditPerson}
         onDelete={handleDeletePerson}
         onView={handleViewPerson}

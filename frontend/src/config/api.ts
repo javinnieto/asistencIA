@@ -1,12 +1,15 @@
 // Configuración centralizada de la API
 // En desarrollo, usar el proxy del package.json
 // En producción, usar la variable de entorno o localhost
-const API_BASE_URL = '/api';
+// Configuración centralizada de la API
+// En desarrollo, usar el proxy del package.json
+// En producción, usar la variable de entorno o localhost
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 // Función para hacer peticiones autenticadas
 export const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('accessToken');
-  
+
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -24,7 +27,7 @@ export const apiRequest = async (endpoint: string, options: RequestInit = {}) =>
   };
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  
+
   return fetch(url, config);
 };
 

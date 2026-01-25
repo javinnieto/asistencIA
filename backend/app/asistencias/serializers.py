@@ -44,7 +44,7 @@ class PersonaSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Persona
-        fields = ['idPersona', 'nombre', 'activo', 'roles', 'total_asistencias', 'necesita_clasificacion']
+        fields = ['idPersona', 'nombre', 'foto', 'activo', 'roles', 'total_asistencias', 'necesita_clasificacion']
 
 
 class EstadoAsistenciaSerializer(serializers.ModelSerializer):
@@ -67,7 +67,7 @@ class AsistenciaSerializer(serializers.ModelSerializer):
 class PersonaCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Persona
-        fields = ['idPersona', 'nombre', 'activo']
+        fields = ['idPersona', 'nombre', 'foto', 'activo']
 
 
 class PersonaInstitucionCreateSerializer(serializers.ModelSerializer):

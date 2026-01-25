@@ -44,6 +44,7 @@ class Persona(models.Model):
     """Persona del sistema - completamente genérica"""
     idPersona = models.IntegerField(primary_key=True)
     nombre = models.CharField(max_length=200)
+    foto = models.ImageField(upload_to='personas/', null=True, blank=True)
     activo = models.BooleanField(default=True)
 
     def __str__(self):

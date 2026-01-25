@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -9,102 +9,101 @@ import Reportes from './pages/Reportes';
 import PoloTecnologico from './pages/PoloTecnologico';
 import Login from './pages/Login';
 import './App.css';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Componente para proteger rutas privadas
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const token = localStorage.getItem('accessToken');
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
-  if (!token) {
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   return <>{children}</>;
 };
 
-const App: React.FC = () => {
-  // Estado global para el token
-  const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
-  // Estado para saber si el sidebar está colapsado
+const AppContent: React.FC = () => {
+  const { isAuthenticated } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
-
-  // Sincronizar token con localStorage al cargar y al cambiar en otras pestañas
-  useEffect(() => {
-    const syncToken = () => {
-      setToken(localStorage.getItem('accessToken'));
-    };
-    window.addEventListener('storage', syncToken);
-    return () => {
-      window.removeEventListener('storage', syncToken);
-    };
-  }, []);
 
   const isLoginRoute = location.pathname === '/login';
 
   if (isLoginRoute) {
-    // Solo renderizar el login, sin navbar ni sidebar ni layout
-    return <Routes><Route path="/login" element={<Login setToken={setToken} />} /></Routes>;
+    return <Routes><Route path="/login" element={<Login />} /></Routes>;
+  }
+
+  // Si no está autenticado y no está en login, PrivateRoute lo redirigirá, 
+  // pero aquí podemos interceptar para no renderizar el layout
+  if (!isAuthenticated) {
+    return <Routes>
+      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
+    </Routes>;
   }
 
   return (
-    <div className="app-layout">
-      <Navbar token={token} />
-      {/* Nuevo wrapper para sidebar + contenido */}
-      <div className="layout-content">
-        {/* Ocultar Sidebar en /login */}
-        {!isLoginRoute && (
-          <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-        )}
-        <div className={`main-content${sidebarCollapsed ? ' sidebar-collapsed' : ''}${isLoginRoute ? ' login-page' : ''}`}>
-          <div className="page-content">
-            <Routes>
-              <Route path="/login" element={<Login setToken={setToken} />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/personas"
-                element={
-                  <PrivateRoute>
-                    <Personas />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/asistencias"
-                element={
-                  <PrivateRoute>
-                    <Asistencias />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/reportes"
-                element={
-                  <PrivateRoute>
-                    <Reportes />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/polo-tecnologico"
-                element={
-                  <PrivateRoute>
-                    <PoloTecnologico />
-                  </PrivateRoute>
-                }
-              />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </div>
-        </div>
+    <div className={`app-layout${sidebarCollapsed ? ' collapsed' : ''}`}>
+      <Navbar token={isAuthenticated ? 'valid' : null} />
+
+      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+
+      <div className={`main-content${isLoginRoute ? ' login-page' : ''}`}>
+        <Routes>
+          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/personas"
+            element={
+              <PrivateRoute>
+                <Personas />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/asistencias"
+            element={
+              <PrivateRoute>
+                <Asistencias />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/reportes"
+            element={
+              <PrivateRoute>
+                <Reportes />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/polo-tecnologico"
+            element={
+              <PrivateRoute>
+                <PoloTecnologico />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </div>
     </div>
   );
 };
 
-export default App; 
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
+
+export default App;
