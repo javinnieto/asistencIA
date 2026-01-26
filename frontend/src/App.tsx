@@ -5,11 +5,13 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Personas from './pages/Personas';
 import Asistencias from './pages/Asistencias';
-import Reportes from './pages/Reportes';
+
+import CursosHorarios from './pages/CursosHorarios';
 import PoloTecnologico from './pages/PoloTecnologico';
 import Login from './pages/Login';
 import './App.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/Toast';
 
 // Componente para proteger rutas privadas
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -76,10 +78,10 @@ const AppContent: React.FC = () => {
             }
           />
           <Route
-            path="/reportes"
+            path="/cursos-horarios"
             element={
               <PrivateRoute>
-                <Reportes />
+                <CursosHorarios />
               </PrivateRoute>
             }
           />
@@ -100,9 +102,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 

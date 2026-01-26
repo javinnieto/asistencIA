@@ -242,6 +242,7 @@
 
 .btn-view:hover {
   background: rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
 }
 
 .btn-edit {
@@ -251,6 +252,7 @@
 
 .btn-edit:hover {
   background: rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
 }
 
 .btn-delete {
@@ -260,6 +262,7 @@
 
 .btn-delete:hover {
   background: rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
 }
 
 /* Pagination */

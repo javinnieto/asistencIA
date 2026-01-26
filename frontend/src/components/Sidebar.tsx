@@ -15,7 +15,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
     { path: '/dashboard', icon: 'bi-grid-1x2-fill', label: 'Dashboard' },
     { path: '/personas', icon: 'bi-people-fill', label: 'Personas' },
     { path: '/asistencias', icon: 'bi-calendar-check-fill', label: 'Asistencias' },
-    { path: '/reportes', icon: 'bi-bar-chart-fill', label: 'Reportes' },
+    { path: '/cursos-horarios', icon: 'bi-calendar-week-fill', label: 'Cursos y Horarios' },
     { path: '/polo-tecnologico', icon: 'bi-cpu-fill', label: 'Tecno Aliados' },
   ];
 

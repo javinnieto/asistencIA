@@ -40,12 +40,40 @@ class Curso(models.Model):
         return f"{self.nombre} ({self.institucion.nombre})"
 
 
+
+class Horario(models.Model):
+    """Horarios de cursada"""
+    DIAS_SEMANA = [
+        ('Lunes', 'Lunes'),
+        ('Martes', 'Martes'),
+        ('Miércoles', 'Miércoles'),
+        ('Jueves', 'Jueves'),
+        ('Viernes', 'Viernes'),
+        ('Sábado', 'Sábado'),
+        ('Domingo', 'Domingo'),
+    ]
+
+    idHorario = models.AutoField(primary_key=True)
+    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name='horarios')
+    dia = models.CharField(max_length=20, choices=DIAS_SEMANA)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    materia = models.CharField(max_length=100, null=True, blank=True)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.curso} - {self.dia} {self.hora_inicio}-{self.hora_fin} ({self.materia})"
+
+
 class Persona(models.Model):
     """Persona del sistema - completamente genérica"""
     idPersona = models.IntegerField(primary_key=True)
     nombre = models.CharField(max_length=200)
-    foto = models.ImageField(upload_to='personas/', null=True, blank=True)
+    email = models.EmailField(max_length=254, null=True, blank=True)
+    telefono = models.CharField(max_length=20, null=True, blank=True)
+    foto = models.TextField(null=True, blank=True)  # Stores Base64 strings or URLs from MQTT
     activo = models.BooleanField(default=True)
+    horarios = models.ManyToManyField(Horario, related_name='personas', blank=True)
 
     def __str__(self):
         return self.nombre

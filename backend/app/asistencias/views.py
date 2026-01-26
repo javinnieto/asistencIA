@@ -1,16 +1,18 @@
 from rest_framework import viewsets, filters
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     Institucion, TipoPersona, Curso, Persona, PersonaInstitucion, 
-    EstadoAsistencia, Asistencia
+    EstadoAsistencia, Asistencia, Horario
 )
 from .serializers import (
     InstitucionSerializer, TipoPersonaSerializer, CursoSerializer, 
     PersonaSerializer, PersonaInstitucionSerializer, EstadoAsistenciaSerializer, 
     AsistenciaSerializer, PersonaCreateSerializer, PersonaInstitucionCreateSerializer,
-    AsistenciaCreateSerializer, TipoPersonaCreateSerializer, CursoCreateSerializer
+    AsistenciaCreateSerializer, TipoPersonaCreateSerializer, CursoCreateSerializer,
+    HorarioSerializer, HorarioCreateSerializer
 )
 
 
@@ -44,6 +46,46 @@ class CursoViewSet(viewsets.ModelViewSet):
             return CursoCreateSerializer
         return CursoSerializer
 
+    @action(detail=True, methods=['post'])
+    def propagate_schedules(self, request, pk=None):
+        """
+        Propaga los horarios de este curso a todas las personas inscriptas en él.
+        Sobreescribe los horarios existentes de las personas.
+        """
+        curso = self.get_object()
+        horarios_curso = curso.horarios.filter(activo=True)
+        
+        # Encontrar personas asociadas a este curso
+        # Buscamos en la tabla intermedia PersonaInstitucion
+        roles_curso = PersonaInstitucion.objects.filter(curso=curso, activo=True)
+        personas_afectadas = 0
+        
+        with transaction.atomic():
+            for role in roles_curso:
+                persona = role.persona
+                # Limpiar horarios actuales y asignar los del curso
+                persona.horarios.clear()
+                persona.horarios.add(*horarios_curso)
+                personas_afectadas += 1
+                
+        return Response({
+            'status': 'success',
+            'message': f'Horarios propagados a {personas_afectadas} alumnos.',
+            'count': personas_afectadas
+        })
+
+
+class HorarioViewSet(viewsets.ModelViewSet):
+    queryset = Horario.objects.all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['curso', 'dia', 'activo']
+    search_fields = ['materia', 'curso__nombre']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return HorarioCreateSerializer
+        return HorarioSerializer
+
 
 class PersonaViewSet(viewsets.ModelViewSet):
     queryset = Persona.objects.all()
@@ -63,23 +105,11 @@ class PersonaViewSet(viewsets.ModelViewSet):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
-        # Extraer datos especiales del payload
+        # Extraer roles y horarios del payload
         roles_data = request.data.pop('roles', None)
-        foto_b64 = request.data.get('foto')
+        horarios_data = request.data.pop('horarios', None)
         
-        # Manejar foto en base64 si viene del frontend
-        if isinstance(foto_b64, str) and foto_b64.startswith('data:image'):
-            try:
-                import base64
-                from django.core.files.base import ContentFile
-                format, imgstr = foto_b64.split(';base64,')
-                ext = format.split('/')[-1]
-                data = ContentFile(base64.b64decode(imgstr), name=f"persona_{instance.idPersona}.{ext}")
-                request.data['foto'] = data
-            except Exception as e:
-                print(f"Error decodificando foto: {e}")
-                # Si falla, quitamos la foto para no invalidar el resto
-                if 'foto' in request.data: del request.data['foto']
+        # foto viene como TextField (Base64 string o URL), no necesita procesamiento especial
         
         # Actualizar datos básicos de la persona
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -88,13 +118,11 @@ class PersonaViewSet(viewsets.ModelViewSet):
         
         # Sincronizar roles si se proporcionan
         if roles_data is not None:
-            # Desactivar roles antiguos (o eliminarlos si se prefiere)
-            # Para simplificar, eliminaremos los actuales y recrearemos los nuevos
-            # ya que es una tabla intermedia de configuración.
+            # Eliminar roles actuales y recrear con los nuevos
             PersonaInstitucion.objects.filter(persona=instance).delete()
             
             for role in roles_data:
-                # El frontend envía objetos anidados o IDs. Manejamos ambos.
+                # Extraer IDs, manejando tanto objetos anidados como IDs directos
                 inst_id = role.get('institucion', {}).get('idInstitucion') if isinstance(role.get('institucion'), dict) else role.get('institucion')
                 tipo_id = role.get('tipo', {}).get('idTipoPersona') if isinstance(role.get('tipo'), dict) else role.get('tipo')
                 curso_id = role.get('curso', {}).get('idCurso') if isinstance(role.get('curso'), dict) else role.get('curso')
@@ -104,8 +132,23 @@ class PersonaViewSet(viewsets.ModelViewSet):
                         persona=instance,
                         institucion_id=inst_id,
                         tipo_id=tipo_id,
-                        curso_id=curso_id
+                        curso_id=curso_id if curso_id else None
                     )
+        
+        # Sincronizar Horarios si se proporcionan
+        if horarios_data is not None:
+            # horarios_data debe ser una lista de IDs de horario
+            # Limpiar asignaciones previas y asignar nuevas
+            instance.horarios.clear()
+            for horario_id in horarios_data:
+                # Si viene como objeto, tratamos de sacar el ID
+                hid = horario_id.get('idHorario') if isinstance(horario_id, dict) else horario_id
+                if hid:
+                    try:
+                        h = Horario.objects.get(pk=hid)
+                        instance.horarios.add(h)
+                    except Horario.DoesNotExist:
+                        pass
 
         # Retornar el objeto actualizado con sus roles
         return Response(PersonaSerializer(instance).data)

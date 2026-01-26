@@ -181,7 +181,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                   {errors.apellido && <span className="error-message">{errors.apellido}</span>}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
                   <label>📧 Email</label>
                   <input type="email" className="form-input" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="ejemplo@email.com" />
@@ -189,6 +189,17 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                 <div className="form-group">
                   <label>📞 Teléfono</label>
                   <input className="form-input" value={formData.telefono} onChange={e => setFormData({ ...formData, telefono: e.target.value })} placeholder="+1 234 567 8900" />
+                </div>
+                <div className="form-group">
+                  <label>Estado</label>
+                  <select
+                    className="form-input"
+                    value={formData.estado}
+                    onChange={e => setFormData({ ...formData, estado: e.target.value as 'activo' | 'inactivo' })}
+                  >
+                    <option value="activo">✅ Activo</option>
+                    <option value="inactivo">❌ Inactivo</option>
+                  </select>
                 </div>
               </div>
               <div className="roles-section">
@@ -207,13 +218,50 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                       <option value="">Seleccionar...</option>
                       {filteredTypes.map(t => <option key={t.idTipoPersona} value={t.idTipoPersona}>{t.nombre}</option>)}
                     </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Curso (Opcional)</label>
-                    <select className="form-select" value={selectedCourseId} onChange={e => setSelectedCourseId(e.target.value)} disabled={!selectedInstId}>
-                      <option value="">Ninguno</option>
-                      {filteredCourses.map(c => <option key={c.idCurso} value={c.idCurso}>{c.nombre}</option>)}
-                    </select>
+                    {/* Campo Curso - Solo mostrar para tipos que lo necesitan */}
+                    {selectedTypeId && (() => {
+                      // Lógica inteligente: determinar si el tipo necesita curso
+                      const selectedType = filteredTypes.find(t => t.idTipoPersona?.toString() === selectedTypeId);
+                      if (!selectedType) return null;
+
+                      const tipoNombre = selectedType.nombre.toLowerCase();
+
+                      // Tipos que SÍ necesitan curso (educativos)
+                      const tiposConCurso = ['alumno', 'docente', 'profesor', 'estudiante', 'maestro', 'tutor'];
+                      // Tipos que NO necesitan curso (administrativos/otros)
+                      const tiposSinCurso = ['no docente', 'administrativo', 'personal', 'visitante', 'directivo', 'director'];
+
+                      // Verificar si coincide con algún tipo que necesita curso
+                      const necesitaCurso = tiposConCurso.some(tipo => tipoNombre.includes(tipo));
+                      const noNecesitaCurso = tiposSinCurso.some(tipo => tipoNombre.includes(tipo));
+
+                      // Si explícitamente no necesita, ocultar campo
+                      if (noNecesitaCurso) return null;
+                      // Si explícitamente necesita O por defecto (educativo), mostrar campo
+                      if (!necesitaCurso && !noNecesitaCurso) {
+                        // Default fallback: si no está en ninguna lista, asumir que necesita curso
+                        // (más seguro para instituciones educativas)
+                        return null; // Cambiar a mostrar si prefieres que por defecto aparezca
+                      }
+
+                      return (
+                        <div className="form-group">
+                          <label>Curso (Opcional)</label>
+                          <select
+                            className="form-select"
+                            value={selectedCourseId}
+                            onChange={(e) => setSelectedCourseId(e.target.value)}
+                          >
+                            <option value="">Sin curso específico</option>
+                            {filteredCourses.map(curso => (
+                              <option key={curso.idCurso} value={curso.idCurso?.toString()}>
+                                {curso.nombre}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <button type="button" className="btn-add-role" onClick={handleAddRole} disabled={!selectedInstId || !selectedTypeId}>➕</button>
                 </div>

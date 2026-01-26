@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import './PersonasTable.css';
 
-const FaEdit = () => <span>✏️</span>;
-const FaTrash = () => <span>🗑️</span>;
-const FaEye = () => <span>👁️</span>;
-const FaSearch = () => <span>🔍</span>;
-const FaDownload = () => <span>📥</span>;
+interface IconProps { className?: string }
+const FaEdit = ({ className }: IconProps) => <span className={className}>✏️</span>;
+const FaTrash = ({ className }: IconProps) => <span className={className}>🗑️</span>;
+const FaEye = ({ className }: IconProps) => <span className={className}>👁️</span>;
+const FaSearch = ({ className }: IconProps) => <span className={className}>🔍</span>;
+const FaDownload = ({ className }: IconProps) => <span className={className}>📥</span>;
 
 interface Person {
   id: string;
@@ -43,6 +44,21 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   // Categorías disponibles
   const categorias = ['Alumno', 'Docente', 'No Docente'];
 
+  const [filterCurso, setFilterCurso] = useState('');
+
+  // Computar cursos únicos disponibles de las personas cargadas
+  const cursosDisponibles = useMemo(() => {
+    const cursos = new Set<string>();
+    personas.forEach(p => {
+      if (p.grado) cursos.add(p.grado);
+      // También buscar en roles si es necesario profundidad
+      p.roles?.forEach(r => {
+        if (r.curso && r.curso.nombre) cursos.add(r.curso.nombre);
+      });
+    });
+    return Array.from(cursos).sort();
+  }, [personas]);
+
   // Filtrar datos
   const filteredData = useMemo(() => {
     return personas.filter(person => {
@@ -50,11 +66,19 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         person.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         person.apellido.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesCategoria = !filterCategoria || person.departamento === filterCategoria;
+      const matchesCategoria = !filterCategoria || (
+        // Check primary department OR any role's type name
+        person.departamento === filterCategoria ||
+        person.roles?.some(r => r.tipo?.nombre === filterCategoria)
+      );
 
-      return matchesSearch && matchesCategoria;
+      const userCourses = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
+      const hasCourse = userCourses.includes(filterCurso) || person.grado === filterCurso;
+      const matchesCurso = !filterCurso || hasCourse;
+
+      return matchesSearch && matchesCategoria && matchesCurso;
     });
-  }, [personas, searchTerm, filterCategoria]);
+  }, [personas, searchTerm, filterCategoria, filterCurso]);
 
   // Paginación
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -134,9 +158,23 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
               onChange={(e) => setFilterCategoria(e.target.value)}
               className="filter-select"
             >
-              <option value="">Todas las categorías</option>
+              <option value="">Todas</option>
               {categorias.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Curso:</label>
+            <select
+              value={filterCurso}
+              onChange={(e) => setFilterCurso(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Todos</option>
+              {cursosDisponibles.map(curso => (
+                <option key={curso} value={curso}>{curso}</option>
               ))}
             </select>
           </div>
@@ -175,45 +213,52 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                   <td><strong>{person.nombre}</strong></td>
                   <td>{person.apellido}</td>
                   <td>
-                    <span className="department-badge" style={{
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      background: person.departamento === 'Alumno' ? '#dbeafe' :
-                        person.departamento === 'Docente' ? '#fef3c7' : '#f3e8ff',
-                      color: person.departamento === 'Alumno' ? '#1e40af' :
-                        person.departamento === 'Docente' ? '#92400e' : '#6b21a8'
-                    }}>
-                      {person.departamento}
-                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {(person.roles && person.roles.length > 0) ? person.roles.map((role, idx) => (
+                        <span key={idx} className="department-badge" style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          background: role.tipo?.nombre === 'Alumno' ? '#dbeafe' :
+                            role.tipo?.nombre === 'Docente' ? '#fef3c7' : '#f3e8ff',
+                          color: role.tipo?.nombre === 'Alumno' ? '#1e40af' :
+                            role.tipo?.nombre === 'Docente' ? '#92400e' : '#6b21a8'
+                        }}>
+                          {role.tipo?.nombre}
+                        </span>
+                      )) : (
+                        <span className="department-badge">-</span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ fontSize: '13px', color: '#64748b' }}>{cursosText}</td>
                   <td>
                     <div className="action-buttons" style={{ display: 'flex', gap: '6px' }}>
                       <button
-                        className="btn-icon btn-view"
+                        className="btn-icon btn-view action-btn"
                         onClick={() => onView(person)}
                         title="Ver detalles"
-                        style={{ cursor: 'pointer', border: 'none', background: '#f0f9ff', padding: '6px 10px', borderRadius: '6px' }}
                       >
-                        <FaEye />
+                        <FaEye className="w-4 h-4 text-blue-600" />
                       </button>
                       <button
-                        className="btn-icon btn-edit"
+                        className="btn-icon btn-edit action-btn"
                         onClick={() => onEdit(person)}
                         title="Editar"
-                        style={{ cursor: 'pointer', border: 'none', background: '#fefce8', padding: '6px 10px', borderRadius: '6px' }}
                       >
-                        <FaEdit />
+                        <FaEdit className="w-4 h-4 text-yellow-600" />
                       </button>
                       <button
-                        className="btn-icon btn-delete"
-                        onClick={() => onDelete(person.id)}
+                        className="btn-icon btn-delete action-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('[PersonasTable] Delete clicked for:', person.id, person.nombre);
+                          onDelete(person.id);
+                        }}
                         title="Eliminar"
-                        style={{ cursor: 'pointer', border: 'none', background: '#fee2e2', padding: '6px 10px', borderRadius: '6px' }}
                       >
-                        <FaTrash />
+                        <FaTrash className="w-4 h-4 text-red-600" />
                       </button>
                     </div>
                   </td>
