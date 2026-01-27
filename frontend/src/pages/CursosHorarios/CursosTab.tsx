@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../config/api';
 import { useToast } from '../../components/Toast';
+import ConfirmModal from '../../components/ConfirmModal';
+import './CursosHorarios.css';
 
-interface Institucion {
-    idInstitucion: number;
-    nombre: string;
-}
-
+interface Institucion { idInstitucion: number; nombre: string; }
 interface Curso {
     idCurso: number;
     nombre: string;
     institucion: Institucion;
     activo: boolean;
+    fecha_inicio?: string;
+    fecha_fin?: string;
 }
 
 const CursosTab: React.FC = () => {
@@ -20,217 +20,236 @@ const CursosTab: React.FC = () => {
     const [cursos, setCursos] = useState<Curso[]>([]);
     const [selectedInstId, setSelectedInstId] = useState<string>('');
     const [loading, setLoading] = useState(false);
-
-    // Modal
+    const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentCurso, setCurrentCurso] = useState<Partial<any>>({}); // using any for form handling simplicity with nested objects
+    const [currentCurso, setCurrentCurso] = useState<Partial<any>>({});
+
+    // Confirm Modal
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
-        // Load institutions for filter
         apiRequest('/instituciones/').then(async res => {
-            if (res.ok) {
-                const data = await res.json();
-                setInstituciones(data.results || []);
-            }
+            if (res.ok) setInstituciones((await res.json()).results || []);
         });
     }, []);
 
-    const fetchCursos = async () => {
+    const fetchCursos = useCallback(async () => {
         setLoading(true);
         let url = '/cursos/';
-        if (selectedInstId) {
-            url += `?institucion=${selectedInstId}`;
-        }
+        if (selectedInstId) url += `?institucion=${selectedInstId}`;
         try {
             const res = await apiRequest(url);
-            if (res.ok) {
-                const data = await res.json();
-                setCursos(data.results || []);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchCursos();
+            if (res.ok) setCursos((await res.json()).results || []);
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     }, [selectedInstId]);
+
+    useEffect(() => { fetchCursos(); }, [fetchCursos]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             const isEdit = !!currentCurso.idCurso;
             const url = isEdit ? `/cursos/${currentCurso.idCurso}/` : '/cursos/';
-            const method = isEdit ? 'PUT' : 'POST';
-
-            const payload = {
-                ...currentCurso,
-                institucion: currentCurso.institucion_id // Send ID, not object
-            };
-
-            const res = await apiRequest(url, {
-                method,
-                body: JSON.stringify(payload)
-            });
-
+            const payload = { ...currentCurso, institucion: currentCurso.institucion_id };
+            const res = await apiRequest(url, { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(payload) });
             if (res.ok) {
-                showToast('Curso guardado exitosamente', 'success');
+                showToast(isEdit ? 'Curso actualizado' : 'Curso creado', 'success');
                 setIsModalOpen(false);
                 fetchCursos();
             } else {
                 const err = await res.json();
-                showToast('Error: ' + JSON.stringify(err), 'error');
+                showToast('Error: ' + (err.detail || JSON.stringify(err)), 'error');
             }
-        } catch (error) {
-            showToast('Error de conexión', 'error');
-        }
+        } catch (e) { showToast('Error de conexión', 'error'); }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm('¿Eliminar curso?')) return;
+    const promptDelete = (id: number) => {
+        setItemToDelete(id);
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
+        setDeleting(true);
         try {
-            const res = await apiRequest(`/cursos/${id}/`, { method: 'DELETE' });
-            if (res.ok) {
-                showToast('Curso eliminado', 'success');
+            const res = await apiRequest(`/cursos/${itemToDelete}/`, { method: 'DELETE' });
+            if (res.ok || res.status === 204) {
+                showToast('Curso eliminado correctamente', 'success');
+                setCursos(prev => prev.filter(c => c.idCurso !== itemToDelete));
                 fetchCursos();
+            } else {
+                showToast('Error al eliminar', 'error');
             }
         } catch (e) {
-            showToast('Error', 'error');
+            console.error(e);
+            showToast('Error de conexión', 'error');
+        } finally {
+            setDeleting(false);
+            setConfirmOpen(false);
+            setItemToDelete(null);
         }
     };
 
-    return (
-        <div>
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <h2 className="text-xl font-bold text-white">Cursos</h2>
+    const filteredCursos = cursos.filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
 
-                <div className="flex gap-4 items-center w-full md:w-auto">
+    return (
+        <div className="ch-tab-wrapper">
+            {/* Header */}
+            <div className={`ch-header-controls column-layout`}>
+                {/* Top Row: Actions */}
+                <div className="ch-controls-row right">
+                    <button
+                        onClick={() => { setCurrentCurso({ activo: true, institucion_id: selectedInstId || instituciones[0]?.idInstitucion }); setIsModalOpen(true); }}
+                        className="btn-primary-action"
+                    >
+                        <i className="bi bi-plus-lg"></i> Nuevo Curso
+                    </button>
+                </div>
+
+                {/* Bottom Row: Filters */}
+                <div className="ch-controls-row nowrap">
+                    <div className="search-container" style={{ flex: '1 1 200px', minWidth: '200px' }}>
+                        <i className="bi bi-search search-icon-pos"></i>
+                        <input
+                            type="text"
+                            placeholder="Buscar cursos..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="search-input-styled"
+                        />
+                    </div>
+
                     <select
-                        className="bg-slate-700 text-white border border-slate-600 rounded px-3 py-2 outline-none focus:border-blue-500"
+                        className="ch-select"
+                        style={{ minWidth: '180px', maxWidth: '300px', cursor: 'pointer', flexShrink: 0 }}
                         value={selectedInstId}
                         onChange={e => setSelectedInstId(e.target.value)}
                     >
                         <option value="">Todas las Instituciones</option>
-                        {instituciones.map(i => (
-                            <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>
-                        ))}
+                        {instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
                     </select>
-
-                    <button
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
-                        onClick={() => {
-                            setCurrentCurso({ active: true, institucion_id: selectedInstId || (instituciones[0]?.idInstitucion) });
-                            setIsModalOpen(true);
-                        }}
-                    >
-                        + Nuevo Curso
-                    </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cursos.map(curso => (
-                    <div key={curso.idCurso} className="bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-slate-500 transition-all shadow-lg flex justify-between items-center">
-                        <div>
-                            <h3 className="font-bold text-lg text-white">{curso.nombre}</h3>
-                            <p className="text-sm text-gray-400">{curso.institucion?.nombre}</p>
-                            <div className="mt-2">
-                                <span className={`text-xs font-bold px-2 py-1 rounded ${curso.activo ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
-                                    {curso.activo ? 'ACTIVO' : 'INACTIVO'}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <button
-                                onClick={() => {
-                                    setCurrentCurso({
-                                        ...curso,
-                                        institucion_id: curso.institucion?.idInstitucion
-                                    });
-                                    setIsModalOpen(true);
-                                }}
-                                className="p-2 bg-slate-700 rounded hover:bg-slate-600 text-yellow-400"
-                            >
-                                ✏️
-                            </button>
-                            <button
-                                onClick={() => handleDelete(curso.idCurso)}
-                                className="p-2 bg-slate-700 rounded hover:bg-slate-600 text-red-400"
-                            >
-                                🗑️
-                            </button>
-                        </div>
-                    </div>
-                ))}
-                {cursos.length === 0 && !loading && (
-                    <div className="col-span-full text-center text-gray-500 py-10">No se encontraron cursos.</div>
-                )}
+            {/* Table */}
+            <div className="ch-table-responsive">
+                <table className="ch-table">
+                    <thead className="ch-thead">
+                        <tr>
+                            {['ID', 'NOMBRE', 'INSTITUCIÓN', 'VIGENCIA', 'ESTADO', 'ACCIONES'].map((h, i) => (
+                                <th key={i} className="ch-th">{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredCursos.map(curso => (
+                            <tr key={curso.idCurso} className="ch-tr">
+                                <td className="ch-td dimmed">#{curso.idCurso}</td>
+                                <td className="ch-td bold">{curso.nombre}</td>
+                                <td className="ch-td dimmed">{curso.institucion?.nombre}</td>
+                                <td className="ch-td dimmed" style={{ fontSize: '0.9rem' }}>
+                                    {curso.fecha_inicio ? `${curso.fecha_inicio} → ${curso.fecha_fin || '∞'}` : <span style={{ fontStyle: 'italic', opacity: 0.7 }}>Sin fechas</span>}
+                                </td>
+                                <td className="ch-td">
+                                    <span className={`ch-badge ${curso.activo ? 'active' : 'inactive'}`}>
+                                        {curso.activo ? 'ACTIVO' : 'INACTIVO'}
+                                    </span>
+                                </td>
+                                <td className="ch-td">
+                                    <div className="action-buttons">
+                                        <button
+                                            onClick={() => { setCurrentCurso({ ...curso, institucion_id: curso.institucion?.idInstitucion }); setIsModalOpen(true); }}
+                                            className="btn-icon btn-edit"
+                                            title="Editar"
+                                        >
+                                            <i className="bi bi-pencil-fill"></i>
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); promptDelete(curso.idCurso); }}
+                                            className="btn-icon btn-delete"
+                                            title="Eliminar"
+                                        >
+                                            <i className="bi bi-trash-fill"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                        {filteredCursos.length === 0 && !loading && (
+                            <tr><td colSpan={6} style={{ padding: 0 }}>
+                                <div className="ch-empty-state">
+                                    <i className="bi bi-journal-x ch-empty-icon"></i>
+                                    No se encontraron cursos.
+                                </div>
+                            </td></tr>
+                        )}
+                    </tbody>
+                </table>
             </div>
 
+            {/* Edit Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md border border-slate-600 shadow-2xl">
-                        <h3 className="text-xl font-bold text-white mb-6">
-                            {currentCurso.idCurso ? 'Editar' : 'Nuevo'} Curso
-                        </h3>
+                <div className="ch-modal-overlay">
+                    <div className="ch-modal-content">
+                        <h2 className="ch-modal-title">{currentCurso.idCurso ? 'Editar' : 'Nuevo'} Curso</h2>
                         <form onSubmit={handleSave}>
-                            <div className="space-y-4">
+                            <div className="ch-form-group">
+                                <label className="ch-label">Institución</label>
+                                <select
+                                    className="ch-select"
+                                    value={currentCurso.institucion_id || ''}
+                                    onChange={e => setCurrentCurso({ ...currentCurso, institucion_id: e.target.value })}
+                                    required
+                                >
+                                    <option value="">Seleccionar...</option>
+                                    {instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="ch-form-group">
+                                <label className="ch-label">Nombre</label>
+                                <input className="ch-input" value={currentCurso.nombre || ''} onChange={e => setCurrentCurso({ ...currentCurso, nombre: e.target.value })} placeholder="Ej: 5to Año 'A'" required />
+                            </div>
+
+                            <div className="ch-form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Institución</label>
-                                    <select
-                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                                        value={currentCurso.institucion_id || ''}
-                                        onChange={e => setCurrentCurso({ ...currentCurso, institucion_id: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {instituciones.map(i => (
-                                            <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>
-                                        ))}
-                                    </select>
+                                    <label className="ch-label">Inicio</label>
+                                    <input type="date" className="ch-input" style={{ colorScheme: 'dark' }} value={currentCurso.fecha_inicio || ''} onChange={e => setCurrentCurso({ ...currentCurso, fecha_inicio: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Nombre del Curso</label>
-                                    <input
-                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                                        value={currentCurso.nombre || ''}
-                                        onChange={e => setCurrentCurso({ ...currentCurso, nombre: e.target.value })}
-                                        placeholder="Ej: 5to Año 'A'"
-                                        required
-                                    />
-                                </div>
-                                <div className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id="curso-activo"
-                                        className="mr-2 w-4 h-4 accent-blue-600"
-                                        checked={currentCurso.activo !== false}
-                                        onChange={e => setCurrentCurso({ ...currentCurso, activo: e.target.checked })}
-                                    />
-                                    <label htmlFor="curso-activo" className="text-gray-300">Curso Activo</label>
+                                    <label className="ch-label">Fin</label>
+                                    <input type="date" className="ch-input" style={{ colorScheme: 'dark' }} value={currentCurso.fecha_fin || ''} onChange={e => setCurrentCurso({ ...currentCurso, fecha_fin: e.target.value })} />
                                 </div>
                             </div>
-                            <div className="mt-8 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium shadow-lg shadow-blue-500/20 transition-all hover:scale-105"
-                                >
-                                    Guardar
-                                </button>
+
+                            <div className="ch-form-group">
+                                <label className="ch-checkbox-group">
+                                    <input type="checkbox" checked={currentCurso.activo !== false} onChange={e => setCurrentCurso({ ...currentCurso, activo: e.target.checked })} className="ch-checkbox" />
+                                    <span style={{ fontSize: '1rem' }}>Curso Activo</span>
+                                </label>
+                            </div>
+
+                            <div className="ch-modal-actions">
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="ch-btn-cancel">Cancelar</button>
+                                <button type="submit" className="ch-btn-save">Guardar Cambios</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="¿Eliminar Curso?"
+                message="Se eliminará el curso y toda la información asociada (horarios, asignaciones, etc). Esta acción no se puede deshacer."
+                confirmText="Sí, Eliminar Curso"
+                isLoading={deleting}
+            />
         </div>
     );
 };

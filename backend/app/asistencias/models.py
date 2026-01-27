@@ -31,6 +31,8 @@ class Curso(models.Model):
     idCurso = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
     institucion = models.ForeignKey(Institucion, on_delete=models.CASCADE, related_name='cursos')
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin = models.DateField(null=True, blank=True)
     activo = models.BooleanField(default=True)
     
     class Meta:

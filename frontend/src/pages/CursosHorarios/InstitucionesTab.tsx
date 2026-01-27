@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../config/api';
 import { useToast } from '../../components/Toast';
+import ConfirmModal from '../../components/ConfirmModal';
+import './CursosHorarios.css';
 
+// Interfaces
 interface Institucion {
     idInstitucion: number;
     nombre: string;
@@ -13,18 +16,25 @@ const InstitucionesTab: React.FC = () => {
     const { showToast } = useToast();
     const [instituciones, setInstituciones] = useState<Institucion[]>([]);
     const [loading, setLoading] = useState(false);
-
-    // Modal State
+    const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentInst, setCurrentInst] = useState<Partial<Institucion>>({});
 
-    const fetchInstituciones = async () => {
+    // Confirm Modal State
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    // Fetch Data
+    const fetchInstituciones = useCallback(async () => {
         setLoading(true);
         try {
             const res = await apiRequest('/instituciones/');
             if (res.ok) {
                 const data = await res.json();
                 setInstituciones(data.results || []);
+            } else {
+                console.error('Error fetching instituciones:', res.status);
             }
         } catch (error) {
             console.error(error);
@@ -32,12 +42,13 @@ const InstitucionesTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [showToast]);
 
     useEffect(() => {
         fetchInstituciones();
-    }, []);
+    }, [fetchInstituciones]);
 
+    // Save Handler
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -55,148 +66,204 @@ const InstitucionesTab: React.FC = () => {
                 setIsModalOpen(false);
                 fetchInstituciones();
             } else {
-                showToast('Error al guardar', 'error');
+                const err = await res.json();
+                showToast('Error: ' + (err.detail || JSON.stringify(err)), 'error');
             }
         } catch (error) {
             showToast('Error de conexión', 'error');
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm('¿Seguro que deseas eliminar esta institución?')) return;
+    // Open confirm modal
+    const promptDelete = (id: number) => {
+        setItemToDelete(id);
+        setConfirmOpen(true);
+    };
+
+    // Execute Delete
+    const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
+        setDeleting(true);
+
         try {
-            const res = await apiRequest(`/instituciones/${id}/`, { method: 'DELETE' });
-            if (res.ok) {
-                showToast('Institución eliminada', 'success');
+            const res = await apiRequest(`/instituciones/${itemToDelete}/`, { method: 'DELETE' });
+
+            if (res.ok || res.status === 204) {
+                showToast('Institución eliminada correctamente', 'success');
+                setInstituciones(prev => prev.filter(i => i.idInstitucion !== itemToDelete));
                 fetchInstituciones();
             } else {
-                showToast('Error al eliminar', 'error');
+                const err = await res.json().catch(() => ({}));
+                showToast('Error al eliminar: ' + (err.detail || 'Error desconocido'), 'error');
             }
         } catch (error) {
-            showToast('Error de conexión', 'error');
+            console.error('Delete network error:', error);
+            showToast('Error de conexión al eliminar', 'error');
+        } finally {
+            setDeleting(false);
+            setConfirmOpen(false);
+            setItemToDelete(null);
         }
     };
 
+    const filteredInstituciones = instituciones.filter(inst =>
+        inst.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
-        <div>
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-white">Instituciones</h2>
-                <button
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    onClick={() => { setCurrentInst({ activa: true }); setIsModalOpen(true); }}
-                >
-                    + Nueva Institución
-                </button>
+        <div className="ch-tab-wrapper">
+            {/* Header */}
+            <div className="ch-header-controls">
+                <div className="ch-controls-row">
+                    <div className="search-container">
+                        <i className="bi bi-search search-icon-pos"></i>
+                        <input
+                            type="text"
+                            placeholder="Buscar instituciones..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="search-input-styled"
+                        />
+                    </div>
+                    <button
+                        onClick={() => { setCurrentInst({ activa: true }); setIsModalOpen(true); }}
+                        className="btn-primary-action"
+                    >
+                        <i className="bi bi-plus-lg"></i>
+                        Nueva Institución
+                    </button>
+                </div>
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
-                <table className="w-full text-left text-sm text-gray-400">
-                    <thead className="bg-slate-900 text-gray-200 uppercase font-medium">
+            <div className="ch-table-responsive">
+                <table className="ch-table">
+                    <thead className="ch-thead">
                         <tr>
-                            <th className="px-6 py-3">ID</th>
-                            <th className="px-6 py-3">Nombre</th>
-                            <th className="px-6 py-3">Descripción</th>
-                            <th className="px-6 py-3">Estado</th>
-                            <th className="px-6 py-3">Acciones</th>
+                            <th className="ch-th">ID</th>
+                            <th className="ch-th">NOMBRE</th>
+                            <th className="ch-th">DESCRIPCIÓN</th>
+                            <th className="ch-th">ESTADO</th>
+                            <th className="ch-th text-right">ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {instituciones.map((inst) => (
-                            <tr key={inst.idInstitucion} className="border-b border-slate-700 hover:bg-slate-700/50">
-                                <td className="px-6 py-4">{inst.idInstitucion}</td>
-                                <td className="px-6 py-4 font-bold text-white">{inst.nombre}</td>
-                                <td className="px-6 py-4">{inst.descripcion}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold ${inst.activa ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {filteredInstituciones.map((inst) => (
+                            <tr key={inst.idInstitucion} className="ch-tr">
+                                <td className="ch-td dimmed">#{inst.idInstitucion}</td>
+                                <td className="ch-td bold">{inst.nombre}</td>
+                                <td className="ch-td dimmed">{inst.descripcion || '-'}</td>
+                                <td className="ch-td">
+                                    <span className={`ch-badge ${inst.activa ? 'active' : 'inactive'}`}>
                                         {inst.activa ? 'ACTIVA' : 'INACTIVA'}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex gap-2">
+                                <td className="ch-td text-right">
+                                    <div className="action-buttons">
                                         <button
+                                            type="button"
                                             onClick={() => { setCurrentInst(inst); setIsModalOpen(true); }}
-                                            className="text-yellow-400 hover:text-yellow-300"
+                                            className="btn-icon btn-edit"
+                                            title="Editar"
                                         >
-                                            Editar
+                                            <i className="bi bi-pencil-fill"></i>
                                         </button>
+
                                         <button
-                                            onClick={() => handleDelete(inst.idInstitucion)}
-                                            className="text-red-400 hover:text-red-300"
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                promptDelete(inst.idInstitucion);
+                                            }}
+                                            className="btn-icon btn-delete"
+                                            title="Eliminar"
                                         >
-                                            Eliminar
+                                            <i className="bi bi-trash-fill"></i>
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                         ))}
-                        {instituciones.length === 0 && !loading && (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                                    No hay instituciones registradas.
-                                </td>
-                            </tr>
-                        )}
                     </tbody>
                 </table>
+                {filteredInstituciones.length === 0 && !loading && (
+                    <div className="ch-empty-state">
+                        <i className="bi bi-search ch-empty-icon"></i>
+                        No se encontraron instituciones.
+                    </div>
+                )}
             </div>
 
-            {/* Modal */}
+            {/* Modal Edit */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md border border-slate-600 shadow-xl">
-                        <h3 className="text-xl font-bold text-white mb-4">
+                <div className="ch-modal-overlay">
+                    <div className="ch-modal-content">
+                        <h2 className="ch-modal-title">
                             {currentInst.idInstitucion ? 'Editar' : 'Nueva'} Institución
-                        </h3>
+                        </h2>
                         <form onSubmit={handleSave}>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Nombre</label>
-                                    <input
-                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                                        value={currentInst.nombre || ''}
-                                        onChange={e => setCurrentInst({ ...currentInst, nombre: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
-                                    <textarea
-                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                                        value={currentInst.descripcion || ''}
-                                        onChange={e => setCurrentInst({ ...currentInst, descripcion: e.target.value })}
-                                    />
-                                </div>
-                                <div className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id="activa"
-                                        className="mr-2"
-                                        checked={currentInst.activa || false}
-                                        onChange={e => setCurrentInst({ ...currentInst, activa: e.target.checked })}
-                                    />
-                                    <label htmlFor="activa" className="text-gray-300">Activa</label>
-                                </div>
+                            <div className="ch-form-group">
+                                <label className="ch-label">Nombre</label>
+                                <input
+                                    className="ch-input"
+                                    value={currentInst.nombre || ''}
+                                    onChange={e => setCurrentInst({ ...currentInst, nombre: e.target.value })}
+                                    required
+                                    placeholder="Ej: Escuela Técnica N°1"
+                                />
                             </div>
-                            <div className="mt-6 flex justify-end gap-3">
+                            <div className="ch-form-group">
+                                <label className="ch-label">Descripción</label>
+                                <textarea
+                                    className="ch-textarea"
+                                    value={currentInst.descripcion || ''}
+                                    onChange={e => setCurrentInst({ ...currentInst, descripcion: e.target.value })}
+                                    placeholder="Información adicional..."
+                                />
+                            </div>
+                            <div className="ch-form-group">
+                                <label className="ch-checkbox-group">
+                                    <div style={{ position: 'relative', width: '24px', height: '24px' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={currentInst.activa !== false}
+                                            onChange={e => setCurrentInst({ ...currentInst, activa: e.target.checked })}
+                                            className="ch-checkbox"
+                                        />
+                                    </div>
+                                    <span style={{ fontSize: '1rem' }}>Institución Activa</span>
+                                </label>
+                            </div>
+                            <div className="ch-modal-actions">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-gray-400 hover:text-white"
+                                    className="ch-btn-cancel"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                                    className="ch-btn-save"
                                 >
-                                    Guardar
+                                    Guardar Cambios
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="¿Eliminar Institución?"
+                message="Esta acción no se puede deshacer. Se eliminarán permanentemente la institución y todas sus relaciones."
+                confirmText="Sí, Eliminar"
+                isLoading={deleting}
+            />
         </div>
     );
 };

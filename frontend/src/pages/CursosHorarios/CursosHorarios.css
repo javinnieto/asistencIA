@@ -1,0 +1,555 @@
+/* CursosHorarios.css - Estilos compartidos */
+
+/* =========================================
+   Layout & Container
+   ========================================= */
+.ch-main-container {
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.ch-tab-wrapper {
+    width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+/* =========================================
+   Navigation Tabs (index.tsx)
+   ========================================= */
+.ch-tabs-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0;
+    background: #1e293b;
+    border-radius: 24px 24px 0 0;
+    border: 1px solid #334155;
+    overflow: hidden;
+    margin-bottom: -1px;
+    position: relative;
+    z-index: 2;
+}
+
+.ch-tab-button {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid #334155;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    position: relative;
+    font-family: inherit;
+}
+
+.ch-tab-button.active {
+    background: rgba(59, 130, 246, 0.08);
+    border-bottom-color: #3b82f6;
+}
+
+.ch-tab-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #fff;
+    transition: background 0.2s;
+}
+
+.ch-tab-button.active .ch-tab-icon-wrapper {
+    background: #3b82f6;
+}
+
+.ch-tab-label {
+    color: #cbd5e1;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.ch-tab-button.active .ch-tab-label {
+    color: #fff;
+}
+
+.ch-tab-desc {
+    color: #64748b;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+.ch-tab-button.active .ch-tab-desc {
+    color: #93c5fd;
+}
+
+.ch-content-box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-top: none;
+    border-radius: 0 0 24px 24px;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* =========================================
+   Headers & Filters
+   ========================================= */
+.ch-header-controls {
+    padding: 40px;
+    border-bottom: 1px solid #334155;
+    background: rgba(15, 23, 42, 0.6);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+
+}
+
+.ch-header-controls.column-layout {
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.ch-controls-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.ch-controls-row.nowrap {
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.ch-controls-row.right {
+    justify-content: flex-end;
+}
+
+/* =========================================
+   Tables
+   ========================================= */
+.ch-table-responsive {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.ch-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.ch-thead tr {
+    background: rgba(15, 23, 42, 0.8);
+}
+
+.ch-th {
+    padding: 16px;
+    text-align: left;
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.ch-th.text-right {
+    text-align: right;
+}
+
+.ch-tr {
+    border-bottom: 1px solid #334155;
+}
+
+.ch-td {
+    padding: 16px;
+    color: #f1f5f9;
+}
+
+.ch-td.dimmed {
+    color: #64748b;
+}
+
+.ch-td.bold {
+    font-weight: 600;
+}
+
+.ch-td.text-right {
+    text-align: right;
+}
+
+.ch-empty-state {
+    padding: 60px;
+    text-align: center;
+    color: #64748b;
+}
+
+.ch-empty-icon {
+    font-size: 2rem;
+    margin-bottom: 16px;
+    display: block;
+    opacity: 0.5;
+}
+
+/* =========================================
+   Status Badges
+   ========================================= */
+.ch-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.ch-badge.active {
+    background: rgba(34, 197, 94, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.ch-badge.inactive {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* =========================================
+   Modals
+   ========================================= */
+.ch-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.ch-modal-content {
+    background: #1e293b;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 16px;
+    padding: 32px;
+    border: 1px solid #475569;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.ch-modal-title {
+    color: #fff;
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 1.5rem;
+}
+
+.ch-form-group {
+    margin-bottom: 20px;
+}
+
+.ch-label {
+    display: block;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.ch-input,
+.ch-select,
+.ch-textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #475569;
+    background: #0f172a;
+    color: #fff;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.ch-textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.ch-checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+    cursor: pointer;
+    margin-bottom: 32px;
+}
+
+.ch-checkbox {
+    width: 24px !important;
+    height: 24px !important;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+.ch-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.ch-btn-cancel {
+    padding: 12px 24px;
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.ch-btn-cancel:hover {
+    background: rgba(148, 163, 184, 0.1);
+    color: #fff;
+}
+
+.ch-btn-save {
+    padding: 12px 24px;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.ch-btn-save:hover {
+    background: #2563eb;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* =========================================
+   Horarios Specifics
+   ========================================= */
+.ch-horarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+}
+
+.ch-horario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 0 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.ch-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ch-title-bar {
+    width: 4px;
+    height: 32px;
+    background: #3b82f6;
+    border-radius: 4px;
+}
+
+.ch-page-title {
+    color: #f1f5f9;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.ch-count-badge {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 20px;
+    padding: 4px 12px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.ch-days-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 24px 24px;
+}
+
+.ch-day-card {
+    background: #1e293b;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    overflow: hidden;
+}
+
+.ch-day-header {
+    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+    padding: 12px 24px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ch-day-content {
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.ch-horario-item {
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border: 1px solid #334155;
+    min-width: 280px;
+    flex: 1 1 auto;
+    max-width: 400px;
+    justify-content: space-between;
+}
+
+.ch-time-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ch-time-text {
+    color: #f1f5f9;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.ch-no-selection {
+    text-align: center;
+    padding: 100px;
+    color: #64748b;
+    margin: 0 24px 24px;
+    background: #1e293b;
+    border-radius: 12px;
+    border: 2px dashed #334155;
+}
+
+/* Existing Classes Helper */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.btn-edit {
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+}
+
+.btn-edit:hover {
+    background: rgba(245, 158, 11, 0.2);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    transform: translateY(-1px);
+}
+
+.btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    position: relative;
+    z-index: 10;
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    transform: translateY(-1px);
+}
+
+.btn-primary-action {
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-primary-action:hover {
+    background: #2563eb;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
+}
+
+.search-container {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.search-input-styled {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 10px 10px 40px;
+    color: #f1f5f9;
+    outline: none;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.search-input-styled:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.search-icon-pos {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+}

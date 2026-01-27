@@ -1,12 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import './PersonasTable.css';
-
-interface IconProps { className?: string }
-const FaEdit = ({ className }: IconProps) => <span className={className}>✏️</span>;
-const FaTrash = ({ className }: IconProps) => <span className={className}>🗑️</span>;
-const FaEye = ({ className }: IconProps) => <span className={className}>👁️</span>;
-const FaSearch = ({ className }: IconProps) => <span className={className}>🔍</span>;
-const FaDownload = ({ className }: IconProps) => <span className={className}>📥</span>;
+import ConfirmModal from './ConfirmModal';
 
 interface Person {
   id: string;
@@ -38,20 +32,22 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterCurso, setFilterCurso] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Modal states
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   // Categorías disponibles
   const categorias = ['Alumno', 'Docente', 'No Docente'];
 
-  const [filterCurso, setFilterCurso] = useState('');
-
-  // Computar cursos únicos disponibles de las personas cargadas
+  // Computar cursos únicos
   const cursosDisponibles = useMemo(() => {
     const cursos = new Set<string>();
     personas.forEach(p => {
       if (p.grado) cursos.add(p.grado);
-      // También buscar en roles si es necesario profundidad
       p.roles?.forEach(r => {
         if (r.curso && r.curso.nombre) cursos.add(r.curso.nombre);
       });
@@ -67,7 +63,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         person.apellido.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesCategoria = !filterCategoria || (
-        // Check primary department OR any role's type name
         person.departamento === filterCategoria ||
         person.roles?.some(r => r.tipo?.nombre === filterCategoria)
       );
@@ -87,25 +82,19 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 
   const handlePageChange = (page: number) => setCurrentPage(page);
 
-  const exportToCSV = () => {
-    const headers = ['ID', 'Nombre', 'Apellido', 'Categoría', 'Cursos'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredData.map(person => {
-        const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean).join('; ') || '';
-        return [person.id, person.nombre, person.apellido, person.departamento, cursos].join(',');
-      })
-    ].join('\n');
+  const handleDeleteRequest = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setItemToDelete(id);
+    setConfirmOpen(true);
+  };
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'personas.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      onDelete(itemToDelete);
+      setConfirmOpen(false);
+      setItemToDelete(null);
+    }
   };
 
   if (personas.length === 0) {
@@ -122,63 +111,61 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 
   return (
     <div className="personas-table-container">
-      {/* Header */}
-      <div className="table-header">
-        <div className="header-left">
-          <h2>Gestión de Personas</h2>
-          <span className="results-count">
-            Mostrando {currentData.length} de {filteredData.length} personas
-          </span>
-        </div>
-        <div className="header-right">
-          <button className="btn btn-secondary" onClick={exportToCSV}>
-            <FaDownload /> Exportar
-          </button>
-        </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="table-filters">
-        <div className="search-box">
-          <FaSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre o apellido..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-
-        <div className="filter-controls">
-          <div className="filter-group">
-            <label>Categoría:</label>
-            <select
-              value={filterCategoria}
-              onChange={(e) => setFilterCategoria(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Todas</option>
-              {categorias.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+      {/* Combined Compact Header & Filters */}
+      <div className="table-top-bar" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '20px 8px 50px 8px',
+        background: 'rgba(30, 41, 59, 0.4)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        gap: '16px',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1, flexWrap: 'wrap' }}>
+          {/* Search - Flexible Width */}
+          <div className="search-box" style={{ flex: '1 1 200px', minWidth: '200px' }}>
+            <i className="bi bi-search search-icon"></i>
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+              style={{ height: '40px', fontSize: '0.9rem' }}
+            />
           </div>
 
-          <div className="filter-group">
-            <label>Curso:</label>
-            <select
-              value={filterCurso}
-              onChange={(e) => setFilterCurso(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Todos</option>
-              {cursosDisponibles.map(curso => (
-                <option key={curso} value={curso}>{curso}</option>
-              ))}
-            </select>
-          </div>
+          {/* Inline Filters */}
+          <select
+            value={filterCategoria}
+            onChange={(e) => setFilterCategoria(e.target.value)}
+            className="filter-select"
+            style={{ width: 'auto', minWidth: '140px', height: '40px' }}
+          >
+            <option value="">Todas las Categorías</option>
+            {categorias.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterCurso}
+            onChange={(e) => setFilterCurso(e.target.value)}
+            className="filter-select"
+            style={{ width: 'auto', minWidth: '140px', height: '40px' }}
+          >
+            <option value="">Todos los Cursos</option>
+            {cursosDisponibles.map(curso => (
+              <option key={curso} value={curso}>{curso}</option>
+            ))}
+          </select>
         </div>
+
+        {/* Results Count on right */}
+        <span className="results-count" style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+          {filteredData.length} registros
+        </span>
       </div>
 
       {/* Tabla */}
@@ -186,17 +173,16 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         <table className="personas-table">
           <thead>
             <tr>
-              <th style={{ width: '60px' }}>Foto</th>
-              <th style={{ width: '20%' }}>Nombre</th>
-              <th style={{ width: '20%' }}>Apellido</th>
-              <th style={{ width: '15%' }}>Categoría</th>
-              <th style={{ width: '25%' }}>Cursos</th>
-              <th style={{ width: '15%' }}>Acciones</th>
+              <th style={{ width: '60px' }}>FOTO</th>
+              <th style={{ width: '20%' }}>NOMBRE</th>
+              <th style={{ width: '20%' }}>APELLIDO</th>
+              <th style={{ width: '15%' }}>CATEGORÍA</th>
+              <th style={{ width: '25%' }}>CURSOS</th>
+              <th style={{ width: '15%', textAlign: 'right' }}>ACCIONES</th>
             </tr>
           </thead>
           <tbody>
             {currentData.map((person) => {
-              // Mostrar todos los cursos de la persona
               const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
               const cursosText = cursos.length > 0 ? cursos.join(', ') : '-';
 
@@ -218,7 +204,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                         <span key={idx} className="department-badge" style={{
                           padding: '4px 8px',
                           borderRadius: '12px',
-                          fontSize: '11px',
+                          fontSize: '0.7rem',
                           fontWeight: '600',
                           background: role.tipo?.nombre === 'Alumno' ? '#dbeafe' :
                             role.tipo?.nombre === 'Docente' ? '#fef3c7' : '#f3e8ff',
@@ -232,33 +218,32 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       )}
                     </div>
                   </td>
-                  <td style={{ fontSize: '13px', color: '#64748b' }}>{cursosText}</td>
+                  <td style={{ fontSize: '0.85rem', color: '#64748b' }}>{cursosText}</td>
                   <td>
-                    <div className="action-buttons" style={{ display: 'flex', gap: '6px' }}>
+                    <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <button
                         className="btn-icon btn-view action-btn"
                         onClick={() => onView(person)}
                         title="Ver detalles"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#3b82f6' }}
                       >
-                        <FaEye className="w-4 h-4 text-blue-600" />
+                        <i className="bi bi-eye-fill"></i>
                       </button>
                       <button
                         className="btn-icon btn-edit action-btn"
                         onClick={() => onEdit(person)}
                         title="Editar"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#fbbf24' }}
                       >
-                        <FaEdit className="w-4 h-4 text-yellow-600" />
+                        <i className="bi bi-pencil-fill"></i>
                       </button>
                       <button
                         className="btn-icon btn-delete action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('[PersonasTable] Delete clicked for:', person.id, person.nombre);
-                          onDelete(person.id);
-                        }}
+                        onClick={(e) => handleDeleteRequest(person.id, e)}
                         title="Eliminar"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#f87171', zIndex: 10, position: 'relative' }}
                       >
-                        <FaTrash className="w-4 h-4 text-red-600" />
+                        <i className="bi bi-trash-fill"></i>
                       </button>
                     </div>
                   </td>
@@ -279,7 +264,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           >
             ← Anterior
           </button>
-
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
             <button
               key={page}
@@ -289,7 +273,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
               {page}
             </button>
           ))}
-
           <button
             className="btn-page"
             onClick={() => handlePageChange(currentPage + 1)}
@@ -299,6 +282,16 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           </button>
         </div>
       )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="¿Eliminar Persona?"
+        message="¿Estás seguro que deseas eliminar a esta persona del sistema? Se perderá todo su historial."
+        confirmText="Sí, Eliminar"
+      />
     </div>
   );
 };

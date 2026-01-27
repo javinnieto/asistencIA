@@ -85,6 +85,28 @@ class HorarioViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return HorarioCreateSerializer
         return HorarioSerializer
+    
+    def _propagate_to_personas(self, horario):
+        """
+        Asigna el horario a todas las personas que están inscriptas en el curso.
+        """
+        # Encontrar personas asociadas a este curso
+        roles_curso = PersonaInstitucion.objects.filter(curso=horario.curso, activo=True)
+        for role in roles_curso:
+            persona = role.persona
+            # Agregar el horario si no lo tiene ya
+            if not persona.horarios.filter(pk=horario.pk).exists():
+                persona.horarios.add(horario)
+    
+    def perform_create(self, serializer):
+        """Al crear un horario, asignarlo automáticamente a todos los alumnos del curso."""
+        horario = serializer.save()
+        self._propagate_to_personas(horario)
+    
+    def perform_update(self, serializer):
+        """Al actualizar un horario, también propagarlo (por si cambió de curso)."""
+        horario = serializer.save()
+        self._propagate_to_personas(horario)
 
 
 class PersonaViewSet(viewsets.ModelViewSet):
