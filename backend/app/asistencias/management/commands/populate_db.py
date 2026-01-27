@@ -34,10 +34,7 @@ class Command(BaseCommand):
             nombre='ISAE',
             defaults={'descripcion': 'Instituto Superior de Enseñanza', 'activa': True}
         )
-        tecno, _ = Institucion.objects.get_or_create(
-            nombre='TecnoAliados',
-            defaults={'descripcion': 'Cursos Extraprogramáticos de Tecnología', 'activa': True}
-        )
+
 
         # 2. Crear Tipos de Persona por Institución
         self.stdout.write('👥 Creando tipos de persona...')
@@ -52,11 +49,7 @@ class Command(BaseCommand):
         director_isae, _ = TipoPersona.objects.get_or_create(
             nombre='Director', institucion=isae, defaults={'activo': True})
         
-        # Tipos TecnoAliados
-        estudiante_tecno, _ = TipoPersona.objects.get_or_create(
-            nombre='Estudiante', institucion=tecno, defaults={'activo': True})
-        instructor_tecno, _ = TipoPersona.objects.get_or_create(
-            nombre='Instructor', institucion=tecno, defaults={'activo': True})
+
 
         # 3. Crear Cursos por Institución
         self.stdout.write('📖 Creando cursos...')
@@ -68,12 +61,7 @@ class Command(BaseCommand):
                 nombre=grado, institucion=isae, defaults={'activo': True})
             cursos_isae.append(curso)
         
-        # Cursos TecnoAliados
-        cursos_tecno = []
-        for curso_nombre in ['Programación Python', 'Desarrollo Web', 'Diseño Gráfico', 'Robótica', 'Marketing Digital']:
-            curso, _ = Curso.objects.get_or_create(
-                nombre=curso_nombre, institucion=tecno, defaults={'activo': True})
-            cursos_tecno.append(curso)
+
 
         # 4. Estados de Asistencia
         self.stdout.write('📊 Creando estados de asistencia...')
@@ -94,8 +82,8 @@ class Command(BaseCommand):
             persona=javier, institucion=isae, tipo=estudiante_isae, 
             curso=cursos_isae[4], defaults={'activo': True})  # 5to año
         PersonaInstitucion.objects.get_or_create(
-            persona=javier, institucion=tecno, tipo=instructor_tecno, 
-            curso=cursos_tecno[0], defaults={'activo': True})  # Python
+            persona=javier, institucion=isae, tipo=estudiante_isae, 
+            curso=cursos_isae[4], defaults={'activo': True})  # 5to año
 
         # Estudiantes ISAE
         estudiantes_isae = [
@@ -129,23 +117,7 @@ class Command(BaseCommand):
         PersonaInstitucion.objects.get_or_create(
             persona=director, institucion=isae, tipo=director_isae, defaults={'activo': True})
 
-        # Instructores TecnoAliados
-        instructores_tecno = [(40, 'Instructor Python'), (41, 'Instructor Web')]
-        for i, (id_persona, nombre) in enumerate(instructores_tecno):
-            persona, _ = Persona.objects.get_or_create(
-                idPersona=id_persona, defaults={'nombre': nombre, 'activo': True})
-            PersonaInstitucion.objects.get_or_create(
-                persona=persona, institucion=tecno, tipo=instructor_tecno,
-                curso=cursos_tecno[i], defaults={'activo': True})
 
-        # Estudiantes TecnoAliados
-        estudiantes_tecno = [(50, 'Tech Student 1'), (51, 'Tech Student 2')]
-        for id_persona, nombre in estudiantes_tecno:
-            persona, _ = Persona.objects.get_or_create(
-                idPersona=id_persona, defaults={'nombre': nombre, 'activo': True})
-            PersonaInstitucion.objects.get_or_create(
-                persona=persona, institucion=tecno, tipo=estudiante_tecno,
-                curso=random.choice(cursos_tecno), defaults={'activo': True})
 
         # 6. Crear Asistencias de los últimos 30 días
         self.stdout.write('📅 Creando asistencias...')
@@ -167,7 +139,7 @@ class Command(BaseCommand):
                     persona=persona, fechaHora=fecha_con_hora,
                     defaults={
                         'temperatura': temperatura, 'estado': random.choice(estados),
-                        'institucion': isae if persona.idPersona < 40 else tecno
+                        'institucion': isae
                     })
 
         # Estadísticas finales
@@ -192,7 +164,7 @@ class Command(BaseCommand):
    • Asistencias: {stats['asistencias']}
 
 🔧 MODELO GENÉRICO IMPLEMENTADO:
-   • Instituciones: ISAE, TecnoAliados
+   • Instituciones: ISAE
    • Roles flexibles por institución
    • Personas con múltiples roles
    • Escalable para futuras instituciones

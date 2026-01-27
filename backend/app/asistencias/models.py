@@ -151,6 +151,9 @@ class Asistencia(models.Model):
     estado = models.ForeignKey(EstadoAsistencia, on_delete=models.PROTECT)
     # Opcional: especificar para qué institución/contexto es la asistencia
     institucion = models.ForeignKey(Institucion, null=True, blank=True, on_delete=models.SET_NULL)
+    # New fields for strict logic
+    horario = models.ForeignKey(Horario, null=True, blank=True, on_delete=models.SET_NULL)
+    llegada_tarde_minutos = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.persona} - {self.fechaHora} - {self.temperatura}°C"

@@ -3,7 +3,7 @@ import paho.mqtt.client as mqtt
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db import transaction
 from django.conf import settings
@@ -133,95 +133,128 @@ class Command(BaseCommand):
             logger.error(f'{error_msg} - Payload: {msg.payload}')
 
     def procesar_asistencia(self, info):
-        """Procesa una asistencia recibida por MQTT"""
+        """Procesa una asistencia recibida por MQTT con lógica estricta de horarios"""
         try:
             with transaction.atomic():
-                # Extraer datos del payload real
+                # Extraer datos del payload
                 person_id = int(info.get('personId'))
                 nombre = info.get('persionName', 'Usuario Desconocido').strip()
                 temperatura = float(info.get('temperature', 0.0))
                 verify_status = info.get('VerifyStatus', '0')
-                person_type = info.get('PersonType', '0')
                 
-                # FILTRO CRUCIAL: Solo procesar personas reconocidas
+                # 1. FILTRO: Solo procesar personas reconocidas
                 if verify_status != LECTOR_CONFIG['VERIFY_STATUS_SUCCESS']:
                     self.stdout.write(self.style.WARNING(f'⚠️ Persona no reconocida (ID: {person_id}) - VerifyStatus: {verify_status}'))
-                    logger.warning(f'Persona no reconocida - ID: {person_id}, VerifyStatus: {verify_status}')
                     return
-                
-                # Parsear fecha/hora del formato real del lector
+
+                # 2. Obtener fecha/hora
                 time_str = info.get('time')
                 if time_str:
                     try:
-                        # Formato del lector: "2025-09-02 21:13:12"
                         fecha_hora = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
                         fecha_hora = timezone.make_aware(fecha_hora)
                     except:
                         fecha_hora = timezone.now()
                 else:
                     fecha_hora = timezone.now()
-                
-                # Verificar si la persona existe en nuestra BD
+
+                # 3. Buscar persona
                 try:
                     persona = Persona.objects.get(idPersona=person_id)
-                    # Actualizar datos si es necesario
-                    if persona.nombre != nombre:
-                        persona.nombre = nombre
-                        persona.save()
-                    
-                    # Persona ya existe, no necesitamos actualizar nada más
-                    
                 except Persona.DoesNotExist:
-                    # PERSONA NO EXISTE EN NUESTRA BD - CREAR SIN CLASIFICAR
-                    self.stdout.write(self.style.WARNING(f'⚠️ Persona nueva detectada (ID: {person_id}) - Creando en BD'))
-                    
-                    # Intentar obtener foto del payload
-                    foto_file = None
-                    face_image_b64 = info.get('faceImage') or info.get('picture') # Posibles keys
-                    if face_image_b64:
-                        try:
-                            import base64
-                            from django.core.files.base import ContentFile
-                            format, imgstr = 'jpeg', face_image_b64
-                            if ';base64,' in face_image_b64:
-                                format, imgstr = face_image_b64.split(';base64,') 
-                            data = base64.b64decode(imgstr)
-                            file_name = f'persona_{person_id}_{int(timezone.now().timestamp())}.jpg'
-                            foto_file = ContentFile(data, name=file_name)
-                        except Exception as e:
-                            self.stdout.write(self.style.ERROR(f'Error decodificando foto: {e}'))
+                    self.stdout.write(self.style.ERROR(f'❌ Persona no encontrada en BD (ID: {person_id}). Asistencia ignorada.'))
+                    return
 
-                    # Crear persona genérica sin clasificar
-                    persona = Persona.objects.create(
-                        idPersona=person_id,
-                        nombre=nombre,
-                        activo=True,
-                        foto=foto_file
-                    )
+                # 4. LÓGICA DE HORARIOS
+                # Determinar día de la semana
+                dias_map = {
+                    0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves', 
+                    4: 'Viernes', 5: 'Sábado', 6: 'Domingo'
+                }
+                dia_actual = dias_map[fecha_hora.weekday()]
+                time_actual = fecha_hora.time()
+
+                # Buscar horarios de la persona para hoy
+                horarios_candidatos = persona.horarios.filter(dia=dia_actual, activo=True)
+                
+                horario_valido = None
+                minutos_tarde = 0
+                estado_nombre = ESTADOS_ASISTENCIA['AUSENTE'] # Default, aunque no se guardará si es ausente aquí
+
+                for h in horarios_candidatos:
+                    # Convertir tiempos a datetime para comparar con fecha completa si es necesario, 
+                    # pero aquí usaremos dummy dates para comparar tiempos y deltas.
                     
-                    self.stdout.write(self.style.SUCCESS(f'✅ Nueva persona creada: {nombre} (ID: {person_id}) - FOTO: {"SI" if foto_file else "NO"} - NECESITA CLASIFICACIÓN MANUAL'))
+                    # Rango válido: [Inicio - 1 hora, Fin]
+                    # Construir datetimes para el día de la asistencia
+                    start_dt = datetime.combine(fecha_hora.date(), h.hora_inicio)
+                    start_dt_aware = timezone.make_aware(start_dt)
+                    
+                    end_dt = datetime.combine(fecha_hora.date(), h.hora_fin)
+                    end_dt_aware = timezone.make_aware(end_dt)
+                    
+                    valid_start = start_dt_aware - timedelta(hours=1)
+                    valid_end = end_dt_aware
+
+                    if valid_start <= fecha_hora <= valid_end:
+                        horario_valido = h
+                        
+                        # Calcular tardanza con tolerancia de 1 minuto
+                        if fecha_hora > start_dt_aware:
+                            diff = fecha_hora - start_dt_aware
+                            minutos_tarde = int(diff.total_seconds() / 60)
+                            
+                            # Tolerancia de 1 minuto: si llega dentro del primer minuto, es "Presente"
+                            if minutos_tarde >= 1:
+                                estado_nombre = ESTADOS_ASISTENCIA['TARDANZA']
+                            else:
+                                minutos_tarde = 0
+                                estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
+                        else:
+                            minutos_tarde = 0
+                            estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
+                        
+                        break # Encontramos el horario (asumimos no solapamiento o prioridad al primero encontrado)
+
+                if not horario_valido:
+                    self.stdout.write(self.style.WARNING(f'⚠️ Asistencia FUERA DE RANGO para {persona.nombre} a las {fecha_hora.time()}. Ignorada.'))
+                    logger.warning(f'Asistencia fuera de rango: {persona.idPersona} - {fecha_hora}')
+                    return
+
+                # 5. CONTROL DE DUPLICADOS
+                # Verificar si ya existe asistencia para esta persona en este horario hoy
+                inicio_dia = fecha_hora.replace(hour=0, minute=0, second=0, microsecond=0)
+                duplicada = Asistencia.objects.filter(
+                    persona=persona, 
+                    horario=horario_valido,
+                    fechaHora__gte=inicio_dia,
+                    fechaHora__lt=inicio_dia + timedelta(days=1)
+                ).exists()
+
+                if duplicada:
+                    self.stdout.write(self.style.WARNING(f'⚠️ Asistencia DUPLICADA para {persona.nombre} en el horario {horario_valido}. Ignorada.'))
+                    return
+
+                # 6. GUARDAR ASISTENCIA
+                estado_obj, _ = EstadoAsistencia.objects.get_or_create(nombre=estado_nombre)
                 
-                # Obtener estado de asistencia usando constantes
-                estado, _ = EstadoAsistencia.objects.get_or_create(
-                    nombre=ESTADOS_ASISTENCIA['PRESENTE'],
-                    defaults={'descripcion': 'Asistencia registrada por terminal biométrico'}
-                )
-                
-                # Crear asistencia minimalista
                 asistencia = Asistencia.objects.create(
                     persona=persona,
                     fechaHora=fecha_hora,
                     temperatura=temperatura,
-                    estado=estado
+                    estado=estado_obj,
+                    horario=horario_valido,
+                    llegada_tarde_minutos=minutos_tarde,
+                    # Institución podría derivarse del curso/horario
+                    institucion=horario_valido.curso.institucion
                 )
                 
-                # Log de éxito con más información
-                success_msg = f'✅ Asistencia registrada: {persona.nombre} (ID: {person_id}) - Temp: {temperatura}°C - Similarity: {info.get("similarity1", "N/A")}%'
-                self.stdout.write(self.style.SUCCESS(success_msg))
-                logger.info(f'Asistencia registrada exitosamente: {asistencia.idAsistencia} - Persona: {persona.nombre}')
-                
+                tarde_msg = f" (Tarde {minutos_tarde} min)" if minutos_tarde > 0 else " (A tiempo)"
+                log_msg = f'✅ Asistencia GUARDADA: {persona.nombre} - {horario_valido.curso.nombre} {tarde_msg}'
+                self.stdout.write(self.style.SUCCESS(log_msg))
+                logger.info(log_msg)
+
         except Exception as e:
             error_msg = f'❌ Error procesando asistencia: {e}'
             self.stdout.write(self.style.ERROR(error_msg))
-            logger.error(f'{error_msg} - Info: {info}')
-            # No hacer raise para que siga funcionando con otros mensajes 
+            logger.error(f'{error_msg} - Info: {info}') 

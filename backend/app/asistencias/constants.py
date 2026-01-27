@@ -9,16 +9,9 @@ TIPOS_ISAE = {
     'DIRECTOR': 'Director'
 }
 
-# Tipos de persona en TecnoAliados
-TIPOS_TECNO = {
-    'ESTUDIANTE': 'Estudiante TecnoAliados',
-    'INSTRUCTOR': 'Instructor TecnoAliados'
-}
-
 # Instituciones
 INSTITUCIONES = {
     'ISAE': 'ISAE',
-    'TECNOALIADOS': 'TecnoAliados'
 }
 
 # Estados de asistencia

@@ -205,12 +205,16 @@ class EstadoAsistenciaViewSet(viewsets.ModelViewSet):
 
 
 class AsistenciaViewSet(viewsets.ModelViewSet):
-    queryset = Asistencia.objects.all()
+    queryset = Asistencia.objects.all().select_related('persona', 'estado', 'horario', 'horario__curso').order_by('-fechaHora')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['estado', 'persona', 'institucion']
-    search_fields = ['persona__nombre', 'persona__idPersona']
-    ordering_fields = ['fechaHora', 'temperatura', 'persona__nombre', 'persona__idPersona']
-    ordering = ['-fechaHora']  # Más recientes primero
+    filterset_fields = {
+        'fechaHora': ['date', 'gte', 'lte'],
+        'estado': ['exact'],
+        'horario__curso': ['exact'],
+    }
+    search_fields = ['persona__nombre']
+    ordering_fields = ['fechaHora', 'temperatura']
+    ordering = ['-fechaHora']
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:

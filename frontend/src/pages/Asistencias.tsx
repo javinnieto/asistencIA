@@ -1,422 +1,420 @@
 import React, { useState, useEffect } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap-icons/font/bootstrap-icons.css';
-import Notification, { NotificationType } from '../components/Notification';
-import ExportButton from '../components/ExportButton';
-
 import { apiRequest } from '../config/api';
+import { includesNormalized } from '../utils/normalize';
 import './Asistencias.css';
-
-interface Asistencia {
-  idAsistencia: number;
-  persona: {
-    idPersona: number;
-    nombre: string;
-    curso?: { idCurso: number; nombre: string } | null;
-  };
-  fecha_hora: string;
-  temperatura: number;
-  estado: { idEstadoAsistencia: number; nombre: string };
-  justificacion?: {
-    tipo: 'salud' | 'justificado' | 'varios';
-    comentario?: string;
-  };
-}
 
 interface Persona {
   idPersona: number;
   nombre: string;
-  tipo: 'alumno' | 'profesor' | 'personal';
-  curso?: { idCurso: number; nombre: string } | null;
+  foto?: string;
+}
+
+interface Curso {
+  idCurso: number;
+  nombre: string;
+}
+
+interface Horario {
+  idHorario: number;
+  dia: string;
+  hora_inicio: string;
+  hora_fin: string;
+  curso: Curso;
+}
+
+interface Asistencia {
+  idAsistencia: number;
+  persona: Persona;
+  fechaHora: string;
+  temperatura: number;
+  estado: { idEstadoAsistencia: number; nombre: string };
+  horario?: Horario;
+  llegada_tarde_minutos: number;
 }
 
 const Asistencias: React.FC = () => {
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
-  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [notification, setNotification] = useState<{ message: string; type: NotificationType } | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [stats, setStats] = useState({ presentes: 0, tardanzas: 0, ausentes: 0 });
+
+  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [filtros, setFiltros] = useState({
-    fechaInicio: '',
-    fechaFin: '',
-    estado: '',
-    tipo: ''
-  });
+  const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().slice(0, 10));
+  const [fechaFin, setFechaFin] = useState('');
+  const [cursoFiltro, setCursoFiltro] = useState('');
 
-  // Cargar datos reales del backend
+  // Modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAsistencia, setEditingAsistencia] = useState<Asistencia | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
   useEffect(() => {
-    const cargarDatos = async () => {
-      setLoading(true);
-      try {
-        // Cargar personas
-        const responsePersonas = await apiRequest('/personas/');
-        if (responsePersonas.ok) {
-          const dataPersonas = await responsePersonas.json();
-          const personasTransformadas = dataPersonas.results.map((persona: any) => {
-            const tipoNombre = persona.tipo?.nombre || 'Desconocido';
-            return {
-              idPersona: persona.idPersona,
-              nombre: persona.nombre || 'Sin Nombre',
-              tipo: tipoNombre === 'Estudiante' ? 'alumno' :
-                tipoNombre === 'Profesor' ? 'profesor' : 'personal',
-              curso: persona.curso
-            };
-          });
-          setPersonas(personasTransformadas);
-        }
-
-        // Cargar asistencias
-        const responseAsistencias = await apiRequest('/asistencias/');
-        if (responseAsistencias.ok) {
-          const dataAsistencias = await responseAsistencias.json();
-          const asistenciasTransformadas = dataAsistencias.results.map((asistencia: any) => {
-            try {
-              // Obtener información de la persona desde los roles
-              let curso = null;
-              let tipo = 'personal';
-
-              // Safe access to nested properties
-              const persona = asistencia.persona || {};
-              const roles = persona.roles || [];
-
-              if (roles.length > 0) {
-                const primerRol = roles[0];
-                curso = primerRol.curso;
-                const tipoNombre = primerRol.tipo_persona?.nombre;
-
-                if (tipoNombre === 'Estudiante') {
-                  tipo = 'alumno';
-                } else if (tipoNombre === 'Profesor') {
-                  tipo = 'profesor';
-                }
-              }
-
-              return {
-                idAsistencia: asistencia.idAsistencia,
-                persona: {
-                  idPersona: persona.idPersona || 0,
-                  nombre: persona.nombre || 'Desconocido',
-                  curso: curso,
-                  tipo: tipo
-                },
-                fecha_hora: asistencia.fechaHora || new Date().toISOString(),
-                temperatura: asistencia.temperatura || 0,
-                estado: asistencia.estado || { idEstadoAsistencia: 0, nombre: 'Desconocido' },
-                justificacion: asistencia.justificacion || undefined
-              };
-            } catch (err) {
-              console.error('Error transforming asistencia:', err);
-              return null;
-            }
-          }).filter((item: any) => item !== null);
-          setAsistencias(asistenciasTransformadas);
-        }
-      } catch (error) {
-        console.error('Error cargando datos:', error);
-        setError('Error al cargar los datos');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     cargarDatos();
-  }, []);
+    cargarCursos();
+    const interval = setInterval(cargarDatos, 30000);
+    return () => clearInterval(interval);
+  }, [fechaInicio, fechaFin, cursoFiltro]);
 
-  const showNotification = (message: string, type: NotificationType) => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
+  const cargarCursos = async () => {
+    try {
+      const response = await apiRequest('/cursos/');
+      if (response.ok) {
+        const data = await response.json();
+        setCursos(data.results || []);
+      }
+    } catch (error) {
+      console.error('Error cargando cursos:', error);
+    }
   };
 
-  // Filtrar asistencias
-  const asistenciasFiltradas = asistencias.filter(asistencia => {
-    const matchesSearch = searchTerm === '' ||
-      asistencia.persona.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+  const cargarDatos = async () => {
+    try {
+      let queryParams = [];
+      if (fechaInicio) queryParams.push(`fechaHora__gte=${fechaInicio}T00:00:00`);
+      if (fechaFin) queryParams.push(`fechaHora__lte=${fechaFin}T23:59:59`);
+      if (cursoFiltro) queryParams.push(`horario__curso=${cursoFiltro}`);
 
-    const matchesFechaInicio = !filtros.fechaInicio ||
-      new Date(asistencia.fecha_hora) >= new Date(filtros.fechaInicio);
+      const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+      const response = await apiRequest(`/asistencias/${queryString}`);
 
-    const matchesFechaFin = !filtros.fechaFin ||
-      new Date(asistencia.fecha_hora) <= new Date(filtros.fechaFin + 'T23:59:59');
+      if (response.ok) {
+        const data = await response.json();
+        const mappedData: Asistencia[] = data.results.map((a: any) => ({
+          idAsistencia: a.idAsistencia,
+          persona: a.persona,
+          fechaHora: a.fechaHora,
+          temperatura: a.temperatura,
+          estado: a.estado,
+          horario: a.horario,
+          llegada_tarde_minutos: a.llegada_tarde_minutos || 0
+        }));
 
-    const matchesEstado = !filtros.estado ||
-      asistencia.estado.idEstadoAsistencia.toString() === filtros.estado;
+        setAsistencias(mappedData);
+        calculateStats(mappedData);
+      }
+    } catch (error) {
+      console.error('Error cargando asistencias:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const matchesTipo = !filtros.tipo ||
-      (filtros.tipo === 'alumno' && asistencia.persona.curso) ||
-      (filtros.tipo === 'profesor' && !asistencia.persona.curso && asistencia.persona.nombre.includes('Prof.')) ||
-      (filtros.tipo === 'personal' && !asistencia.persona.curso && !asistencia.persona.nombre.includes('Prof.'));
+  const calculateStats = (data: Asistencia[]) => {
+    const presentes = data.filter(a => a.estado?.nombre === 'Presente').length;
+    const tardanzas = data.filter(a => a.estado?.nombre === 'Tardanza').length;
+    const ausentes = data.filter(a => a.estado?.nombre === 'Ausente').length;
+    setStats({ presentes, tardanzas, ausentes });
+  };
 
-    return matchesSearch && matchesFechaInicio && matchesFechaFin && matchesEstado && matchesTipo;
-  });
+  const filteredAsistencias = asistencias.filter(a =>
+    includesNormalized(a.persona?.nombre || '', searchTerm)
+  );
 
-  // Paginación
-  const totalPages = Math.ceil(asistenciasFiltradas.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const asistenciasPaginadas = asistenciasFiltradas.slice(startIndex, startIndex + itemsPerPage);
+  const handleEdit = (asistencia: Asistencia) => {
+    setEditingAsistencia(asistencia);
+    setShowEditModal(true);
+  };
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
-      </div>
-    );
-  }
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAsistencia) return;
 
-  if (error) {
-    return (
-      <div className="alert alert-danger">
-        <i className="bi bi-exclamation-triangle me-2"></i>
-        {error}
-      </div>
-    );
-  }
+    try {
+      const response = await apiRequest(`/asistencias/${editingAsistencia.idAsistencia}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          temperatura: editingAsistencia.temperatura,
+          estado: editingAsistencia.estado.idEstadoAsistencia
+        })
+      });
+
+      if (response.ok) {
+        setShowEditModal(false);
+        setEditingAsistencia(null);
+        cargarDatos();
+      }
+    } catch (error) {
+      console.error('Error editando asistencia:', error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const response = await apiRequest(`/asistencias/${id}/`, { method: 'DELETE' });
+      if (response.ok) {
+        setDeleteConfirm(null);
+        cargarDatos();
+      }
+    } catch (error) {
+      console.error('Error eliminando asistencia:', error);
+    }
+  };
+
+  const limpiarFiltros = () => {
+    setSearchTerm('');
+    setFechaInicio(new Date().toISOString().slice(0, 10));
+    setFechaFin('');
+    setCursoFiltro('');
+  };
+
+  const formatTime = (isoString: string) => {
+    return new Date(isoString).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
-    <div className="container-fluid">
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
-
-      <div className="row mb-4">
-        <div className="col-md-6">
-          <h2 className="mb-0">
-            <i className="bi bi-clipboard-check me-2"></i>
-            Gestión de Asistencias
-          </h2>
+    <div className="as-main-container">
+      {/* Header & Controls */}
+      <div className="as-header-controls">
+        <div className="as-title-group">
+          <div className="as-title-bar"></div>
+          <h3 className="as-page-title">Asistencias</h3>
+          <span className="as-count-badge">{filteredAsistencias.length} REGISTROS</span>
         </div>
-        <div className="col-md-6 text-end">
-          <button
-            className="btn btn-primary me-2"
-            onClick={() => setShowForm(true)}
+
+        <div className="as-filters-row">
+          <div className="as-input-group">
+            <i className="bi bi-search as-input-icon"></i>
+            <input
+              type="text"
+              className="as-input"
+              placeholder="Buscar persona..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <input
+            type="date"
+            className="as-date-input"
+            value={fechaInicio}
+            onChange={e => setFechaInicio(e.target.value)}
+          />
+
+          <input
+            type="date"
+            className="as-date-input"
+            value={fechaFin}
+            onChange={e => setFechaFin(e.target.value)}
+            placeholder="Fecha fin (opcional)"
+          />
+
+          <select
+            className="as-select"
+            value={cursoFiltro}
+            onChange={e => setCursoFiltro(e.target.value)}
           >
-            <i className="bi bi-plus-circle me-1"></i>
-            Nueva Asistencia
+            <option value="">Todos los cursos</option>
+            {cursos.map(c => (
+              <option key={c.idCurso} value={c.idCurso}>{c.nombre}</option>
+            ))}
+          </select>
+
+          <button className="as-btn-reset" title="Limpiar filtros" onClick={limpiarFiltros}>
+            <i className="bi bi-x-circle"></i>
           </button>
-          <ExportButton data={asistenciasFiltradas} filename="asistencias" />
+
+          <button className="as-btn-reset" title="Refrescar" onClick={() => cargarDatos()}>
+            <i className="bi bi-arrow-clockwise"></i>
+          </button>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="card mb-4">
-        <div className="card-header">
-          <h5 className="mb-0">
-            <i className="bi bi-funnel me-2"></i>
-            Filtros de Búsqueda
-          </h5>
+      {/* Stats Cards */}
+      <div className="as-stats-grid">
+        <div className="as-stat-card">
+          <div className="as-stat-icon presentes">
+            <i className="bi bi-check-circle-fill"></i>
+          </div>
+          <div className="as-stat-info">
+            <h3>{stats.presentes}</h3>
+            <p>Presentes</p>
+          </div>
         </div>
-        <div className="card-body">
-          <div className="row">
-            <div className="col-md-3 mb-3">
-              <label className="form-label">Buscar persona</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Nombre de la persona..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="col-md-2 mb-3">
-              <label className="form-label">Fecha Inicio</label>
-              <input
-                type="date"
-                className="form-control"
-                value={filtros.fechaInicio}
-                onChange={(e) => setFiltros({ ...filtros, fechaInicio: e.target.value })}
-              />
-            </div>
-            <div className="col-md-2 mb-3">
-              <label className="form-label">Fecha Fin</label>
-              <input
-                type="date"
-                className="form-control"
-                value={filtros.fechaFin}
-                onChange={(e) => setFiltros({ ...filtros, fechaFin: e.target.value })}
-              />
-            </div>
-            <div className="col-md-2 mb-3">
-              <label className="form-label">Estado</label>
-              <select
-                className="form-select"
-                value={filtros.estado}
-                onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-              >
-                <option value="">Todos</option>
-                <option value="1">Presente</option>
-                <option value="2">Ausente</option>
-                <option value="3">Tardanza</option>
-              </select>
-            </div>
-            <div className="col-md-2 mb-3">
-              <label className="form-label">Tipo</label>
-              <select
-                className="form-select"
-                value={filtros.tipo}
-                onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
-              >
-                <option value="">Todos</option>
-                <option value="alumno">Alumnos</option>
-                <option value="profesor">Profesores</option>
-                <option value="personal">Personal</option>
-              </select>
-            </div>
-            <div className="col-md-1 mb-3 d-flex align-items-end">
-              <button
-                className="btn btn-warning"
-                onClick={() => {
-                  setFiltros({ fechaInicio: '', fechaFin: '', estado: '', tipo: '' });
-                  setSearchTerm('');
-                }}
-              >
-                <i className="bi bi-arrow-clockwise"></i>
-              </button>
-            </div>
+        <div className="as-stat-card">
+          <div className="as-stat-icon tardanzas">
+            <i className="bi bi-exclamation-circle-fill"></i>
+          </div>
+          <div className="as-stat-info">
+            <h3>{stats.tardanzas}</h3>
+            <p>Tardanzas</p>
+          </div>
+        </div>
+        <div className="as-stat-card">
+          <div className="as-stat-icon ausentes">
+            <i className="bi bi-x-circle-fill"></i>
+          </div>
+          <div className="as-stat-info">
+            <h3>{stats.ausentes}</h3>
+            <p>Ausentes</p>
           </div>
         </div>
       </div>
 
-      {/* Tabla de Asistencias */}
-      <div className="card">
-        <div className="card-header d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">
-            <i className="bi bi-table me-2"></i>
-            Asistencias ({asistenciasFiltradas.length})
-          </h5>
-          <div className="d-flex align-items-center">
-            <label className="form-label me-2 mb-0">Mostrar:</label>
-            <select
-              className="form-select form-select-sm"
-              style={{ width: 'auto' }}
-              value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </div>
-        </div>
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="table-dark">
-                <tr>
-                  <th>Persona</th>
-                  <th>Tipo</th>
-                  <th>Curso</th>
-                  <th>Fecha y Hora</th>
-                  <th>Temperatura</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {asistenciasPaginadas.map((asistencia) => (
-                  <tr key={asistencia.idAsistencia}>
-                    <td>
-                      <strong>{asistencia.persona.nombre}</strong>
-                      <br />
-                      <small className="text-muted">ID: {asistencia.persona.idPersona}</small>
-                    </td>
-                    <td>
-                      <span className={`badge ${asistencia.persona.curso ? 'bg-primary' :
-                        asistencia.persona.nombre.includes('Prof.') ? 'bg-warning' : 'bg-secondary'
-                        }`}>
-                        {asistencia.persona.curso ? 'Alumno' :
-                          asistencia.persona.nombre.includes('Prof.') ? 'Profesor' : 'Personal'}
+      {/* Table */}
+      <div className="as-table-container">
+        {loading ? (
+          <div className="as-no-data"><i className="bi bi-hourglass-split"></i> Cargando...</div>
+        ) : filteredAsistencias.length > 0 ? (
+          <table className="as-table">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Curso / Horario</th>
+                <th>Hora Llegada</th>
+                <th>Temp</th>
+                <th>Estado</th>
+                <th>Detalle</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAsistencias.map(a => (
+                <tr key={a.idAsistencia}>
+                  <td>
+                    <div className="as-user-cell">
+                      <div className="as-avatar">
+                        {a.persona?.foto ? (
+                          <img src={a.persona.foto} alt="avatar" />
+                        ) : (
+                          <i className="bi bi-person"></i>
+                        )}
+                      </div>
+                      <div className="as-user-info">
+                        <div>{a.persona?.nombre || 'Usuario Desconocido'}</div>
+                        <div>ID: {a.persona?.idPersona || '-'}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {a.horario ? (
+                      <div className="as-user-info">
+                        <div>{a.horario.curso?.nombre || 'Curso Desconocido'}</div>
+                        <div>{a.horario.hora_inicio?.slice(0, 5)} - {a.horario.hora_fin?.slice(0, 5)}</div>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#64748b' }}>Sin Horario</span>
+                    )}
+                  </td>
+                  <td>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{formatTime(a.fechaHora)}</span>
+                  </td>
+                  <td>
+                    <span className={`as-badge ${a.temperatura > 37.5 ? 'temp-high' : 'temp-normal'}`}>
+                      <i className="bi bi-thermometer-half"></i> {a.temperatura}°C
+                    </span>
+                  </td>
+                  <td>
+                    {a.estado?.nombre === 'Presente' && (
+                      <span className="as-badge presente">Presente</span>
+                    )}
+                    {a.estado?.nombre === 'Tardanza' && (
+                      <span className="as-badge tardanza">Tardanza</span>
+                    )}
+                    {a.estado?.nombre === 'Ausente' && (
+                      <span className="as-badge ausente">Ausente</span>
+                    )}
+                  </td>
+                  <td>
+                    {a.llegada_tarde_minutos > 0 && (
+                      <span style={{ color: '#fbbf24', fontSize: '0.85rem' }}>
+                        + {a.llegada_tarde_minutos} min
                       </span>
-                    </td>
-                    <td>{asistencia.persona.curso?.nombre || 'Sin curso'}</td>
-                    <td>
-                      {new Date(asistencia.fecha_hora).toLocaleString('es-ES')}
-                    </td>
-                    <td>
-                      <span className={`badge ${asistencia.temperatura > 37.5 ? 'bg-danger' :
-                        asistencia.temperatura > 37.0 ? 'bg-warning' : 'bg-success'
-                        }`}>
-                        {asistencia.temperatura > 0 ? `${asistencia.temperatura}°C` : 'N/A'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${asistencia.estado.nombre === 'Presente' ? 'bg-success' :
-                        asistencia.estado.nombre === 'Tardanza' ? 'bg-warning' : 'bg-danger'
-                        }`}>
-                        {asistencia.estado.nombre}
-                      </span>
-                    </td>
-                    <td>
+                    )}
+                  </td>
+                  <td>
+                    <div className="as-actions">
                       <button
-                        className="btn btn-sm btn-outline-primary me-1"
+                        className="as-btn-action as-btn-edit"
+                        onClick={() => handleEdit(a)}
                         title="Editar"
                       >
                         <i className="bi bi-pencil"></i>
                       </button>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        title="Eliminar"
-                      >
-                        <i className="bi bi-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="card-footer">
-          {/* Paginación */}
-          <nav aria-label="Paginación de asistencias">
-            <ul className="pagination pagination-sm justify-content-center mb-0">
-              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  Anterior
-                </button>
-              </li>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                  <button
-                    className="page-link"
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
-                </li>
+                      {deleteConfirm === a.idAsistencia ? (
+                        <>
+                          <button
+                            className="as-btn-action as-btn-confirm"
+                            onClick={() => handleDelete(a.idAsistencia)}
+                            title="Confirmar"
+                          >
+                            <i className="bi bi-check"></i>
+                          </button>
+                          <button
+                            className="as-btn-action as-btn-cancel"
+                            onClick={() => setDeleteConfirm(null)}
+                            title="Cancelar"
+                          >
+                            <i className="bi bi-x"></i>
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          className="as-btn-action as-btn-delete"
+                          onClick={() => setDeleteConfirm(a.idAsistencia)}
+                          title="Eliminar"
+                        >
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
               ))}
-
-              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  Siguiente
-                </button>
-              </li>
-            </ul>
-          </nav>
-        </div>
+            </tbody>
+          </table>
+        ) : (
+          <div className="as-no-data">
+            <i className="bi bi-calendar-x" style={{ fontSize: '2rem', display: 'block', marginBottom: '16px' }}></i>
+            No hay registros de asistencia para los filtros aplicados.
+          </div>
+        )}
       </div>
 
-
+      {/* Edit Modal */}
+      {showEditModal && editingAsistencia && (
+        <div className="as-modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="as-modal" onClick={e => e.stopPropagation()}>
+            <div className="as-modal-header">
+              <h3>Editar Asistencia</h3>
+              <button onClick={() => setShowEditModal(false)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit}>
+              <div className="as-modal-body">
+                <div className="as-form-group">
+                  <label>Persona</label>
+                  <input type="text" value={editingAsistencia.persona?.nombre} disabled />
+                </div>
+                <div className="as-form-group">
+                  <label>Temperatura (°C)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingAsistencia.temperatura}
+                    onChange={e => setEditingAsistencia({
+                      ...editingAsistencia,
+                      temperatura: parseFloat(e.target.value)
+                    })}
+                  />
+                </div>
+              </div>
+              <div className="as-modal-footer">
+                <button type="button" className="as-btn-secondary" onClick={() => setShowEditModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="as-btn-primary">
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Asistencias; 
+export default Asistencias;

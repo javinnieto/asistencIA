@@ -16,7 +16,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
     { path: '/personas', icon: 'bi-people-fill', label: 'Personas' },
     { path: '/asistencias', icon: 'bi-calendar-check-fill', label: 'Asistencias' },
     { path: '/cursos-horarios', icon: 'bi-calendar-week-fill', label: 'Cursos y Horarios' },
-    { path: '/polo-tecnologico', icon: 'bi-cpu-fill', label: 'Tecno Aliados' },
   ];
 
   return (

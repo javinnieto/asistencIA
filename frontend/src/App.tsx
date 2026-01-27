@@ -7,7 +7,7 @@ import Personas from './pages/Personas';
 import Asistencias from './pages/Asistencias';
 
 import CursosHorarios from './pages/CursosHorarios';
-import PoloTecnologico from './pages/PoloTecnologico';
+
 import Login from './pages/Login';
 import './App.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -85,14 +85,7 @@ const AppContent: React.FC = () => {
               </PrivateRoute>
             }
           />
-          <Route
-            path="/polo-tecnologico"
-            element={
-              <PrivateRoute>
-                <PoloTecnologico />
-              </PrivateRoute>
-            }
-          />
+
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>
