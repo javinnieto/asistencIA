@@ -1,10 +1,7 @@
 // Configuración centralizada de la API
 // En desarrollo, usar el proxy del package.json
 // En producción, usar la variable de entorno o localhost
-// Configuración centralizada de la API
-// En desarrollo, usar el proxy del package.json
-// En producción, usar la variable de entorno o localhost
-const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+const API_BASE_URL = '/api';
 
 // Función para hacer peticiones autenticadas
 export const apiRequest = async (endpoint: string, options: RequestInit = {}) => {

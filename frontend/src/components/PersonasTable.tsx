@@ -187,7 +187,11 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
               const cursosText = cursos.length > 0 ? cursos.join(', ') : '-';
 
               return (
-                <tr key={person.id}>
+                <tr
+                  key={person.id}
+                  onClick={() => onView(person)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <td>
                     <img
                       src={person.foto || `https://via.placeholder.com/42x42/667eea/ffffff?text=${person.nombre.charAt(0)}`}
@@ -223,7 +227,10 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                     <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <button
                         className="btn-icon btn-view action-btn"
-                        onClick={() => onView(person)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onView(person);
+                        }}
                         title="Ver detalles"
                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#3b82f6' }}
                       >
@@ -231,7 +238,10 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       </button>
                       <button
                         className="btn-icon btn-edit action-btn"
-                        onClick={() => onEdit(person)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(person);
+                        }}
                         title="Editar"
                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#fbbf24' }}
                       >
@@ -239,7 +249,10 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       </button>
                       <button
                         className="btn-icon btn-delete action-btn"
-                        onClick={(e) => handleDeleteRequest(person.id, e)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRequest(person.id, e);
+                        }}
                         title="Eliminar"
                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#f87171', zIndex: 10, position: 'relative' }}
                       >

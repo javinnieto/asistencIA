@@ -7,6 +7,7 @@ import Personas from './pages/Personas';
 import Asistencias from './pages/Asistencias';
 
 import CursosHorarios from './pages/CursosHorarios';
+import InstitucionesTab from './pages/CursosHorarios/InstitucionesTab';
 
 import Login from './pages/Login';
 import './App.css';
@@ -82,6 +83,19 @@ const AppContent: React.FC = () => {
             element={
               <PrivateRoute>
                 <CursosHorarios />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/instituciones"
+            element={
+              <PrivateRoute>
+                <div className="container-fluid mt-4">
+                  <h1 className="mb-4 text-white fw-bold">Gestionar Instituciones</h1>
+                  <div style={{ background: '#1e293b', borderRadius: '12px', border: '1px solid #334155' }}>
+                    <InstitucionesTab />
+                  </div>
+                </div>
               </PrivateRoute>
             }
           />

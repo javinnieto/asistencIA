@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../config/api';
 import { includesNormalized } from '../utils/normalize';
 import './Asistencias.css';
@@ -39,33 +40,41 @@ const Asistencias: React.FC = () => {
   const [stats, setStats] = useState({ presentes: 0, tardanzas: 0, ausentes: 0 });
 
   // Filtros
+  // Filtros
+  const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().slice(0, 10));
+  const [fechaInicio, setFechaInicio] = useState(''); // Vacío por defecto para mostrar todos los registros
   const [fechaFin, setFechaFin] = useState('');
   const [cursoFiltro, setCursoFiltro] = useState('');
+  const [estadoFiltro, setEstadoFiltro] = useState(searchParams.get('estado') || '');
+  const [minTempFiltro, setMinTempFiltro] = useState(searchParams.get('minTemp') || '');
+  const [maxTempFiltro, setMaxTempFiltro] = useState(searchParams.get('maxTemp') || '');
 
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAsistencia, setEditingAsistencia] = useState<Asistencia | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
-  useEffect(() => {
-    cargarDatos();
-    cargarCursos();
-    const interval = setInterval(cargarDatos, 30000);
-    return () => clearInterval(interval);
-  }, [fechaInicio, fechaFin, cursoFiltro]);
+  // Sorting
+  const [ordering, setOrdering] = useState('-fechaHora'); // Default sort
 
-  const cargarCursos = async () => {
-    try {
-      const response = await apiRequest('/cursos/');
-      if (response.ok) {
-        const data = await response.json();
-        setCursos(data.results || []);
-      }
-    } catch (error) {
-      console.error('Error cargando cursos:', error);
+  // ... (inside component)
+
+  const handleSort = (field: string) => {
+    // Toggle sort order
+    if (ordering === field) {
+      setOrdering(`-${field}`);
+    } else if (ordering === `-${field}`) {
+      setOrdering(field);
+    } else {
+      setOrdering(`-${field}`); // Default to descending for new field
     }
+  };
+
+  const getSortIcon = (field: string) => {
+    if (ordering === field) return <i className="bi bi-sort-down"></i>;
+    if (ordering === `-${field}`) return <i className="bi bi-sort-up"></i>;
+    return <i className="bi bi-arrow-down-up" style={{ opacity: 0.3 }}></i>;
   };
 
   const cargarDatos = async () => {
@@ -74,6 +83,7 @@ const Asistencias: React.FC = () => {
       if (fechaInicio) queryParams.push(`fechaHora__gte=${fechaInicio}T00:00:00`);
       if (fechaFin) queryParams.push(`fechaHora__lte=${fechaFin}T23:59:59`);
       if (cursoFiltro) queryParams.push(`horario__curso=${cursoFiltro}`);
+      if (ordering) queryParams.push(`ordering=${ordering}`);
 
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
       const response = await apiRequest(`/asistencias/${queryString}`);
@@ -100,6 +110,45 @@ const Asistencias: React.FC = () => {
     }
   };
 
+  const cargarCursos = async () => {
+    try {
+      const response = await apiRequest('/cursos/');
+      if (response.ok) {
+        const data = await response.json();
+        // Handle both paginated and non-paginated responses
+        setCursos(data.results || data || []);
+      }
+    } catch (error) {
+      console.error('Error cargando cursos:', error);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+    cargarCursos();
+    const interval = setInterval(cargarDatos, 30000);
+    return () => clearInterval(interval);
+  }, [fechaInicio, fechaFin, cursoFiltro, ordering]);
+
+  // ... (render)
+  <thead>
+    <tr>
+      <th>Persona</th>
+      <th>Curso / Horario</th>
+      <th>Hora Llegada</th>
+      <th
+        onClick={() => handleSort('temperatura')}
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+        title="Ordenar por temperatura"
+      >
+        Temp {getSortIcon('temperatura')}
+      </th>
+      <th>Estado</th>
+      <th>Detalle</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+
   const calculateStats = (data: Asistencia[]) => {
     const presentes = data.filter(a => a.estado?.nombre === 'Presente').length;
     const tardanzas = data.filter(a => a.estado?.nombre === 'Tardanza').length;
@@ -107,9 +156,31 @@ const Asistencias: React.FC = () => {
     setStats({ presentes, tardanzas, ausentes });
   };
 
-  const filteredAsistencias = asistencias.filter(a =>
-    includesNormalized(a.persona?.nombre || '', searchTerm)
-  );
+  // Primero filtramos por búsqueda y estado
+  // Primero filtramos por búsqueda y estado
+  const filteredAsistencias = asistencias.filter(a => {
+    const matchesSearch = includesNormalized(a.persona?.nombre || '', searchTerm);
+    const matchesEstado = !estadoFiltro || a.estado?.nombre === estadoFiltro;
+    const matchesTempMin = !minTempFiltro || a.temperatura >= parseFloat(minTempFiltro);
+    const matchesTempMax = !maxTempFiltro || a.temperatura <= parseFloat(maxTempFiltro);
+    return matchesSearch && matchesEstado && matchesTempMin && matchesTempMax;
+  });
+
+  // Luego calculamos stats dinámicas de los datos filtrados
+  const statsActuales = {
+    presentes: filteredAsistencias.filter(a => a.estado?.nombre === 'Presente').length,
+    tardanzas: filteredAsistencias.filter(a => a.estado?.nombre === 'Tardanza').length,
+    ausentes: filteredAsistencias.filter(a => a.estado?.nombre === 'Ausente').length
+  };
+
+  const handleCardClick = (estado: string) => {
+    // Si ya está filtrado por este estado, quitar el filtro
+    if (estadoFiltro === estado) {
+      setEstadoFiltro('');
+    } else {
+      setEstadoFiltro(estado);
+    }
+  };
 
   const handleEdit = (asistencia: Asistencia) => {
     setEditingAsistencia(asistencia);
@@ -154,9 +225,13 @@ const Asistencias: React.FC = () => {
 
   const limpiarFiltros = () => {
     setSearchTerm('');
-    setFechaInicio(new Date().toISOString().slice(0, 10));
+    setFechaInicio('');
     setFechaFin('');
     setCursoFiltro('');
+    setCursoFiltro('');
+    setEstadoFiltro('');
+    setMinTempFiltro('');
+    setMaxTempFiltro('');
   };
 
   const formatTime = (isoString: string) => {
@@ -214,39 +289,47 @@ const Asistencias: React.FC = () => {
           <button className="as-btn-reset" title="Limpiar filtros" onClick={limpiarFiltros}>
             <i className="bi bi-x-circle"></i>
           </button>
-
-          <button className="as-btn-reset" title="Refrescar" onClick={() => cargarDatos()}>
-            <i className="bi bi-arrow-clockwise"></i>
-          </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Clickeable para filtrar */}
       <div className="as-stats-grid">
-        <div className="as-stat-card">
+        <div
+          className={`as-stat-card ${estadoFiltro === 'Presente' ? 'active' : ''}`}
+          onClick={() => handleCardClick('Presente')}
+          style={{ cursor: 'pointer' }}
+        >
           <div className="as-stat-icon presentes">
             <i className="bi bi-check-circle-fill"></i>
           </div>
           <div className="as-stat-info">
-            <h3>{stats.presentes}</h3>
+            <h3>{statsActuales.presentes}</h3>
             <p>Presentes</p>
           </div>
         </div>
-        <div className="as-stat-card">
+        <div
+          className={`as-stat-card ${estadoFiltro === 'Tardanza' ? 'active' : ''}`}
+          onClick={() => handleCardClick('Tardanza')}
+          style={{ cursor: 'pointer' }}
+        >
           <div className="as-stat-icon tardanzas">
             <i className="bi bi-exclamation-circle-fill"></i>
           </div>
           <div className="as-stat-info">
-            <h3>{stats.tardanzas}</h3>
+            <h3>{statsActuales.tardanzas}</h3>
             <p>Tardanzas</p>
           </div>
         </div>
-        <div className="as-stat-card">
+        <div
+          className={`as-stat-card ${estadoFiltro === 'Ausente' ? 'active' : ''}`}
+          onClick={() => handleCardClick('Ausente')}
+          style={{ cursor: 'pointer' }}
+        >
           <div className="as-stat-icon ausentes">
             <i className="bi bi-x-circle-fill"></i>
           </div>
           <div className="as-stat-info">
-            <h3>{stats.ausentes}</h3>
+            <h3>{statsActuales.ausentes}</h3>
             <p>Ausentes</p>
           </div>
         </div>
@@ -262,8 +345,18 @@ const Asistencias: React.FC = () => {
               <tr>
                 <th>Persona</th>
                 <th>Curso / Horario</th>
-                <th>Hora Llegada</th>
-                <th>Temp</th>
+                <th>
+                  Hora Llegada
+                  {/* Add basic sort for time too if desired, keeping it simple for now */}
+                </th>
+                <th
+                  onClick={() => handleSort('temperatura')}
+                  style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  title="Ordenar por temperatura"
+                  className="sortable-header"
+                >
+                  Temp {getSortIcon('temperatura')}
+                </th>
                 <th>Estado</th>
                 <th>Detalle</th>
                 <th>Acciones</th>
@@ -387,6 +480,20 @@ const Asistencias: React.FC = () => {
                 <div className="as-form-group">
                   <label>Persona</label>
                   <input type="text" value={editingAsistencia.persona?.nombre} disabled />
+                </div>
+                <div className="as-form-group">
+                  <label>Hora de Llegada</label>
+                  <input
+                    type="datetime-local"
+                    value={editingAsistencia.fechaHora.slice(0, 16)}
+                    onChange={e => setEditingAsistencia({
+                      ...editingAsistencia,
+                      fechaHora: e.target.value + ':00Z'
+                    })}
+                  />
+                  <small style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Al cambiar la hora, el estado se recalculará automáticamente
+                  </small>
                 </div>
                 <div className="as-form-group">
                   <label>Temperatura (°C)</label>

@@ -329,9 +329,12 @@
 }
 
 .btn-add-role:disabled {
-  background: rgba(100, 116, 139, 0.3);
+  background: rgba(100, 116, 139, 0.2);
   cursor: not-allowed;
   box-shadow: none;
+  opacity: 0.4;
+  filter: grayscale(100%);
+  transform: none;
 }
 
 /* Roles List */
@@ -387,6 +390,22 @@
   font-weight: 600;
   font-size: 13px;
   border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+/* Error States for Roles */
+.role-item-error {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.role-item-error-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .btn-remove-role {

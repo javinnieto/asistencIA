@@ -9,6 +9,7 @@ interface Person {
   apellido: string;
   email: string;
   telefono: string;
+  telefono_emergencia?: string;
   departamento: string;
   cargo: string;
   fechaIngreso: string;
@@ -37,6 +38,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
     apellido: '',
     email: '',
     telefono: '',
+    telefono_emergencia: '',
     departamento: '',
     cargo: '',
     fechaIngreso: new Date().toISOString().split('T')[0],
@@ -79,6 +81,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
         apellido: person.apellido,
         email: person.email,
         telefono: person.telefono,
+        telefono_emergencia: person.telefono_emergencia || '',
         departamento: person.departamento,
         cargo: person.cargo,
         fechaIngreso: person.fechaIngreso,
@@ -100,13 +103,17 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
   }, [selectedInstId, courses]);
 
   const handleAddRole = () => {
-    if (!selectedInstId || !selectedTypeId) return;
+    if (!selectedInstId || !selectedTypeId || !selectedCourseId) return;
     const inst = institutions.find(i => i.idInstitucion?.toString() === selectedInstId);
     const type = types.find(t => t.idTipoPersona?.toString() === selectedTypeId);
-    const course = selectedCourseId ? courses.find(c => c.idCurso?.toString() === selectedCourseId) : null;
+    const course = courses.find(c => c.idCurso?.toString() === selectedCourseId);
     setFormData(prev => ({ ...prev, roles: [...(prev.roles || []), { institucion: inst, tipo: type, curso: course, tempId: Date.now() }] }));
     setSelectedTypeId('');
     setSelectedCourseId('');
+    // Limpiar errores al agregar rol válido
+    if (errors.roles) {
+      setErrors(prev => ({ ...prev, roles: '' }));
+    }
   };
 
   const handleRemoveRole = (index: number) => {
@@ -117,6 +124,15 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
     const newErrors: Record<string, string> = {};
     if (!formData.nombre?.trim()) newErrors.nombre = 'Nombre requerido';
     if (!formData.apellido?.trim()) newErrors.apellido = 'Apellido requerido';
+
+    // Validar que todos los roles tengan curso asignado
+    if (formData.roles && formData.roles.length > 0) {
+      const rolesWithoutCurso = formData.roles.filter(role => !role.curso);
+      if (rolesWithoutCurso.length > 0) {
+        newErrors.roles = `Hay ${rolesWithoutCurso.length} categoría(s) sin curso asignado. Todas las categorías deben tener un curso.`;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -191,6 +207,10 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                   <input className="form-input" value={formData.telefono} onChange={e => setFormData({ ...formData, telefono: e.target.value })} placeholder="+1 234 567 8900" />
                 </div>
                 <div className="form-group">
+                  <label>🚨 Tel. Emergencia</label>
+                  <input className="form-input" value={formData.telefono_emergencia} onChange={e => setFormData({ ...formData, telefono_emergencia: e.target.value })} placeholder="Contacto de emergencia" />
+                </div>
+                <div className="form-group">
                   <label>Estado</label>
                   <select
                     className="form-input"
@@ -204,86 +224,78 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
               </div>
               <div className="roles-section">
                 <div className="roles-section-header">🏢 Roles y Cursos</div>
-                <div className="role-input-row">
-                  <div className="form-group">
+                <div className="role-input-row" style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                  <div className="form-group" style={{ flex: 1 }}>
                     <label>Institución</label>
                     <select className="form-select" value={selectedInstId} onChange={e => { setSelectedInstId(e.target.value); setSelectedTypeId(''); setSelectedCourseId(''); }}>
                       <option value="">Seleccionar...</option>
                       {institutions.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
                     </select>
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ flex: 1 }}>
                     <label>Tipo</label>
                     <select className="form-select" value={selectedTypeId} onChange={e => setSelectedTypeId(e.target.value)} disabled={!selectedInstId}>
                       <option value="">Seleccionar...</option>
                       {filteredTypes.map(t => <option key={t.idTipoPersona} value={t.idTipoPersona}>{t.nombre}</option>)}
                     </select>
-                    {/* Campo Curso - Solo mostrar para tipos que lo necesitan */}
-                    {selectedTypeId && (() => {
-                      // Lógica inteligente: determinar si el tipo necesita curso
-                      const selectedType = filteredTypes.find(t => t.idTipoPersona?.toString() === selectedTypeId);
-                      if (!selectedType) return null;
-
-                      const tipoNombre = selectedType.nombre.toLowerCase();
-
-                      // Tipos que SÍ necesitan curso (educativos)
-                      const tiposConCurso = ['alumno', 'docente', 'profesor', 'estudiante', 'maestro', 'tutor'];
-                      // Tipos que NO necesitan curso (administrativos/otros)
-                      const tiposSinCurso = ['no docente', 'administrativo', 'personal', 'visitante', 'directivo', 'director'];
-
-                      // Verificar si coincide con algún tipo que necesita curso
-                      const necesitaCurso = tiposConCurso.some(tipo => tipoNombre.includes(tipo));
-                      const noNecesitaCurso = tiposSinCurso.some(tipo => tipoNombre.includes(tipo));
-
-                      // Si explícitamente no necesita, ocultar campo
-                      if (noNecesitaCurso) return null;
-                      // Si explícitamente necesita O por defecto (educativo), mostrar campo
-                      if (!necesitaCurso && !noNecesitaCurso) {
-                        // Default fallback: si no está en ninguna lista, asumir que necesita curso
-                        // (más seguro para instituciones educativas)
-                        return null; // Cambiar a mostrar si prefieres que por defecto aparezca
-                      }
-
-                      return (
-                        <div className="form-group">
-                          <label>Curso (Opcional)</label>
-                          <select
-                            className="form-select"
-                            value={selectedCourseId}
-                            onChange={(e) => setSelectedCourseId(e.target.value)}
-                          >
-                            <option value="">Sin curso específico</option>
-                            {filteredCourses.map(curso => (
-                              <option key={curso.idCurso} value={curso.idCurso?.toString()}>
-                                {curso.nombre}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })()}
                   </div>
-                  <button type="button" className="btn-add-role" onClick={handleAddRole} disabled={!selectedInstId || !selectedTypeId}>➕</button>
+                  {/* Campo Curso - SIEMPRE OBLIGATORIO */}
+                  {selectedTypeId && (
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Curso <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span></label>
+                      <select
+                        className={`form-select ${!selectedCourseId && selectedTypeId ? 'error' : ''}`}
+                        value={selectedCourseId}
+                        onChange={(e) => setSelectedCourseId(e.target.value)}
+                        required
+                      >
+                        <option value="">Seleccionar curso...</option>
+                        {filteredCourses.map(curso => (
+                          <option key={curso.idCurso} value={curso.idCurso?.toString()}>
+                            {curso.nombre}
+                          </option>
+                        ))}
+                      </select>
+                      {!selectedCourseId && selectedTypeId && (
+                        <span className="error-message" style={{ fontSize: '0.75rem', color: '#ef4444' }}>El curso es obligatorio</span>
+                      )}
+                    </div>
+                  )}
+                  <div style={{ alignSelf: 'flex-end', paddingBottom: '2px' }}>
+                    <button type="button" className="btn-add-role" onClick={handleAddRole} disabled={!selectedInstId || !selectedTypeId || !selectedCourseId}>➕</button>
+                  </div>
                 </div>
                 <div className="roles-list">
                   {formData.roles && formData.roles.length > 0 ? formData.roles.map((role, idx) => (
-                    <div key={idx} className="role-item">
+                    <div key={idx} className={`role-item ${!role.curso ? 'role-item-error' : ''}`}>
                       <div className="role-item-content">
                         <div className="role-item-inst">{role.institucion?.nombre}</div>
                         <div className="role-item-details">
                           <span>{role.tipo?.nombre}</span>
-                          {role.curso && <span className="role-item-course">{role.curso.nombre}</span>}
+                          {role.curso ? (
+                            <span className="role-item-course">{role.curso.nombre}</span>
+                          ) : (
+                            <span className="role-item-error-badge">⚠️ Sin curso</span>
+                          )}
                         </div>
                       </div>
                       <button type="button" className="btn-remove-role" onClick={() => handleRemoveRole(idx)}>🗑️</button>
                     </div>
                   )) : <div className="empty-roles">No hay roles asignados. Agregue uno usando los campos de arriba.</div>}
+                  {errors.roles && <div className="error-message" style={{ marginTop: '8px', color: '#ef4444', fontSize: '0.85rem' }}>⚠️ {errors.roles}</div>}
                 </div>
               </div>
             </div>
             <div className="form-actions">
               <button type="button" className="btn-cancel" onClick={onClose} disabled={isSubmitting}>Cancelar</button>
-              <button type="submit" className="btn-save" disabled={isSubmitting}>💾 {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}</button>
+              <button
+                type="submit"
+                className="btn-save"
+                disabled={isSubmitting || (formData.roles && formData.roles.some(r => !r.curso))}
+                title={formData.roles && formData.roles.some(r => !r.curso) ? 'Todas las categorías deben tener un curso asignado' : ''}
+              >
+                💾 {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
             </div>
           </form>
         </div>

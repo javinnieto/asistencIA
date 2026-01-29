@@ -220,3 +220,62 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return AsistenciaCreateSerializer
         return AsistenciaSerializer
+    
+    def perform_update(self, serializer):
+        """Recalcular estado y tardanza si se modifica fechaHora"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        asistencia = self.get_object()
+        nueva_fecha_hora = serializer.validated_data.get('fechaHora')
+        
+        # Si se modificó la hora y tiene horario asignado
+        if nueva_fecha_hora and asistencia.horario:
+            from asistencias.management.commands.mqtt_listener import ESTADOS_ASISTENCIA
+            from datetime import datetime
+            
+            horario = asistencia.horario
+            
+            # Convertir a aware datetime si es necesario
+            if timezone.is_naive(nueva_fecha_hora):
+                nueva_fecha_hora = timezone.make_aware(nueva_fecha_hora)
+            
+            # Construir datetime del inicio de la clase
+            start_dt = datetime.combine(nueva_fecha_hora.date(), horario.hora_inicio)
+            start_dt_aware = timezone.make_aware(start_dt)
+            
+            end_dt = datetime.combine(nueva_fecha_hora.date(), horario.hora_fin)
+            end_dt_aware = timezone.make_aware(end_dt)
+            
+            valid_start = start_dt_aware - timedelta(hours=1)
+            valid_end = end_dt_aware
+            
+            # Verificar si está en rango válido
+            if valid_start <= nueva_fecha_hora <= valid_end:
+                # Calcular tardanza
+                if nueva_fecha_hora > start_dt_aware:
+                    diff = nueva_fecha_hora - start_dt_aware
+                    minutos_tarde = int(diff.total_seconds() / 60)
+                    
+                    if minutos_tarde >= 1:
+                        estado_nombre = ESTADOS_ASISTENCIA['TARDANZA']
+                    else:
+                        minutos_tarde = 0
+                        estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
+                else:
+                    minutos_tarde = 0
+                    estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
+                
+                # Actualizar estado
+                from asistencias.models import EstadoAsistencia
+                estado_obj, _ = EstadoAsistencia.objects.get_or_create(nombre=estado_nombre)
+                serializer.validated_data['estado'] = estado_obj
+                serializer.validated_data['llegada_tarde_minutos'] = minutos_tarde
+            else:
+                # Fuera de rango = Ausente
+                from asistencias.models import EstadoAsistencia
+                estado_obj, _ = EstadoAsistencia.objects.get_or_create(nombre=ESTADOS_ASISTENCIA['AUSENTE'])
+                serializer.validated_data['estado'] = estado_obj
+                serializer.validated_data['llegada_tarde_minutos'] = 0
+        
+        serializer.save()

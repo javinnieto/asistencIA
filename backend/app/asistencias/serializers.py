@@ -19,8 +19,28 @@ class TipoPersonaSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+
+class HorarioSerializer(serializers.ModelSerializer):
+    curso = serializers.SerializerMethodField()
+    
+    def get_curso(self, obj):
+        # Return simple curso data to avoid recursion depth issues or cyclical dependency
+        try:
+            return {
+                "idCurso": obj.curso.idCurso,
+                "nombre": obj.curso.nombre
+            }
+        except:
+            return None
+    
+    class Meta:
+        model = Horario
+        fields = '__all__'
+
+
 class CursoSerializer(serializers.ModelSerializer):
     institucion = InstitucionSerializer(read_only=True)
+    horarios = HorarioSerializer(many=True, read_only=True)
     
     class Meta:
         model = Curso
@@ -35,14 +55,6 @@ class PersonaInstitucionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PersonaInstitucion
         fields = '__all__'
-
-
-class HorarioSerializer(serializers.ModelSerializer):
-    curso = CursoSerializer(read_only=True)
-    
-    class Meta:
-        model = Horario
-        fields = '__all__'
     
 class PersonaSerializer(serializers.ModelSerializer):
     roles = PersonaInstitucionSerializer(many=True, read_only=True)
@@ -52,7 +64,7 @@ class PersonaSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Persona
-        fields = ['idPersona', 'nombre', 'email', 'telefono', 'foto', 'activo', 'roles', 'horarios', 'total_asistencias', 'necesita_clasificacion']
+        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo', 'roles', 'horarios', 'total_asistencias', 'necesita_clasificacion']
 
 
 class EstadoAsistenciaSerializer(serializers.ModelSerializer):
@@ -78,10 +90,18 @@ class PersonaCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Persona
-        fields = ['idPersona', 'nombre', 'email', 'telefono', 'foto', 'activo', 'horarios']
+        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo', 'horarios']
 
 
 class PersonaInstitucionCreateSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+        """Validar que curso sea obligatorio"""
+        if not data.get('curso'):
+            raise serializers.ValidationError({
+                'curso': 'El curso es obligatorio. Una persona debe estar asignada a un curso específico.'
+            })
+        return data
+    
     class Meta:
         model = PersonaInstitucion
         fields = '__all__'
@@ -100,9 +120,36 @@ class TipoPersonaCreateSerializer(serializers.ModelSerializer):
 
 
 class CursoCreateSerializer(serializers.ModelSerializer):
+    horarios = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False,
+        help_text="Lista de horarios para el curso (mínimo 1)"
+    )
+    
+    def validate_horarios(self, value):
+        """Validar que haya al menos un horario si se proporciona"""
+        if value is not None and len(value) == 0:
+            raise serializers.ValidationError(
+                'Debe proporcionar al menos un horario para el curso si envía este campo.'
+            )
+        return value
+    
+    def create(self, validated_data):
+        """Crear curso con sus horarios"""
+        horarios_data = validated_data.pop('horarios', [])
+        curso = Curso.objects.create(**validated_data)
+        
+        # Crear los horarios asociados
+        if horarios_data:
+            for horario_data in horarios_data:
+                Horario.objects.create(curso=curso, **horario_data)
+        
+        return curso
+    
     class Meta:
         model = Curso
-        fields = '__all__'
+        fields = ['idCurso', 'nombre', 'institucion', 'fecha_inicio', 'fecha_fin', 'activo', 'horarios']
 
 
 class HorarioCreateSerializer(serializers.ModelSerializer):

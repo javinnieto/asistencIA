@@ -73,6 +73,7 @@ class Persona(models.Model):
     nombre = models.CharField(max_length=200)
     email = models.EmailField(max_length=254, null=True, blank=True)
     telefono = models.CharField(max_length=20, null=True, blank=True)
+    telefono_emergencia = models.CharField(max_length=20, null=True, blank=True)
     foto = models.TextField(null=True, blank=True)  # Stores Base64 strings or URLs from MQTT
     activo = models.BooleanField(default=True)
     horarios = models.ManyToManyField(Horario, related_name='personas', blank=True)

@@ -62,6 +62,9 @@ const Navbar: React.FC<NavbarProps> = () => {
       <div className="container-fluid">
         <span className="navbar-brand">AsistencIA</span>
         <div className="navbar-user-actions">
+          <Link to="/instituciones" className="btn btn-sm btn-outline-secondary me-3" style={{ border: '1px solid #475569', color: '#94a3b8' }}>
+            <i className="bi bi-building me-2"></i>Gestionar Instituciones
+          </Link>
           {token ? (
             <div className="navbar-dropdown-wrapper" ref={dropdownRef}>
               <button
