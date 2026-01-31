@@ -314,3 +314,94 @@
   margin-bottom: 16px;
   opacity: 0.5;
 }
+/* =========================================
+   Responsive Mobile Design
+   ========================================= */
+@media (max-width: 768px) {
+    .table-wrapper {
+        overflow-x: visible;
+    }
+
+    /* Hide table headers */
+    .personas-table thead {
+        display: none;
+    }
+
+    /* Convert table elements to block */
+    .personas-table,
+    .personas-table tbody,
+    .personas-table tr,
+    .personas-table td {
+        display: block;
+        width: 100%;
+    }
+
+    /* Style rows as cards */
+    .personas-table tr {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        padding: 16px;
+    }
+
+    /* Style cells */
+    .personas-table td {
+        border: none;
+        padding: 8px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left !important;
+    }
+
+    /* Add labels before content */
+    .personas-table td:before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #94a3b8;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        min-width: 100px;
+        flex-shrink: 0;
+    }
+
+    /* Last cell (actions) */
+    .personas-table td:last-child {
+        justify-content: flex-end;
+        padding-top: 12px;
+        margin-top: 8px;
+        border-top: 1px solid #334155;
+    }
+
+    .personas-table td:last-child:before {
+        content: none;
+    }
+
+    /* Action buttons */
+    .action-buttons {
+        width: 100%;
+    }
+
+    /* Filters responsive */
+    .table-top-bar {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 16px !important;
+    }
+
+    .search-box {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .filter-select {
+        width: 100%;
+    }
+
+    .results-count {
+        text-align: center;
+    }
+}

@@ -51,6 +51,11 @@ const Asistencias: React.FC = () => {
   const [minTempFiltro, setMinTempFiltro] = useState(searchParams.get('minTemp') || '');
   const [maxTempFiltro, setMaxTempFiltro] = useState(searchParams.get('maxTemp') || '');
 
+  // Pagination states
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [previousUrl, setPreviousUrl] = useState<string | null>(null);
+  const [currentUrl, setCurrentUrl] = useState<string>('');
+
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAsistencia, setEditingAsistencia] = useState<Asistencia | null>(null);
@@ -75,16 +80,23 @@ const Asistencias: React.FC = () => {
     return <i className="bi bi-arrow-down-up" style={{ opacity: 0.3 }}></i>;
   };
 
-  const cargarDatos = async () => {
+  const cargarDatos = async (url?: string) => {
     try {
-      let queryParams = [];
-      if (fechaInicio) queryParams.push(`fechaHora__gte=${fechaInicio}T00:00:00`);
-      if (fechaFin) queryParams.push(`fechaHora__lte=${fechaFin}T23:59:59`);
-      if (cursoFiltro) queryParams.push(`horario__curso=${cursoFiltro}`);
-      if (ordering) queryParams.push(`ordering=${ordering}`);
+      let endpoint = url;
 
-      const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-      const response = await apiRequest(`/asistencias/${queryString}`);
+      if (!endpoint) {
+        let queryParams = [];
+        if (fechaInicio) queryParams.push(`fechaHora__gte=${fechaInicio}T00:00:00`);
+        if (fechaFin) queryParams.push(`fechaHora__lte=${fechaFin}T23:59:59`);
+        if (cursoFiltro) queryParams.push(`horario__curso=${cursoFiltro}`);
+        if (ordering) queryParams.push(`ordering=${ordering}`);
+
+        const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+        endpoint = `/asistencias/${queryString}`;
+        setCurrentUrl(endpoint);
+      }
+
+      const response = await apiRequest(endpoint);
 
       if (response.ok) {
         const data = await response.json();
@@ -100,6 +112,10 @@ const Asistencias: React.FC = () => {
 
         setAsistencias(mappedData);
         calculateStats(mappedData);
+
+        // Extract pagination URLs from response
+        setNextUrl(data.next);
+        setPreviousUrl(data.previous);
       }
     } catch (error) {
       console.error('Error cargando asistencias:', error);
@@ -126,6 +142,12 @@ const Asistencias: React.FC = () => {
     const interval = setInterval(cargarDatos, 30000);
     return () => clearInterval(interval);
   }, [fechaInicio, fechaFin, cursoFiltro, ordering]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setPreviousUrl(null);
+    setNextUrl(null);
+  }, [fechaInicio, fechaFin, cursoFiltro, estadoFiltro, minTempFiltro, maxTempFiltro]);
 
   const calculateStats = (data: Asistencia[]) => {
     const presentes = data.filter(a => a.estado?.nombre === 'Presente').length;
@@ -221,6 +243,42 @@ const Asistencias: React.FC = () => {
     setEstadoFiltro('');
     setMinTempFiltro('');
     setMaxTempFiltro('');
+  };
+
+  const handleNextPage = () => {
+    if (nextUrl) {
+      try {
+        let cleanUrl = nextUrl;
+        // If it's a full URL, extract the path
+        if (nextUrl.startsWith('http')) {
+          const url = new URL(nextUrl);
+          cleanUrl = url.pathname + url.search;
+        }
+        // Remove /back/api prefix if present (apiRequest will add /api)
+        cleanUrl = cleanUrl.replace(/^\/back\/api/, '');
+        cargarDatos(cleanUrl);
+      } catch (error) {
+        console.error('Error parsing pagination URL:', error);
+      }
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (previousUrl) {
+      try {
+        let cleanUrl = previousUrl;
+        // If it's a full URL, extract the path
+        if (previousUrl.startsWith('http')) {
+          const url = new URL(previousUrl);
+          cleanUrl = url.pathname + url.search;
+        }
+        // Remove /back/api prefix if present (apiRequest will add /api)
+        cleanUrl = cleanUrl.replace(/^\/back\/api/, '');
+        cargarDatos(cleanUrl);
+      } catch (error) {
+        console.error('Error parsing pagination URL:', error);
+      }
+    }
   };
 
   const formatDateTime = (isoString: string) => {
@@ -355,9 +413,30 @@ const Asistencias: React.FC = () => {
           <table className="as-table">
             <thead>
               <tr>
-                <th>Persona</th>
-                <th>Curso / Horario</th>
-                <th>Fecha/Hora</th>
+                <th
+                  onClick={() => handleSort('persona__nombre')}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  title="Ordenar por persona"
+                  className="sortable-header"
+                >
+                  Persona {getSortIcon('persona__nombre')}
+                </th>
+                <th
+                  onClick={() => handleSort('horario__curso__nombre')}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  title="Ordenar por curso"
+                  className="sortable-header"
+                >
+                  Curso / Horario {getSortIcon('horario__curso__nombre')}
+                </th>
+                <th
+                  onClick={() => handleSort('fechaHora')}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  title="Ordenar por fecha/hora"
+                  className="sortable-header"
+                >
+                  Fecha/Hora {getSortIcon('fechaHora')}
+                </th>
                 <th
                   onClick={() => handleSort('temperatura')}
                   style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -366,7 +445,14 @@ const Asistencias: React.FC = () => {
                 >
                   Temp {getSortIcon('temperatura')}
                 </th>
-                <th>Estado</th>
+                <th
+                  onClick={() => handleSort('estado__nombre')}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  title="Ordenar por estado"
+                  className="sortable-header"
+                >
+                  Estado {getSortIcon('estado__nombre')}
+                </th>
                 <th>Detalle</th>
                 <th>Acciones</th>
               </tr>
@@ -473,6 +559,41 @@ const Asistencias: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {(previousUrl || nextUrl) && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '12px',
+          marginTop: '24px',
+          padding: '16px'
+        }}>
+          <button
+            onClick={handlePreviousPage}
+            disabled={!previousUrl}
+            className="as-btn-secondary"
+            style={{
+              opacity: previousUrl ? 1 : 0.5,
+              cursor: previousUrl ? 'pointer' : 'not-allowed'
+            }}
+          >
+            <i className="bi bi-chevron-left me-2"></i>Anterior
+          </button>
+          <button
+            onClick={handleNextPage}
+            disabled={!nextUrl}
+            className="as-btn-secondary"
+            style={{
+              opacity: nextUrl ? 1 : 0.5,
+              cursor: nextUrl ? 'pointer' : 'not-allowed'
+            }}
+          >
+            Siguiente<i className="bi bi-chevron-right ms-2"></i>
+          </button>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {showEditModal && editingAsistencia && (

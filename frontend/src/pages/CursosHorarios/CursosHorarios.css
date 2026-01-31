@@ -769,8 +769,16 @@
     cursor: not-allowed;
 }
 
-/* Responsive adjustments */
+/* =========================================
+   Responsive Mobile Design
+   ========================================= */
 @media (max-width: 768px) {
+
+    /* General responsive adjustments */
+    .ch-header-controls {
+        padding: 20px;
+    }
+
     .horario-item-fields {
         grid-template-columns: 1fr;
     }
@@ -781,5 +789,114 @@
 
     .horarios-expanded-container {
         padding: 16px 20px;
+    }
+
+    /* Table to Card Layout */
+    .ch-table-responsive {
+        overflow-x: visible;
+    }
+
+    .ch-table {
+        min-width: unset;
+    }
+
+    /* Hide table headers */
+    .ch-thead {
+        display: none;
+    }
+
+    /* Convert table elements to block */
+    .ch-table,
+    .ch-table tbody,
+    .ch-tr,
+    .ch-td {
+        display: block;
+        width: 100%;
+    }
+
+    /* Style rows as cards */
+    .ch-tr {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        padding: 16px;
+        border-bottom: 1px solid #334155;
+    }
+
+    /* Style cells */
+    .ch-td {
+        border: none;
+        padding: 8px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left !important;
+    }
+
+    /* Add labels before content */
+    .ch-td:before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #94a3b8;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        min-width: 100px;
+        flex-shrink: 0;
+    }
+
+    /* Last cell (actions) should stack properly */
+    .ch-td:last-child {
+        justify-content: flex-end;
+        padding-top: 12px;
+        margin-top: 8px;
+        border-top: 1px solid #334155;
+    }
+
+    .ch-td:last-child:before {
+        content: none;
+    }
+
+    /* Action buttons in mobile */
+    .action-buttons {
+        width: 100%;
+    }
+
+    /* Tabs responsive */
+    .ch-tabs-nav {
+        grid-template-columns: 1fr;
+    }
+
+    .ch-tab-button {
+        border-right: none;
+        border-bottom: 1px solid #334155;
+    }
+
+    /* Modal responsive */
+    .ch-modal-content {
+        max-width: 90vw;
+        padding: 24px;
+        margin: 20px;
+    }
+
+    /* Stats and grids */
+    .ch-horarios-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Empty state */
+    .ch-empty-state {
+        padding: 40px 20px;
+    }
+
+    /* Expanded rows */
+    .expanded-row td {
+        display: block !important;
+        padding: 0 !important;
+    }
+
+    .expanded-row td:before {
+        display: none !important;
     }
 }

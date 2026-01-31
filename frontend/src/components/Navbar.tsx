@@ -62,20 +62,29 @@ const Navbar: React.FC<NavbarProps> = () => {
       <div className="container-fluid">
         <span className="navbar-brand">AsistencIA</span>
         <div className="navbar-user-actions">
-          <Link to="/instituciones" className="btn btn-sm btn-outline-secondary me-3" style={{ border: '1px solid #475569', color: '#94a3b8' }}>
-            <i className="bi bi-building me-2"></i><span className="d-none d-md-inline">Gestionar Instituciones</span>
-          </Link>
           {token ? (
             <div className="navbar-dropdown-wrapper" ref={dropdownRef}>
               <button
-                className="navbar-username-btn"
+                className="navbar-icon-btn"
                 onClick={() => setDropdownOpen((open) => !open)}
+                title="Menú de Usuario"
               >
-                Bienvenido {displayName}
-                <span className="dropdown-caret ms-2">▼</span>
+                <i className="bi bi-person-circle"></i>
               </button>
               {dropdownOpen && (
                 <div className="navbar-dropdown-menu">
+                  <div className="dropdown-header">
+                    <i className="bi bi-person-fill me-2"></i>
+                    {displayName}
+                  </div>
+                  <div className="dropdown-divider"></div>
+                  <Link
+                    to="/instituciones"
+                    className="dropdown-item"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    <i className="bi bi-building me-2"></i>Gestionar Instituciones
+                  </Link>
                   <button className="dropdown-item" onClick={handleLogout}>
                     <i className="bi bi-box-arrow-right me-2"></i>Logout
                   </button>

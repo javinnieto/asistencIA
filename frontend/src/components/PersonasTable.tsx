@@ -192,7 +192,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                   onClick={() => onView(person)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <td>
+                  <td data-label="Foto">
                     <img
                       src={person.foto || `https://via.placeholder.com/42x42/667eea/ffffff?text=${person.nombre.charAt(0)}`}
                       alt={`${person.nombre} ${person.apellido}`}
@@ -200,9 +200,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
                     />
                   </td>
-                  <td><strong>{person.nombre}</strong></td>
-                  <td>{person.apellido}</td>
-                  <td>
+                  <td data-label="Nombre"><strong>{person.nombre}</strong></td>
+                  <td data-label="Apellido">{person.apellido}</td>
+                  <td data-label="Categoría">
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                       {(person.roles && person.roles.length > 0) ? person.roles.map((role, idx) => (
                         <span key={idx} className="department-badge" style={{
@@ -222,8 +222,8 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       )}
                     </div>
                   </td>
-                  <td style={{ fontSize: '0.85rem', color: '#64748b' }}>{cursosText}</td>
-                  <td>
+                  <td data-label="Cursos" style={{ fontSize: '0.85rem', color: '#64748b' }}>{cursosText}</td>
+                  <td data-label="Acciones">
                     <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <button
                         className="btn-icon btn-view action-btn"

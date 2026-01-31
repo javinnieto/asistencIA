@@ -195,6 +195,46 @@ const Dashboard: React.FC = () => {
     setChartData(processedChartData);
   };
 
+
+  // Helper function to build Asistencias URL with current dashboard filters
+  const buildAsistenciasUrl = (additionalParams: Record<string, string> = {}) => {
+    const params = new URLSearchParams();
+
+    // Add date filters based on current dashboard state
+    const now = new Date();
+    let startD = new Date();
+
+    if (timeRange === 'day') {
+      const dayStr = now.toISOString().split('T')[0];
+      params.append('fechaInicio', dayStr);
+      params.append('fechaFin', dayStr);
+    } else if (timeRange === 'week') {
+      startD.setDate(now.getDate() - 7);
+      params.append('fechaInicio', startD.toISOString().split('T')[0]);
+      params.append('fechaFin', now.toISOString().split('T')[0]);
+    } else if (timeRange === 'month') {
+      startD.setMonth(now.getMonth() - 1);
+      params.append('fechaInicio', startD.toISOString().split('T')[0]);
+      params.append('fechaFin', now.toISOString().split('T')[0]);
+    } else if (timeRange === 'custom') {
+      params.append('fechaInicio', startDate);
+      params.append('fechaFin', endDate);
+    }
+
+    // Add scope filter if applicable
+    if (scopeType === 'course' && selectedScopeId) {
+      params.append('curso', selectedScopeId);
+    }
+
+    // Add additional parameters (like estado, minTemp, etc.)
+    Object.entries(additionalParams).forEach(([key, value]) => {
+      params.append(key, value);
+    });
+
+    const queryString = params.toString();
+    return `/asistencias${queryString ? `?${queryString}` : ''}`;
+  };
+
   return (
     <div className="dashboard-container">
       {/* Header with Filters */}
@@ -269,16 +309,16 @@ const Dashboard: React.FC = () => {
 
       {/* Metrics Grid */}
       <div className="stats-grid">
-        <div onClick={() => navigate('/asistencias')} style={{ cursor: 'pointer' }}>
+        <div onClick={() => navigate(buildAsistenciasUrl())} style={{ cursor: 'pointer' }}>
           <StatCard icon="bi-people-fill" label="Total Registros" value={stats.total} color="primary" />
         </div>
-        <div onClick={() => navigate('/asistencias?estado=Presente')} style={{ cursor: 'pointer' }}>
+        <div onClick={() => navigate(buildAsistenciasUrl({ estado: 'Presente' }))} style={{ cursor: 'pointer' }}>
           <StatCard icon="bi-check-circle-fill" label="Presentes" value={stats.presentes} color="success" />
         </div>
-        <div onClick={() => navigate('/asistencias?estado=Tardanza')} style={{ cursor: 'pointer' }}>
+        <div onClick={() => navigate(buildAsistenciasUrl({ estado: 'Tardanza' }))} style={{ cursor: 'pointer' }}>
           <StatCard icon="bi-exclamation-circle-fill" label="Tardanzas" value={stats.tardanzas} color="warning" />
         </div>
-        <div onClick={() => navigate('/asistencias?minTemp=37.6')} style={{ cursor: 'pointer' }}>
+        <div onClick={() => navigate(buildAsistenciasUrl({ minTemp: '37.6' }))} style={{ cursor: 'pointer' }}>
           <StatCard icon="bi-thermometer-high" label="Fiebre (>37.5)" value={stats.fiebre} color="danger" />
         </div>
       </div>
