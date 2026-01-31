@@ -34,7 +34,7 @@ const CursosTab: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentCurso, setCurrentCurso] = useState<Partial<any>>({});
+    const [currentCurso, setCurrentCurso] = useState<Partial<Curso>>({});
     const [expandedCursoId, setExpandedCursoId] = useState<number | null>(null);
 
     // Horarios management in modal
@@ -43,7 +43,11 @@ const CursosTab: React.FC = () => {
     // Confirm Modal
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+
     const [deleting, setDeleting] = useState(false);
+
+    const [formError, setFormError] = useState<string | null>(null);
+    const [horarioErrors, setHorarioErrors] = useState<Record<number, string>>({});
 
     useEffect(() => {
         apiRequest('/instituciones/').then(async res => {
@@ -66,28 +70,70 @@ const CursosTab: React.FC = () => {
 
     const openModal = (curso?: Curso) => {
         if (curso) {
-            setCurrentCurso({ ...curso, institucion_id: curso.institucion?.idInstitucion });
+            // Need to map Institucion object to ID for the form or keep it consistent
+            // The form expects institucion_id which is not on the Curso interface from api
+            // So we might need to cast or just use the ID from the nested object
+            setCurrentCurso({ ...curso, institucion: curso.institucion });
             setHorarios(curso.horarios || []);
         } else {
-            setCurrentCurso({ activo: true, institucion_id: selectedInstId || instituciones[0]?.idInstitucion });
+            setCurrentCurso({ activo: true, institucion: instituciones.find(i => i.idInstitucion === parseInt(selectedInstId)) });
+            // Start with a smart default for new course too
             setHorarios([{ dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true }]);
         }
+        setFormError(null);
+        setHorarioErrors({});
         setIsModalOpen(true);
+    };
+
+    // Helper function to check if two time ranges overlap
+    const timesOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
+        return start1 < end2 && end1 > start2;
+    };
+
+    // Check for overlapping horarios in the same course
+    const checkHorarioOverlaps = (horariosList: Horario[]): { hasOverlap: boolean; conflictDetails?: string } => {
+        for (let i = 0; i < horariosList.length; i++) {
+            for (let j = i + 1; j < horariosList.length; j++) {
+                const h1 = horariosList[i];
+                const h2 = horariosList[j];
+
+                // Only check if same day
+                if (h1.dia === h2.dia) {
+                    if (timesOverlap(h1.hora_inicio, h1.hora_fin, h2.hora_inicio, h2.hora_fin)) {
+                        return {
+                            hasOverlap: true,
+                            conflictDetails: `Conflicto en ${h1.dia}: ${h1.hora_inicio}-${h1.hora_fin} se superpone con ${h2.hora_inicio}-${h2.hora_fin}`
+                        };
+                    }
+                }
+            }
+        }
+        return { hasOverlap: false };
     };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
 
+
+        setFormError(null);
+
         // Validación: al menos 1 horario
         if (!horarios || horarios.length === 0) {
-            showToast('Debe agregar al menos un horario al curso', 'error');
+            setFormError('Debe agregar al menos un horario al curso');
             return;
         }
 
         // Validar que los horarios tengan datos válidos
         const invalidHorario = horarios.find(h => !h.dia || !h.hora_inicio || !h.hora_fin);
         if (invalidHorario) {
-            showToast('Todos los horarios deben tener día, hora de inicio y hora de fin', 'error');
+            setFormError('Todos los horarios deben tener día, hora de inicio y hora de fin');
+            return;
+        }
+
+        // Check for overlapping horarios
+        const overlapCheck = checkHorarioOverlaps(horarios);
+        if (overlapCheck.hasOverlap) {
+            setFormError(overlapCheck.conflictDetails || 'Hay horarios que se superponen');
             return;
         }
 
@@ -176,8 +222,66 @@ const CursosTab: React.FC = () => {
         }
     };
 
+    const getNextAvailableSlot = (currentHorarios: Horario[]): Horario => {
+        // Find the last used time slot or default to Mon 8-9
+        let baseDay = 'Lunes';
+        let baseStart = 8; // 8:00 AM
+
+        if (currentHorarios.length > 0) {
+            const lastHorario = currentHorarios[currentHorarios.length - 1];
+            baseDay = lastHorario.dia;
+            const [lastHour] = lastHorario.hora_fin.split(':').map(Number);
+            baseStart = lastHour;
+        }
+
+        // Try to find a slot that doesn't overlap
+        // We'll try up to 10 slots to avoid infinite loops
+        for (let attempt = 0; attempt < 10; attempt++) {
+            let nextStart = baseStart + attempt;
+            let nextEnd = nextStart + 1;
+
+            // If we go past 22:00, switch to next day
+            if (nextEnd > 22) {
+                const dayIdx = DIAS_SEMANA.indexOf(baseDay);
+                baseDay = DIAS_SEMANA[(dayIdx + 1) % DIAS_SEMANA.length];
+                baseStart = 8;
+                attempt = -1; // reset loop with new base
+                continue;
+            }
+
+            const startStr = `${nextStart.toString().padStart(2, '0')}:00`;
+            const endStr = `${nextEnd.toString().padStart(2, '0')}:00`;
+
+            // Check if this proposed slot overlaps with ANY existing horario
+            let overlaps = false;
+            for (const h of currentHorarios) {
+                if (h.dia === baseDay) {
+                    if (timesOverlap(startStr, endStr, h.hora_inicio, h.hora_fin)) {
+                        overlaps = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!overlaps) {
+                return {
+                    dia: baseDay,
+                    hora_inicio: startStr,
+                    hora_fin: endStr,
+                    materia: '',
+                    activo: true
+                };
+            }
+        }
+
+        // Fallback if no slot found easily
+        return { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true };
+    };
+
     const addHorario = () => {
-        setHorarios([...horarios, { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true }]);
+        setFormError(null);
+        const newHorario = getNextAvailableSlot(horarios);
+        setHorarios([...horarios, newHorario]);
     };
 
     const removeHorario = (index: number) => {
@@ -188,10 +292,39 @@ const CursosTab: React.FC = () => {
         setHorarios(horarios.filter((_, i) => i !== index));
     };
 
-    const updateHorario = (index: number, field: keyof Horario, value: any) => {
+    const updateHorario = (index: number, field: keyof Horario, value: string | boolean) => {
         const updated = [...horarios];
-        updated[index] = { ...updated[index], [field]: value };
+        const newHorario = { ...updated[index], [field]: value };
+        updated[index] = newHorario;
         setHorarios(updated);
+
+        // Real-time validation
+        const errors = { ...horarioErrors };
+        delete errors[index]; // Clear previous error
+
+        // Check for overlaps against all other horarios
+        let hasOverlap = false;
+        for (let i = 0; i < updated.length; i++) {
+            if (i === index) continue;
+            if (updated[i].dia === newHorario.dia) {
+                if (timesOverlap(newHorario.hora_inicio, newHorario.hora_fin, updated[i].hora_inicio, updated[i].hora_fin)) {
+                    errors[index] = `Coincide con horario ${i + 1} (${updated[i].hora_inicio}-${updated[i].hora_fin})`;
+                    hasOverlap = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasOverlap) {
+            // Check valid time range
+            if (newHorario.hora_inicio >= newHorario.hora_fin) {
+                errors[index] = 'Hora fin debe ser mayor a inicio';
+            }
+        }
+
+        setHorarioErrors(errors);
+        if (Object.keys(errors).length > 0) setFormError('Corrija los errores marcados en rojo');
+        else setFormError(null);
     };
 
     const promptDelete = (id: number) => {
@@ -238,6 +371,14 @@ const CursosTab: React.FC = () => {
             }
             setExpandedCursoId(cursoId);
         }
+    };
+
+    // Handle clicking a horario to edit it
+    const handleEditHorario = (curso: Curso, horario: Horario) => {
+        setCurrentCurso({ ...curso, institucion_id: curso.institucion?.idInstitucion });
+        setHorarios(curso.horarios || []);
+        setFormError(null);
+        setIsModalOpen(true);
     };
 
     const filteredCursos = cursos.filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -357,10 +498,18 @@ const CursosTab: React.FC = () => {
                                                 {curso.horarios && curso.horarios.length > 0 ? (
                                                     <div className="horarios-grid">
                                                         {curso.horarios.map((h, idx) => (
-                                                            <div key={idx} className="horario-card">
+                                                            <div
+                                                                key={idx}
+                                                                className="horario-card horario-card-clickable"
+                                                                onClick={() => handleEditHorario(curso, h)}
+                                                                title="Click para editar este horario"
+                                                            >
                                                                 <div className="horario-day">{h.dia}</div>
                                                                 <div className="horario-time">{h.hora_inicio} - {h.hora_fin}</div>
                                                                 {h.materia && <div className="horario-subject">{h.materia}</div>}
+                                                                <div className="horario-edit-hint">
+                                                                    <i className="bi bi-pencil"></i>
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -393,6 +542,24 @@ const CursosTab: React.FC = () => {
                 <div className="ch-modal-overlay">
                     <div className="ch-modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h2 className="ch-modal-title">{currentCurso.idCurso ? 'Editar' : 'Nuevo'} Curso</h2>
+
+                        {formError && (
+                            <div style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                color: '#fca5a5',
+                                padding: '12px 16px',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px'
+                            }}>
+                                <i className="bi bi-exclamation-triangle-fill"></i>
+                                {formError}
+                            </div>
+                        )}
+
                         <form onSubmit={handleSave}>
                             {/* Datos del Curso */}
                             <div style={{ marginBottom: '24px' }}>
@@ -453,38 +620,46 @@ const CursosTab: React.FC = () => {
                                     {horarios.map((h, idx) => (
                                         <div key={idx} className="horario-item-modal">
                                             <div className="horario-item-number">{idx + 1}</div>
-                                            <div className="horario-item-fields">
-                                                <select
-                                                    value={h.dia}
-                                                    onChange={e => updateHorario(idx, 'dia', e.target.value)}
-                                                    className="ch-input"
-                                                    required
-                                                >
-                                                    {DIAS_SEMANA.map(d => <option key={d} value={d}>{d}</option>)}
-                                                </select>
-                                                <input
-                                                    type="time"
-                                                    value={h.hora_inicio}
-                                                    onChange={e => updateHorario(idx, 'hora_inicio', e.target.value)}
-                                                    className="ch-input"
-                                                    style={{ colorScheme: 'dark' }}
-                                                    required
-                                                />
-                                                <input
-                                                    type="time"
-                                                    value={h.hora_fin}
-                                                    onChange={e => updateHorario(idx, 'hora_fin', e.target.value)}
-                                                    className="ch-input"
-                                                    style={{ colorScheme: 'dark' }}
-                                                    required
-                                                />
-                                                <input
-                                                    type="text"
-                                                    value={h.materia || ''}
-                                                    onChange={e => updateHorario(idx, 'materia', e.target.value)}
-                                                    className="ch-input"
-                                                    placeholder="Materia (opcional)"
-                                                />
+                                            <div style={{ flex: 1 }}>
+                                                <div className="horario-item-fields">
+                                                    <select
+                                                        value={h.dia}
+                                                        onChange={e => updateHorario(idx, 'dia', e.target.value)}
+                                                        className="ch-input"
+                                                        style={horarioErrors[idx] ? { borderColor: '#ef4444' } : {}}
+                                                        required
+                                                    >
+                                                        {DIAS_SEMANA.map(d => <option key={d} value={d}>{d}</option>)}
+                                                    </select>
+                                                    <input
+                                                        type="time"
+                                                        value={h.hora_inicio}
+                                                        onChange={e => updateHorario(idx, 'hora_inicio', e.target.value)}
+                                                        className="ch-input"
+                                                        style={{ colorScheme: 'dark', ...(horarioErrors[idx] ? { borderColor: '#ef4444' } : {}) }}
+                                                        required
+                                                    />
+                                                    <input
+                                                        type="time"
+                                                        value={h.hora_fin}
+                                                        onChange={e => updateHorario(idx, 'hora_fin', e.target.value)}
+                                                        className="ch-input"
+                                                        style={{ colorScheme: 'dark', ...(horarioErrors[idx] ? { borderColor: '#ef4444' } : {}) }}
+                                                        required
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={h.materia || ''}
+                                                        onChange={e => updateHorario(idx, 'materia', e.target.value)}
+                                                        className="ch-input"
+                                                        placeholder="Materia (opcional)"
+                                                    />
+                                                </div>
+                                                {horarioErrors[idx] && (
+                                                    <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <i className="bi bi-exclamation-circle"></i> {horarioErrors[idx]}
+                                                    </div>
+                                                )}
                                             </div>
                                             <button
                                                 type="button"

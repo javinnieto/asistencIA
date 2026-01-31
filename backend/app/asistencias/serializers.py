@@ -58,13 +58,12 @@ class PersonaInstitucionSerializer(serializers.ModelSerializer):
     
 class PersonaSerializer(serializers.ModelSerializer):
     roles = PersonaInstitucionSerializer(many=True, read_only=True)
-    horarios = HorarioSerializer(many=True, read_only=True)
     total_asistencias = serializers.ReadOnlyField()
     necesita_clasificacion = serializers.ReadOnlyField()
     
     class Meta:
         model = Persona
-        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo', 'roles', 'horarios', 'total_asistencias', 'necesita_clasificacion']
+        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo', 'roles', 'total_asistencias', 'necesita_clasificacion']
 
 
 class EstadoAsistenciaSerializer(serializers.ModelSerializer):
@@ -90,7 +89,7 @@ class PersonaCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Persona
-        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo', 'horarios']
+        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo']
 
 
 class PersonaInstitucionCreateSerializer(serializers.ModelSerializer):

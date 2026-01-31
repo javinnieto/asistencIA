@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../config/api';
 import { includesNormalized } from '../utils/normalize';
+import { useToast } from '../components/Toast';
 import './Asistencias.css';
 
 interface Persona {
@@ -34,16 +35,16 @@ interface Asistencia {
 }
 
 const Asistencias: React.FC = () => {
+  const { showToast } = useToast();
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ presentes: 0, tardanzas: 0, ausentes: 0 });
+  const [stats, setStats] = useState({ presentes: 0, tardanzas: 0, ausentes: 0, fiebre: 0 });
 
-  // Filtros
   // Filtros
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const [fechaInicio, setFechaInicio] = useState(''); // Vacío por defecto para mostrar todos los registros
+  const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [cursoFiltro, setCursoFiltro] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState(searchParams.get('estado') || '');
@@ -56,18 +57,15 @@ const Asistencias: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   // Sorting
-  const [ordering, setOrdering] = useState('-fechaHora'); // Default sort
-
-  // ... (inside component)
+  const [ordering, setOrdering] = useState('-fechaHora');
 
   const handleSort = (field: string) => {
-    // Toggle sort order
     if (ordering === field) {
       setOrdering(`-${field}`);
     } else if (ordering === `-${field}`) {
       setOrdering(field);
     } else {
-      setOrdering(`-${field}`); // Default to descending for new field
+      setOrdering(`-${field}`);
     }
   };
 
@@ -115,7 +113,6 @@ const Asistencias: React.FC = () => {
       const response = await apiRequest('/cursos/');
       if (response.ok) {
         const data = await response.json();
-        // Handle both paginated and non-paginated responses
         setCursos(data.results || data || []);
       }
     } catch (error) {
@@ -130,55 +127,45 @@ const Asistencias: React.FC = () => {
     return () => clearInterval(interval);
   }, [fechaInicio, fechaFin, cursoFiltro, ordering]);
 
-  // ... (render)
-  <thead>
-    <tr>
-      <th>Persona</th>
-      <th>Curso / Horario</th>
-      <th>Hora Llegada</th>
-      <th
-        onClick={() => handleSort('temperatura')}
-        style={{ cursor: 'pointer', userSelect: 'none' }}
-        title="Ordenar por temperatura"
-      >
-        Temp {getSortIcon('temperatura')}
-      </th>
-      <th>Estado</th>
-      <th>Detalle</th>
-      <th>Acciones</th>
-    </tr>
-  </thead>
-
   const calculateStats = (data: Asistencia[]) => {
     const presentes = data.filter(a => a.estado?.nombre === 'Presente').length;
     const tardanzas = data.filter(a => a.estado?.nombre === 'Tardanza').length;
     const ausentes = data.filter(a => a.estado?.nombre === 'Ausente').length;
-    setStats({ presentes, tardanzas, ausentes });
+    const fiebre = data.filter(a => a.temperatura > 37.5).length;
+    setStats({ presentes, tardanzas, ausentes, fiebre });
   };
 
-  // Primero filtramos por búsqueda y estado
-  // Primero filtramos por búsqueda y estado
   const filteredAsistencias = asistencias.filter(a => {
     const matchesSearch = includesNormalized(a.persona?.nombre || '', searchTerm);
     const matchesEstado = !estadoFiltro || a.estado?.nombre === estadoFiltro;
     const matchesTempMin = !minTempFiltro || a.temperatura >= parseFloat(minTempFiltro);
     const matchesTempMax = !maxTempFiltro || a.temperatura <= parseFloat(maxTempFiltro);
+    // Fiebre filter integration: if minTemp is 37.5 (our fever threshold), we consider it the fever filter
     return matchesSearch && matchesEstado && matchesTempMin && matchesTempMax;
   });
 
-  // Luego calculamos stats dinámicas de los datos filtrados
   const statsActuales = {
     presentes: filteredAsistencias.filter(a => a.estado?.nombre === 'Presente').length,
     tardanzas: filteredAsistencias.filter(a => a.estado?.nombre === 'Tardanza').length,
-    ausentes: filteredAsistencias.filter(a => a.estado?.nombre === 'Ausente').length
+    ausentes: filteredAsistencias.filter(a => a.estado?.nombre === 'Ausente').length,
+    fiebre: filteredAsistencias.filter(a => a.temperatura > 37.5).length
   };
 
-  const handleCardClick = (estado: string) => {
-    // Si ya está filtrado por este estado, quitar el filtro
-    if (estadoFiltro === estado) {
-      setEstadoFiltro('');
+  const handleCardClick = (filtro: string) => {
+    if (filtro === 'Fiebre') {
+      if (minTempFiltro === '37.6') {
+        setMinTempFiltro('');
+      } else {
+        setMinTempFiltro('37.6');
+      }
+      setEstadoFiltro(''); // Reset status filter when clicking fever
     } else {
-      setEstadoFiltro(estado);
+      if (estadoFiltro === filtro) {
+        setEstadoFiltro('');
+      } else {
+        setEstadoFiltro(filtro);
+        setMinTempFiltro(''); // Reset temp filter when clicking status
+      }
     }
   };
 
@@ -196,6 +183,7 @@ const Asistencias: React.FC = () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          fechaHora: editingAsistencia.fechaHora,
           temperatura: editingAsistencia.temperatura,
           estado: editingAsistencia.estado.idEstadoAsistencia
         })
@@ -205,9 +193,11 @@ const Asistencias: React.FC = () => {
         setShowEditModal(false);
         setEditingAsistencia(null);
         cargarDatos();
+        showToast('Asistencia actualizada correctamente', 'success');
       }
     } catch (error) {
       console.error('Error editando asistencia:', error);
+      showToast('Error al actualizar asistencia', 'error');
     }
   };
 
@@ -228,10 +218,19 @@ const Asistencias: React.FC = () => {
     setFechaInicio('');
     setFechaFin('');
     setCursoFiltro('');
-    setCursoFiltro('');
     setEstadoFiltro('');
     setMinTempFiltro('');
     setMaxTempFiltro('');
+  };
+
+  const formatDateTime = (isoString: string) => {
+    return new Date(isoString).toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const formatTime = (isoString: string) => {
@@ -333,6 +332,19 @@ const Asistencias: React.FC = () => {
             <p>Ausentes</p>
           </div>
         </div>
+        <div
+          className={`as-stat-card ${minTempFiltro === '37.6' ? 'active' : ''}`}
+          onClick={() => handleCardClick('Fiebre')}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className="as-stat-icon fiebre" style={{ backgroundColor: '#ffe4e6', color: '#e11d48' }}>
+            <i className="bi bi-thermometer-high"></i>
+          </div>
+          <div className="as-stat-info">
+            <h3>{statsActuales.fiebre}</h3>
+            <p>Fiebre</p>
+          </div>
+        </div>
       </div>
 
       {/* Table */}
@@ -345,10 +357,7 @@ const Asistencias: React.FC = () => {
               <tr>
                 <th>Persona</th>
                 <th>Curso / Horario</th>
-                <th>
-                  Hora Llegada
-                  {/* Add basic sort for time too if desired, keeping it simple for now */}
-                </th>
+                <th>Fecha/Hora</th>
                 <th
                   onClick={() => handleSort('temperatura')}
                   style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -391,7 +400,7 @@ const Asistencias: React.FC = () => {
                     )}
                   </td>
                   <td>
-                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{formatTime(a.fechaHora)}</span>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{formatDateTime(a.fechaHora)}</span>
                   </td>
                   <td>
                     <span className={`as-badge ${a.temperatura > 37.5 ? 'temp-high' : 'temp-normal'}`}>
@@ -488,7 +497,7 @@ const Asistencias: React.FC = () => {
                     value={editingAsistencia.fechaHora.slice(0, 16)}
                     onChange={e => setEditingAsistencia({
                       ...editingAsistencia,
-                      fechaHora: e.target.value + ':00Z'
+                      fechaHora: new Date(e.target.value).toISOString()
                     })}
                   />
                   <small style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>

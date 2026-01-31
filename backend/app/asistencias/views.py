@@ -46,33 +46,6 @@ class CursoViewSet(viewsets.ModelViewSet):
             return CursoCreateSerializer
         return CursoSerializer
 
-    @action(detail=True, methods=['post'])
-    def propagate_schedules(self, request, pk=None):
-        """
-        Propaga los horarios de este curso a todas las personas inscriptas en él.
-        Sobreescribe los horarios existentes de las personas.
-        """
-        curso = self.get_object()
-        horarios_curso = curso.horarios.filter(activo=True)
-        
-        # Encontrar personas asociadas a este curso
-        # Buscamos en la tabla intermedia PersonaInstitucion
-        roles_curso = PersonaInstitucion.objects.filter(curso=curso, activo=True)
-        personas_afectadas = 0
-        
-        with transaction.atomic():
-            for role in roles_curso:
-                persona = role.persona
-                # Limpiar horarios actuales y asignar los del curso
-                persona.horarios.clear()
-                persona.horarios.add(*horarios_curso)
-                personas_afectadas += 1
-                
-        return Response({
-            'status': 'success',
-            'message': f'Horarios propagados a {personas_afectadas} alumnos.',
-            'count': personas_afectadas
-        })
 
 
 class HorarioViewSet(viewsets.ModelViewSet):
@@ -86,27 +59,8 @@ class HorarioViewSet(viewsets.ModelViewSet):
             return HorarioCreateSerializer
         return HorarioSerializer
     
-    def _propagate_to_personas(self, horario):
-        """
-        Asigna el horario a todas las personas que están inscriptas en el curso.
-        """
-        # Encontrar personas asociadas a este curso
-        roles_curso = PersonaInstitucion.objects.filter(curso=horario.curso, activo=True)
-        for role in roles_curso:
-            persona = role.persona
-            # Agregar el horario si no lo tiene ya
-            if not persona.horarios.filter(pk=horario.pk).exists():
-                persona.horarios.add(horario)
-    
-    def perform_create(self, serializer):
-        """Al crear un horario, asignarlo automáticamente a todos los alumnos del curso."""
-        horario = serializer.save()
-        self._propagate_to_personas(horario)
-    
-    def perform_update(self, serializer):
-        """Al actualizar un horario, también propagarlo (por si cambió de curso)."""
-        horario = serializer.save()
-        self._propagate_to_personas(horario)
+    # Propagate logic removed: Schedules are now strictly linked to Cursos.
+
 
 
 class PersonaViewSet(viewsets.ModelViewSet):
@@ -127,9 +81,9 @@ class PersonaViewSet(viewsets.ModelViewSet):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
-        # Extraer roles y horarios del payload
+        # Extraer roles del payload
         roles_data = request.data.pop('roles', None)
-        horarios_data = request.data.pop('horarios', None)
+        # horarios_data removed: Persona no longer has direct horarios
         
         # foto viene como TextField (Base64 string o URL), no necesita procesamiento especial
         
@@ -157,22 +111,7 @@ class PersonaViewSet(viewsets.ModelViewSet):
                         curso_id=curso_id if curso_id else None
                     )
         
-        # Sincronizar Horarios si se proporcionan
-        if horarios_data is not None:
-            # horarios_data debe ser una lista de IDs de horario
-            # Limpiar asignaciones previas y asignar nuevas
-            instance.horarios.clear()
-            for horario_id in horarios_data:
-                # Si viene como objeto, tratamos de sacar el ID
-                hid = horario_id.get('idHorario') if isinstance(horario_id, dict) else horario_id
-                if hid:
-                    try:
-                        h = Horario.objects.get(pk=hid)
-                        instance.horarios.add(h)
-                    except Horario.DoesNotExist:
-                        pass
-
-        # Retornar el objeto actualizado con sus roles
+        # Retornar el objeto actualizado
         return Response(PersonaSerializer(instance).data)
 
     def perform_update(self, serializer):
@@ -211,6 +150,7 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         'fechaHora': ['date', 'gte', 'lte'],
         'estado': ['exact'],
         'horario__curso': ['exact'],
+        'institucion': ['exact'],
     }
     search_fields = ['persona__nombre']
     ordering_fields = ['fechaHora', 'temperatura']

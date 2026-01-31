@@ -76,7 +76,7 @@ class Persona(models.Model):
     telefono_emergencia = models.CharField(max_length=20, null=True, blank=True)
     foto = models.TextField(null=True, blank=True)  # Stores Base64 strings or URLs from MQTT
     activo = models.BooleanField(default=True)
-    horarios = models.ManyToManyField(Horario, related_name='personas', blank=True)
+    # horarios = models.ManyToManyField(Horario, related_name='personas', blank=True) -> REMOVED: Redundant, use PersonaInstitucion -> Curso -> Horario
 
     def __str__(self):
         return self.nombre

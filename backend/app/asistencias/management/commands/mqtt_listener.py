@@ -174,19 +174,36 @@ class Command(BaseCommand):
                 dia_actual = dias_map[fecha_hora.weekday()]
                 time_actual = fecha_hora.time()
 
-                # Buscar horarios de la persona para hoy
-                horarios_candidatos = persona.horarios.filter(dia=dia_actual, activo=True)
+                # Buscar horarios de la persona para hoy a través de sus cursos activos
+                # Nuevo enfoque: Persona -> Roles Activos -> Cursos Activos -> Horarios del día
+                from asistencias.models import PersonaInstitucion, Horario
+                
+                # Obtener cursos activos de la persona
+                cursos_ids = PersonaInstitucion.objects.filter(
+                    persona=persona, 
+                    activo=True,
+                    curso__isnull=False
+                ).values_list('curso_id', flat=True)
+
+                if not cursos_ids:
+                    self.stdout.write(self.style.WARNING(f'⚠️ Persona {persona.nombre} no tiene cursos activos. Asistencia ignorada.'))
+                    return
+
+                # Buscar horarios en esos cursos para el día actual
+                horarios_candidatos = Horario.objects.filter(
+                    curso_id__in=cursos_ids,
+                    dia=dia_actual,
+                    activo=True
+                )
                 
                 horario_valido = None
                 minutos_tarde = 0
-                estado_nombre = ESTADOS_ASISTENCIA['AUSENTE'] # Default, aunque no se guardará si es ausente aquí
+                estado_nombre = ESTADOS_ASISTENCIA['AUSENTE'] 
 
                 for h in horarios_candidatos:
-                    # Convertir tiempos a datetime para comparar con fecha completa si es necesario, 
-                    # pero aquí usaremos dummy dates para comparar tiempos y deltas.
+                    # Convertir tiempos a datetime para comparar
                     
                     # Rango válido: [Inicio - 1 hora, Fin]
-                    # Construir datetimes para el día de la asistencia
                     start_dt = datetime.combine(fecha_hora.date(), h.hora_inicio)
                     start_dt_aware = timezone.make_aware(start_dt)
                     
@@ -204,7 +221,7 @@ class Command(BaseCommand):
                             diff = fecha_hora - start_dt_aware
                             minutos_tarde = int(diff.total_seconds() / 60)
                             
-                            # Tolerancia de 1 minuto: si llega dentro del primer minuto, es "Presente"
+                            # Tolerancia de 1 minuto
                             if minutos_tarde >= 1:
                                 estado_nombre = ESTADOS_ASISTENCIA['TARDANZA']
                             else:
@@ -214,7 +231,7 @@ class Command(BaseCommand):
                             minutos_tarde = 0
                             estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
                         
-                        break # Encontramos el horario (asumimos no solapamiento o prioridad al primero encontrado)
+                        break
 
                 if not horario_valido:
                     self.stdout.write(self.style.WARNING(f'⚠️ Asistencia FUERA DE RANGO para {persona.nombre} a las {fecha_hora.time()}. Ignorada.'))

@@ -34,17 +34,54 @@
     font-weight: 500;
 }
 
-.header-time-group {
-    text-align: right;
+/* Dashboard Filters */
+.filters-container {
+    display: flex;
+    gap: 16px;
+    align-items: center;
     background: rgba(30, 41, 59, 0.4);
-    padding: 16px 24px;
-    border-radius: 16px;
+    padding: 8px 16px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
 }
 
+.filter-group {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    background: transparent;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-btn.active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: #3b82f6;
+    color: #60a5fa;
+    font-weight: 600;
+}
+
+.scope-select {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #f1f5f9;
+    padding: 6px 12px;
+    border-radius: 8px;
+    outline: none;
+    font-size: 0.85rem;
+    min-width: 150px;
+}
+
 .current-time {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #60a5fa;
     line-height: 1;
@@ -208,7 +245,7 @@
 
 .chart-container {
     padding: 24px;
-    height: 400px;
+    min-height: 400px;
 }
 
 /* List Items */
