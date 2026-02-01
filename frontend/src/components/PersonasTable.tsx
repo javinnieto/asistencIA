@@ -193,12 +193,28 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                   style={{ cursor: 'pointer' }}
                 >
                   <td data-label="Foto">
-                    <img
-                      src={person.foto || `https://via.placeholder.com/42x42/667eea/ffffff?text=${person.nombre.charAt(0)}`}
-                      alt={`${person.nombre} ${person.apellido}`}
-                      className="person-avatar"
-                      style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
-                    />
+                    {person.foto ? (
+                      <img
+                        src={person.foto}
+                        alt={`${person.nombre} ${person.apellido}`}
+                        className="person-avatar"
+                        style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className="avatar-placeholder" style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: '#e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#64748b',
+                        fontSize: '1.5rem'
+                      }}>
+                        <i className="bi bi-person-circle"></i>
+                      </div>
+                    )}
                   </td>
                   <td data-label="Nombre"><strong>{person.nombre}</strong></td>
                   <td data-label="Apellido">{person.apellido}</td>

@@ -36,42 +36,43 @@ interface Asistencia {
 
 const Asistencias: React.FC = () => {
   const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ presentes: 0, tardanzas: 0, ausentes: 0, fiebre: 0 });
 
-  // Filtros
-  const [searchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [fechaFin, setFechaFin] = useState('');
-  const [cursoFiltro, setCursoFiltro] = useState('');
+  // Filter states initialized from URL params
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [fechaInicio, setFechaInicio] = useState(searchParams.get('fechaInicio') || '');
+  const [fechaFin, setFechaFin] = useState(searchParams.get('fechaFin') || '');
+  const [cursoFiltro, setCursoFiltro] = useState(searchParams.get('curso') || '');
   const [estadoFiltro, setEstadoFiltro] = useState(searchParams.get('estado') || '');
   const [minTempFiltro, setMinTempFiltro] = useState(searchParams.get('minTemp') || '');
   const [maxTempFiltro, setMaxTempFiltro] = useState(searchParams.get('maxTemp') || '');
 
-  // Pagination states
+  // Pagination
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [previousUrl, setPreviousUrl] = useState<string | null>(null);
-  const [currentUrl, setCurrentUrl] = useState<string>('');
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
+  // Sorting
+  const [ordering, setOrdering] = useState(searchParams.get('ordering') || '-fechaHora');
 
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAsistencia, setEditingAsistencia] = useState<Asistencia | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
-  // Sorting
-  const [ordering, setOrdering] = useState('-fechaHora');
-
   const handleSort = (field: string) => {
-    if (ordering === field) {
-      setOrdering(`-${field}`);
-    } else if (ordering === `-${field}`) {
-      setOrdering(field);
-    } else {
-      setOrdering(`-${field}`);
-    }
+    setOrdering(prev => {
+      if (prev === field) return `-${field}`;
+      if (prev === `-${field}`) return field;
+      return `-${field}`;
+    });
   };
 
   const getSortIcon = (field: string) => {
@@ -80,45 +81,70 @@ const Asistencias: React.FC = () => {
     return <i className="bi bi-arrow-down-up" style={{ opacity: 0.3 }}></i>;
   };
 
+  // Build query string from current state
+  const buildQueryString = () => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.append('persona__nombre', searchTerm); // Backend uses persona__nombre for search
+    if (fechaInicio) params.append('fechaHora__gte', `${fechaInicio}T00:00:00`);
+    if (fechaFin) params.append('fechaHora__lte', `${fechaFin}T23:59:59`);
+    if (cursoFiltro) params.append('horario__curso', cursoFiltro);
+    if (cursoFiltro) params.append('horario__curso', cursoFiltro);
+
+    // Filter by status name (e.g. 'Presente')
+    if (estadoFiltro) params.append('estado__nombre', estadoFiltro);
+
+    if (minTempFiltro) params.append('temperatura__gte', minTempFiltro);
+    if (maxTempFiltro) params.append('temperatura__lte', maxTempFiltro);
+    if (ordering) params.append('ordering', ordering);
+
+    return params.toString();
+  };
+
   const cargarDatos = async (url?: string) => {
+    setLoading(true);
     try {
       let endpoint = url;
-
       if (!endpoint) {
-        let queryParams = [];
-        if (fechaInicio) queryParams.push(`fechaHora__gte=${fechaInicio}T00:00:00`);
-        if (fechaFin) queryParams.push(`fechaHora__lte=${fechaFin}T23:59:59`);
-        if (cursoFiltro) queryParams.push(`horario__curso=${cursoFiltro}`);
-        if (ordering) queryParams.push(`ordering=${ordering}`);
-
-        const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-        endpoint = `/asistencias/${queryString}`;
-        setCurrentUrl(endpoint);
+        endpoint = `/asistencias/?${buildQueryString()}`;
       }
 
       const response = await apiRequest(endpoint);
-
       if (response.ok) {
         const data = await response.json();
-        const mappedData: Asistencia[] = data.results.map((a: any) => ({
-          idAsistencia: a.idAsistencia,
-          persona: a.persona,
-          fechaHora: a.fechaHora,
-          temperatura: a.temperatura,
-          estado: a.estado,
-          horario: a.horario,
-          llegada_tarde_minutos: a.llegada_tarde_minutos || 0
-        }));
-
-        setAsistencias(mappedData);
-        calculateStats(mappedData);
-
-        // Extract pagination URLs from response
+        setAsistencias(data.results);
+        setTotalRecords(data.count);
         setNextUrl(data.next);
         setPreviousUrl(data.previous);
+
+        // Calculate page
+        let pageForUrl = 1;
+        if (url) {
+          const urlObj = new URL(url, window.location.origin);
+          const pageParam = urlObj.searchParams.get('page');
+          pageForUrl = pageParam ? parseInt(pageParam) : 1;
+          setCurrentPage(pageForUrl);
+        } else {
+          // Reset to 1 if loading default/filtered list without specific URL
+          setCurrentPage(1);
+        }
+
+        // Update browser URL without reloading
+        const cleanParams = new URLSearchParams();
+        if (searchTerm) cleanParams.set('search', searchTerm);
+        if (fechaInicio) cleanParams.set('fechaInicio', fechaInicio);
+        if (fechaFin) cleanParams.set('fechaFin', fechaFin);
+        if (cursoFiltro) cleanParams.set('curso', cursoFiltro);
+        if (estadoFiltro) cleanParams.set('estado', estadoFiltro);
+        if (minTempFiltro) cleanParams.set('minTemp', minTempFiltro);
+        if (ordering) cleanParams.set('ordering', ordering);
+
+        if (pageForUrl > 1) cleanParams.set('page', pageForUrl.toString());
+
+        setSearchParams(cleanParams);
       }
     } catch (error) {
       console.error('Error cargando asistencias:', error);
+      showToast('Error al cargar datos', 'error');
     } finally {
       setLoading(false);
     }
@@ -132,63 +158,90 @@ const Asistencias: React.FC = () => {
         setCursos(data.results || data || []);
       }
     } catch (error) {
-      console.error('Error cargando cursos:', error);
+      // console.error(error);
+    }
+  };
+  const fetchStats = async (queryString: string) => {
+    try {
+      const response = await apiRequest(`/asistencias/stats/?${queryString}`);
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
     }
   };
 
   useEffect(() => {
-    cargarDatos();
     cargarCursos();
-    const interval = setInterval(cargarDatos, 30000);
-    return () => clearInterval(interval);
-  }, [fechaInicio, fechaFin, cursoFiltro, ordering]);
+  }, []);
 
-  // Reset to first page when filters change
+  // Trigger load when filters change
   useEffect(() => {
-    setPreviousUrl(null);
-    setNextUrl(null);
-  }, [fechaInicio, fechaFin, cursoFiltro, estadoFiltro, minTempFiltro, maxTempFiltro]);
-
-  const calculateStats = (data: Asistencia[]) => {
-    const presentes = data.filter(a => a.estado?.nombre === 'Presente').length;
-    const tardanzas = data.filter(a => a.estado?.nombre === 'Tardanza').length;
-    const ausentes = data.filter(a => a.estado?.nombre === 'Ausente').length;
-    const fiebre = data.filter(a => a.temperatura > 37.5).length;
-    setStats({ presentes, tardanzas, ausentes, fiebre });
-  };
-
-  const filteredAsistencias = asistencias.filter(a => {
-    const matchesSearch = includesNormalized(a.persona?.nombre || '', searchTerm);
-    const matchesEstado = !estadoFiltro || a.estado?.nombre === estadoFiltro;
-    const matchesTempMin = !minTempFiltro || a.temperatura >= parseFloat(minTempFiltro);
-    const matchesTempMax = !maxTempFiltro || a.temperatura <= parseFloat(maxTempFiltro);
-    // Fiebre filter integration: if minTemp is 37.5 (our fever threshold), we consider it the fever filter
-    return matchesSearch && matchesEstado && matchesTempMin && matchesTempMax;
-  });
-
-  const statsActuales = {
-    presentes: filteredAsistencias.filter(a => a.estado?.nombre === 'Presente').length,
-    tardanzas: filteredAsistencias.filter(a => a.estado?.nombre === 'Tardanza').length,
-    ausentes: filteredAsistencias.filter(a => a.estado?.nombre === 'Ausente').length,
-    fiebre: filteredAsistencias.filter(a => a.temperatura > 37.5).length
-  };
+    const query = buildQueryString();
+    cargarDatos();
+    fetchStats(query);
+  }, [searchTerm, fechaInicio, fechaFin, cursoFiltro, estadoFiltro, minTempFiltro, maxTempFiltro, ordering]);
 
   const handleCardClick = (filtro: string) => {
     if (filtro === 'Fiebre') {
-      if (minTempFiltro === '37.6') {
-        setMinTempFiltro('');
-      } else {
-        setMinTempFiltro('37.6');
-      }
-      setEstadoFiltro(''); // Reset status filter when clicking fever
+      setMinTempFiltro(prev => prev === '37.6' ? '' : '37.6');
+      setEstadoFiltro('');
     } else {
-      if (estadoFiltro === filtro) {
-        setEstadoFiltro('');
-      } else {
-        setEstadoFiltro(filtro);
-        setMinTempFiltro(''); // Reset temp filter when clicking status
-      }
+      setEstadoFiltro(prev => prev === filtro ? '' : filtro);
+      setMinTempFiltro('');
     }
+  };
+
+  const handlePageClick = (page: number) => {
+    const params = new URLSearchParams();
+    // Use 'persona__nombre' if that's what backend expects for search, OR 'search' if backend `SearchFilter` is configured to `search_fields`.
+    // `buildQueryString` at line 87 uses: `if (searchTerm) params.append('persona__nombre', searchTerm);`
+    // So we stick to that.
+    if (searchTerm) params.append('persona__nombre', searchTerm);
+    if (fechaInicio) params.append('fechaHora__gte', `${fechaInicio}T00:00:00`);
+    if (fechaFin) params.append('fechaHora__lte', `${fechaFin}T23:59:59`);
+    if (cursoFiltro) params.append('horario__curso', cursoFiltro);
+
+    // Filter by status name (e.g. 'Presente')
+    if (estadoFiltro) params.append('estado__nombre', estadoFiltro);
+
+    if (minTempFiltro) params.append('temperatura__gte', minTempFiltro);
+    if (maxTempFiltro) params.append('temperatura__lte', maxTempFiltro);
+    if (ordering) params.append('ordering', ordering);
+
+    params.append('page', page.toString());
+
+    cargarDatos(`/asistencias/?${params.toString()}`);
+  };
+
+  const totalPages = Math.ceil(totalRecords / pageSize);
+
+  const getPageNumbers = () => {
+    const delta = 2;
+    const range: number[] = []; // Explicit type
+    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+      range.push(i);
+    }
+
+    const pages: (number | string)[] = []; // Explicit type
+
+    if (totalPages >= 1) pages.push(1);
+
+    if (range.length > 0 && range[0] > 2) {
+      pages.push('...');
+    }
+
+    range.forEach(i => pages.push(i));
+
+    if (range.length > 0 && range[range.length - 1] < totalPages - 1) {
+      pages.push('...');
+    }
+
+    if (totalPages > 1) pages.push(totalPages);
+
+    return pages;
   };
 
   const handleEdit = (asistencia: Asistencia) => {
@@ -199,7 +252,6 @@ const Asistencias: React.FC = () => {
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAsistencia) return;
-
     try {
       const response = await apiRequest(`/asistencias/${editingAsistencia.idAsistencia}/`, {
         method: 'PATCH',
@@ -214,12 +266,11 @@ const Asistencias: React.FC = () => {
       if (response.ok) {
         setShowEditModal(false);
         setEditingAsistencia(null);
-        cargarDatos();
+        cargarDatos(previousUrl ? undefined : undefined); // Refresh current filters
         showToast('Asistencia actualizada correctamente', 'success');
       }
     } catch (error) {
-      console.error('Error editando asistencia:', error);
-      showToast('Error al actualizar asistencia', 'error');
+      showToast('Error al actualizar', 'error');
     }
   };
 
@@ -231,7 +282,7 @@ const Asistencias: React.FC = () => {
         cargarDatos();
       }
     } catch (error) {
-      console.error('Error eliminando asistencia:', error);
+      console.error(error);
     }
   };
 
@@ -245,20 +296,18 @@ const Asistencias: React.FC = () => {
     setMaxTempFiltro('');
   };
 
+  // Pagination Handlers
   const handleNextPage = () => {
     if (nextUrl) {
+      // Extract relative path + query from full URL
       try {
-        let cleanUrl = nextUrl;
-        // If it's a full URL, extract the path
-        if (nextUrl.startsWith('http')) {
-          const url = new URL(nextUrl);
-          cleanUrl = url.pathname + url.search;
-        }
+        const urlObj = new URL(nextUrl);
+        const relativePath = urlObj.pathname + urlObj.search;
         // Remove /back/api prefix if present (apiRequest will add /api)
-        cleanUrl = cleanUrl.replace(/^\/back\/api/, '');
+        const cleanUrl = relativePath.replace(/^\/back\/api/, '');
         cargarDatos(cleanUrl);
-      } catch (error) {
-        console.error('Error parsing pagination URL:', error);
+      } catch (e) {
+        cargarDatos(nextUrl); // Fallback
       }
     }
   };
@@ -266,17 +315,12 @@ const Asistencias: React.FC = () => {
   const handlePreviousPage = () => {
     if (previousUrl) {
       try {
-        let cleanUrl = previousUrl;
-        // If it's a full URL, extract the path
-        if (previousUrl.startsWith('http')) {
-          const url = new URL(previousUrl);
-          cleanUrl = url.pathname + url.search;
-        }
-        // Remove /back/api prefix if present (apiRequest will add /api)
-        cleanUrl = cleanUrl.replace(/^\/back\/api/, '');
+        const urlObj = new URL(previousUrl);
+        const relativePath = urlObj.pathname + urlObj.search;
+        const cleanUrl = relativePath.replace(/^\/back\/api/, '');
         cargarDatos(cleanUrl);
-      } catch (error) {
-        console.error('Error parsing pagination URL:', error);
+      } catch (e) {
+        cargarDatos(previousUrl);
       }
     }
   };
@@ -291,10 +335,6 @@ const Asistencias: React.FC = () => {
     });
   };
 
-  const formatTime = (isoString: string) => {
-    return new Date(isoString).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  };
-
   return (
     <div className="as-main-container">
       {/* Header & Controls */}
@@ -302,7 +342,7 @@ const Asistencias: React.FC = () => {
         <div className="as-title-group">
           <div className="as-title-bar"></div>
           <h3 className="as-page-title">Asistencias</h3>
-          <span className="as-count-badge">{filteredAsistencias.length} REGISTROS</span>
+          <span className="as-count-badge">{totalRecords} REGISTROS</span>
         </div>
 
         <div className="as-filters-row">
@@ -329,7 +369,7 @@ const Asistencias: React.FC = () => {
             className="as-date-input"
             value={fechaFin}
             onChange={e => setFechaFin(e.target.value)}
-            placeholder="Fecha fin (opcional)"
+            placeholder="Fecha fin"
           />
 
           <select
@@ -349,7 +389,7 @@ const Asistencias: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards - Clickeable para filtrar */}
+      {/* Stats Cards */}
       <div className="as-stats-grid">
         <div
           className={`as-stat-card ${estadoFiltro === 'Presente' ? 'active' : ''}`}
@@ -360,8 +400,8 @@ const Asistencias: React.FC = () => {
             <i className="bi bi-check-circle-fill"></i>
           </div>
           <div className="as-stat-info">
-            <h3>{statsActuales.presentes}</h3>
-            <p>Presentes</p>
+            <h3>{stats.presentes}</h3>
+            <p>Presentes (página)</p>
           </div>
         </div>
         <div
@@ -373,8 +413,8 @@ const Asistencias: React.FC = () => {
             <i className="bi bi-exclamation-circle-fill"></i>
           </div>
           <div className="as-stat-info">
-            <h3>{statsActuales.tardanzas}</h3>
-            <p>Tardanzas</p>
+            <h3>{stats.tardanzas}</h3>
+            <p>Tardanzas (página)</p>
           </div>
         </div>
         <div
@@ -386,8 +426,8 @@ const Asistencias: React.FC = () => {
             <i className="bi bi-x-circle-fill"></i>
           </div>
           <div className="as-stat-info">
-            <h3>{statsActuales.ausentes}</h3>
-            <p>Ausentes</p>
+            <h3>{stats.ausentes}</h3>
+            <p>Ausentes (página)</p>
           </div>
         </div>
         <div
@@ -399,8 +439,8 @@ const Asistencias: React.FC = () => {
             <i className="bi bi-thermometer-high"></i>
           </div>
           <div className="as-stat-info">
-            <h3>{statsActuales.fiebre}</h3>
-            <p>Fiebre</p>
+            <h3>{stats.fiebre}</h3>
+            <p>Fiebre (página)</p>
           </div>
         </div>
       </div>
@@ -409,48 +449,23 @@ const Asistencias: React.FC = () => {
       <div className="as-table-container">
         {loading ? (
           <div className="as-no-data"><i className="bi bi-hourglass-split"></i> Cargando...</div>
-        ) : filteredAsistencias.length > 0 ? (
+        ) : asistencias.length > 0 ? (
           <table className="as-table">
             <thead>
               <tr>
-                <th
-                  onClick={() => handleSort('persona__nombre')}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                  title="Ordenar por persona"
-                  className="sortable-header"
-                >
+                <th onClick={() => handleSort('persona__nombre')} className="sortable-header">
                   Persona {getSortIcon('persona__nombre')}
                 </th>
-                <th
-                  onClick={() => handleSort('horario__curso__nombre')}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                  title="Ordenar por curso"
-                  className="sortable-header"
-                >
+                <th onClick={() => handleSort('horario__curso__nombre')} className="sortable-header">
                   Curso / Horario {getSortIcon('horario__curso__nombre')}
                 </th>
-                <th
-                  onClick={() => handleSort('fechaHora')}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                  title="Ordenar por fecha/hora"
-                  className="sortable-header"
-                >
+                <th onClick={() => handleSort('fechaHora')} className="sortable-header">
                   Fecha/Hora {getSortIcon('fechaHora')}
                 </th>
-                <th
-                  onClick={() => handleSort('temperatura')}
-                  style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  title="Ordenar por temperatura"
-                  className="sortable-header"
-                >
+                <th onClick={() => handleSort('temperatura')} className="sortable-header">
                   Temp {getSortIcon('temperatura')}
                 </th>
-                <th
-                  onClick={() => handleSort('estado__nombre')}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                  title="Ordenar por estado"
-                  className="sortable-header"
-                >
+                <th onClick={() => handleSort('estado__nombre')} className="sortable-header">
                   Estado {getSortIcon('estado__nombre')}
                 </th>
                 <th>Detalle</th>
@@ -458,19 +473,15 @@ const Asistencias: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredAsistencias.map(a => (
+              {asistencias.map(a => (
                 <tr key={a.idAsistencia}>
                   <td>
                     <div className="as-user-cell">
                       <div className="as-avatar">
-                        {a.persona?.foto ? (
-                          <img src={a.persona.foto} alt="avatar" />
-                        ) : (
-                          <i className="bi bi-person"></i>
-                        )}
+                        {a.persona?.foto ? <img src={a.persona.foto} alt="av" /> : <i className="bi bi-person"></i>}
                       </div>
                       <div className="as-user-info">
-                        <div>{a.persona?.nombre || 'Usuario Desconocido'}</div>
+                        <div>{a.persona?.nombre || 'Desc.'}</div>
                         <div>ID: {a.persona?.idPersona || '-'}</div>
                       </div>
                     </div>
@@ -478,73 +489,39 @@ const Asistencias: React.FC = () => {
                   <td>
                     {a.horario ? (
                       <div className="as-user-info">
-                        <div>{a.horario.curso?.nombre || 'Curso Desconocido'}</div>
-                        <div>{a.horario.hora_inicio?.slice(0, 5)} - {a.horario.hora_fin?.slice(0, 5)}</div>
+                        <div>{a.horario.curso?.nombre || 'Curso Desc.'}</div>
+                        {a.horario.hora_inicio && <div>{a.horario.hora_inicio.slice(0, 5)} - {a.horario.hora_fin.slice(0, 5)}</div>}
                       </div>
-                    ) : (
-                      <span style={{ color: '#64748b' }}>Sin Horario</span>
-                    )}
+                    ) : <span style={{ color: '#94a3b8' }}>Sin Horario</span>}
                   </td>
-                  <td>
-                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{formatDateTime(a.fechaHora)}</span>
-                  </td>
+                  <td><span style={{ fontWeight: 700 }}>{formatDateTime(a.fechaHora)}</span></td>
                   <td>
                     <span className={`as-badge ${a.temperatura > 37.5 ? 'temp-high' : 'temp-normal'}`}>
                       <i className="bi bi-thermometer-half"></i> {a.temperatura}°C
                     </span>
                   </td>
                   <td>
-                    {a.estado?.nombre === 'Presente' && (
-                      <span className="as-badge presente">Presente</span>
-                    )}
-                    {a.estado?.nombre === 'Tardanza' && (
-                      <span className="as-badge tardanza">Tardanza</span>
-                    )}
-                    {a.estado?.nombre === 'Ausente' && (
-                      <span className="as-badge ausente">Ausente</span>
-                    )}
+                    {/* Safe check for estado.nombre */}
+                    {a.estado?.nombre === 'Presente' && <span className="as-badge presente">Presente</span>}
+                    {a.estado?.nombre === 'Tardanza' && <span className="as-badge tardanza">Tardanza</span>}
+                    {a.estado?.nombre === 'Ausente' && <span className="as-badge ausente">Ausente</span>}
+                    {/* Fallback for other states */}
+                    {!['Presente', 'Tardanza', 'Ausente'].includes(a.estado?.nombre) &&
+                      <span className="as-badge">{a.estado?.nombre}</span>}
                   </td>
                   <td>
-                    {a.llegada_tarde_minutos > 0 && (
-                      <span style={{ color: '#fbbf24', fontSize: '0.85rem' }}>
-                        + {a.llegada_tarde_minutos} min
-                      </span>
-                    )}
+                    {a.llegada_tarde_minutos > 0 && <span style={{ color: '#fbbf24' }}>+ {a.llegada_tarde_minutos} min</span>}
                   </td>
                   <td>
                     <div className="as-actions">
-                      <button
-                        className="as-btn-action as-btn-edit"
-                        onClick={() => handleEdit(a)}
-                        title="Editar"
-                      >
-                        <i className="bi bi-pencil"></i>
-                      </button>
+                      <button className="as-btn-action as-btn-edit" onClick={() => handleEdit(a)}><i className="bi bi-pencil"></i></button>
                       {deleteConfirm === a.idAsistencia ? (
                         <>
-                          <button
-                            className="as-btn-action as-btn-confirm"
-                            onClick={() => handleDelete(a.idAsistencia)}
-                            title="Confirmar"
-                          >
-                            <i className="bi bi-check"></i>
-                          </button>
-                          <button
-                            className="as-btn-action as-btn-cancel"
-                            onClick={() => setDeleteConfirm(null)}
-                            title="Cancelar"
-                          >
-                            <i className="bi bi-x"></i>
-                          </button>
+                          <button className="as-btn-action as-btn-confirm" onClick={() => handleDelete(a.idAsistencia)}><i className="bi bi-check"></i></button>
+                          <button className="as-btn-action as-btn-cancel" onClick={() => setDeleteConfirm(null)}><i className="bi bi-x"></i></button>
                         </>
                       ) : (
-                        <button
-                          className="as-btn-action as-btn-delete"
-                          onClick={() => setDeleteConfirm(a.idAsistencia)}
-                          title="Eliminar"
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
+                        <button className="as-btn-action as-btn-delete" onClick={() => setDeleteConfirm(a.idAsistencia)}><i className="bi bi-trash"></i></button>
                       )}
                     </div>
                   </td>
@@ -555,55 +532,54 @@ const Asistencias: React.FC = () => {
         ) : (
           <div className="as-no-data">
             <i className="bi bi-calendar-x" style={{ fontSize: '2rem', display: 'block', marginBottom: '16px' }}></i>
-            No hay registros de asistencia para los filtros aplicados.
+            No hay registros.
           </div>
         )}
       </div>
 
+
+
       {/* Pagination Controls */}
-      {(previousUrl || nextUrl) && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '12px',
-          marginTop: '24px',
-          padding: '16px'
-        }}>
+      {totalRecords > 0 && (
+        <div className="as-pagination-container">
           <button
             onClick={handlePreviousPage}
             disabled={!previousUrl}
-            className="as-btn-secondary"
-            style={{
-              opacity: previousUrl ? 1 : 0.5,
-              cursor: previousUrl ? 'pointer' : 'not-allowed'
-            }}
+            className="as-btn-page navigation"
           >
-            <i className="bi bi-chevron-left me-2"></i>Anterior
+            <i className="bi bi-chevron-left"></i>
           </button>
+
+          <div className="as-page-numbers">
+            {getPageNumbers().map((p, idx) => (
+              <button
+                key={idx}
+                onClick={() => typeof p === 'number' ? handlePageClick(p) : null}
+                className={`as-btn-page ${p === currentPage ? 'active' : ''} ${p === '...' ? 'dots' : ''}`}
+                disabled={p === '...'}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={handleNextPage}
             disabled={!nextUrl}
-            className="as-btn-secondary"
-            style={{
-              opacity: nextUrl ? 1 : 0.5,
-              cursor: nextUrl ? 'pointer' : 'not-allowed'
-            }}
+            className="as-btn-page navigation"
           >
-            Siguiente<i className="bi bi-chevron-right ms-2"></i>
+            <i className="bi bi-chevron-right"></i>
           </button>
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Modal (Preserved as is mostly) */}
       {showEditModal && editingAsistencia && (
         <div className="as-modal-overlay" onClick={() => setShowEditModal(false)}>
           <div className="as-modal" onClick={e => e.stopPropagation()}>
             <div className="as-modal-header">
               <h3>Editar Asistencia</h3>
-              <button onClick={() => setShowEditModal(false)}>
-                <i className="bi bi-x-lg"></i>
-              </button>
+              <button onClick={() => setShowEditModal(false)}><i className="bi bi-x-lg"></i></button>
             </div>
             <form onSubmit={handleSaveEdit}>
               <div className="as-modal-body">
@@ -611,40 +587,19 @@ const Asistencias: React.FC = () => {
                   <label>Persona</label>
                   <input type="text" value={editingAsistencia.persona?.nombre} disabled />
                 </div>
+                {/* ... inputs preserved ... */}
                 <div className="as-form-group">
                   <label>Hora de Llegada</label>
-                  <input
-                    type="datetime-local"
-                    value={editingAsistencia.fechaHora.slice(0, 16)}
-                    onChange={e => setEditingAsistencia({
-                      ...editingAsistencia,
-                      fechaHora: new Date(e.target.value).toISOString()
-                    })}
-                  />
-                  <small style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                    Al cambiar la hora, el estado se recalculará automáticamente
-                  </small>
+                  <input type="datetime-local" value={editingAsistencia.fechaHora.slice(0, 16)} onChange={e => setEditingAsistencia({ ...editingAsistencia, fechaHora: new Date(e.target.value).toISOString() })} />
                 </div>
                 <div className="as-form-group">
-                  <label>Temperatura (°C)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={editingAsistencia.temperatura}
-                    onChange={e => setEditingAsistencia({
-                      ...editingAsistencia,
-                      temperatura: parseFloat(e.target.value)
-                    })}
-                  />
+                  <label>Temperatura</label>
+                  <input type="number" step="0.1" value={editingAsistencia.temperatura} onChange={e => setEditingAsistencia({ ...editingAsistencia, temperatura: parseFloat(e.target.value) })} />
                 </div>
               </div>
               <div className="as-modal-footer">
-                <button type="button" className="as-btn-secondary" onClick={() => setShowEditModal(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="as-btn-primary">
-                  Guardar
-                </button>
+                <button type="button" className="as-btn-secondary" onClick={() => setShowEditModal(false)}>Cancelar</button>
+                <button type="submit" className="as-btn-primary">Guardar</button>
               </div>
             </form>
           </div>

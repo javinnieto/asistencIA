@@ -83,7 +83,6 @@ class PersonaViewSet(viewsets.ModelViewSet):
         
         # Extraer roles del payload
         roles_data = request.data.pop('roles', None)
-        # horarios_data removed: Persona no longer has direct horarios
         
         # foto viene como TextField (Base64 string o URL), no necesita procesamiento especial
         
@@ -149,8 +148,10 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         'fechaHora': ['date', 'gte', 'lte'],
         'estado': ['exact'],
+        'estado__nombre': ['exact'],
         'horario__curso': ['exact'],
         'institucion': ['exact'],
+        'temperatura': ['gte', 'lte'],
     }
     search_fields = ['persona__nombre']
     ordering_fields = ['fechaHora', 'temperatura']
@@ -219,3 +220,26 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
                 serializer.validated_data['llegada_tarde_minutos'] = 0
         
         serializer.save()
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """
+        Retorna estadísticas agregadas basadas en los filtros actuales.
+        Ignora la paginación para calcular sobre todo el dataset filtrado.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Calcular estadísticas
+        total = queryset.count()
+        presentes = queryset.filter(estado__nombre='Presente').count()
+        ausentes = queryset.filter(estado__nombre='Ausente').count()
+        tardanzas = queryset.filter(estado__nombre='Tardanza').count()
+        fiebre = queryset.filter(temperatura__gt=37.5).count()
+        
+        return Response({
+            'total': total,
+            'presentes': presentes,
+            'ausentes': ausentes,
+            'tardanzas': tardanzas,
+            'fiebre': fiebre
+        })

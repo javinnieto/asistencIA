@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -44,17 +44,34 @@ interface ChartData {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // UI State
-  const [timeRange, setTimeRange] = useState<TimeRange>('day');
-  const [scopeType, setScopeType] = useState<ScopeType>('all');
-  const [selectedScopeId, setSelectedScopeId] = useState<string>('');
+  // UI State - Init from URL
+  const [timeRange, setTimeRange] = useState<TimeRange>((searchParams.get('timeRange') as TimeRange) || 'day');
+  const [scopeType, setScopeType] = useState<ScopeType>((searchParams.get('scopeType') as ScopeType) || 'all');
+  const [selectedScopeId, setSelectedScopeId] = useState<string>(searchParams.get('scopeId') || '');
   const [loading, setLoading] = useState(true);
-  const [chartMode, setChartMode] = useState<ChartMode>('attendance');
+  const [chartMode, setChartMode] = useState<ChartMode>((searchParams.get('chartMode') as ChartMode) || 'attendance');
 
-  // Custom Date Range State
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  // Custom Date Range State - Init from URL
+  const [startDate, setStartDate] = useState(searchParams.get('startDate') || new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(searchParams.get('endDate') || new Date().toISOString().split('T')[0]);
+
+  // Sync state changes to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('timeRange', timeRange);
+    params.set('scopeType', scopeType);
+    if (selectedScopeId) params.set('scopeId', selectedScopeId);
+    params.set('chartMode', chartMode);
+
+    if (timeRange === 'custom') {
+      params.set('startDate', startDate);
+      params.set('endDate', endDate);
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [timeRange, scopeType, selectedScopeId, chartMode, startDate, endDate]);
 
   // Data State
   const [stats, setStats] = useState({ total: 0, presentes: 0, ausentes: 0, tardanzas: 0, avgTemp: 0, fiebre: 0 });
@@ -103,6 +120,9 @@ const Dashboard: React.FC = () => {
       } else if (scopeType === 'course' && selectedScopeId) {
         params.append('horario__curso', selectedScopeId);
       }
+
+      // Load all data for stats (max 10000)
+      params.append('page_size', '10000');
 
       const res = await apiRequest(`/asistencias/?${params.toString()}`);
 

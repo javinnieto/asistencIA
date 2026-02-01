@@ -72,7 +72,7 @@ const Personas: React.FC = () => {
               cargo: primaryRole, // Map cargo to primary role type
               fechaIngreso: persona.fechaRegistro || '2023-01-01',
               estado: (persona.activo !== false ? 'activo' : 'inactivo'),
-              foto: persona.foto || `https://via.placeholder.com/150x150/667eea/ffffff?text=${primerNombre.charAt(0)}`,
+              foto: persona.foto,
               roles: roles,
               grado: primaryCourse, // Display primary course in table
               nivelEducativo: primaryCourse.includes('Año') ? 'Secundaria' : 'Primaria'
