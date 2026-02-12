@@ -138,7 +138,9 @@ class Command(BaseCommand):
             with transaction.atomic():
                 # Extraer datos del payload
                 person_id = int(info.get('personId'))
-                nombre = info.get('persionName', 'Usuario Desconocido').strip()
+                # Corrección basada en PDF V1.24 (pag 58): campo correcto es "Persistname"
+                # Se mantiene un fallback a "Name" y "persionName" por robustez
+                nombre = info.get('Persistname', info.get('Name', info.get('persionName', 'Usuario Desconocido'))).strip()
                 temperatura = float(info.get('temperature', 0.0))
                 verify_status = info.get('VerifyStatus', '0')
                 
