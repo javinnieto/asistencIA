@@ -140,8 +140,8 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           <select
             value={filterCategoria}
             onChange={(e) => setFilterCategoria(e.target.value)}
-            className="filter-select"
-            style={{ width: 'auto', minWidth: '140px', height: '40px' }}
+            className="filter-select form-select"
+            style={{ width: 'auto', minWidth: '140px' }}
           >
             <option value="">Todas las Categorías</option>
             {categorias.map(cat => (
@@ -152,8 +152,8 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           <select
             value={filterCurso}
             onChange={(e) => setFilterCurso(e.target.value)}
-            className="filter-select"
-            style={{ width: 'auto', minWidth: '140px', height: '40px' }}
+            className="filter-select form-select"
+            style={{ width: 'auto', minWidth: '140px' }}
           >
             <option value="">Todos los Cursos</option>
             {cursosDisponibles.map(curso => (
@@ -169,7 +169,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
       </div>
 
       {/* Tabla */}
-      <div className="table-wrapper">
+      <div className="table-wrapper table-responsive">
         <table className="personas-table">
           <thead>
             <tr>

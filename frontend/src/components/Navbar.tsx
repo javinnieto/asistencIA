@@ -15,9 +15,9 @@ interface JwtPayload {
   // Otros campos si los necesitás
 }
 
-const Navbar: React.FC<NavbarProps> = () => {
+const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = ({ token, onToggleMobileSidebar }) => {
   const navigate = useNavigate();
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
 
   let displayName = '';
   if (token) {
@@ -60,7 +60,18 @@ const Navbar: React.FC<NavbarProps> = () => {
   return (
     <nav className="navbar custom-navbar">
       <div className="container-fluid">
-        <span className="navbar-brand">AsistencIA</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {token && (
+            <button
+              className="btn btn-link text-white d-md-none p-0"
+              onClick={onToggleMobileSidebar}
+              style={{ fontSize: '1.5rem' }}
+            >
+              <i className="bi bi-list"></i>
+            </button>
+          )}
+          <span className="navbar-brand">AsistencIA</span>
+        </div>
         <div className="navbar-user-actions">
           {token ? (
             <div className="navbar-dropdown-wrapper" ref={dropdownRef}>

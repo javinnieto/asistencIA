@@ -28,16 +28,20 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // New state for mobile
   const location = useLocation();
 
   const isLoginRoute = location.pathname === '/login';
+
+  // Close mobile sidebar on route change
+  React.useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location]);
 
   if (isLoginRoute) {
     return <Routes><Route path="/login" element={<Login />} /></Routes>;
   }
 
-  // Si no está autenticado y no está en login, PrivateRoute lo redirigirá, 
-  // pero aquí podemos interceptar para no renderizar el layout
   if (!isAuthenticated) {
     return <Routes>
       <Route path="*" element={<Navigate to="/login" replace />} />
@@ -46,10 +50,28 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`app-layout${sidebarCollapsed ? ' collapsed' : ''}`}>
-      <Navbar token={isAuthenticated ? 'valid' : null} />
+    <div className={`app-layout${sidebarCollapsed ? ' collapsed' : ''} ${mobileSidebarOpen ? 'mobile-sidebar-open' : ''}`}>
+      <Navbar
+        token={isAuthenticated ? 'valid' : null}
+        onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+      />
 
-      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
+      />
+
+      {/* Mobile Overlay to close sidebar */}
+      {mobileSidebarOpen && (
+        <div
+          className="mobile-sidebar-overlay"
+          onClick={() => setMobileSidebarOpen(false)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 900
+            // Visual style is handled in CSS by ::before on .app-layout, but this div ensures click capture
+          }}
+        />
+      )}
 
       <div className={`main-content${isLoginRoute ? ' login-page' : ''}`}>
         <Routes>
