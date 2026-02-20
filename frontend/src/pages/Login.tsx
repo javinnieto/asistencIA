@@ -20,12 +20,15 @@ const Login: React.FC = () => {
 
       if (!res.ok) {
         // Intentar parsear el error, si no es JSON, texto plano
+        let errorMessage = 'Error de autenticación';
         try {
           const data = await res.json();
-          throw new Error(data.detail || 'Error de autenticación');
-        } catch (jsonErr) {
-          throw new Error('Error de conexión con el servidor');
+          errorMessage = data.detail || errorMessage;
+        } catch (e) {
+          // If json parse fails, keep default message
+          console.error('Error parsing 401 response', e);
         }
+        throw new Error(errorMessage);
       }
 
       const data = await res.json();

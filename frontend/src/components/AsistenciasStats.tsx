@@ -66,21 +66,30 @@ const AsistenciasStats: React.FC<AsistenciasStatsProps> = ({ asistencias }) => {
     ausentes: asistencias.filter(a => a.persona.curso?.nombre === curso && a.estado.nombre === 'Ausente').length,
   }));
 
-  // Estadísticas por fecha
-  const statsPorFecha = asistencias.reduce((acc, asistencia) => {
+  // Estadísticas por fecha (Asistencias + Temperatura)
+  const statsPorFechaDict = asistencias.reduce((acc, asistencia) => {
     const fecha = asistencia.fecha_hora.split('T')[0];
     if (!acc[fecha]) {
-      acc[fecha] = { fecha, presentes: 0, ausentes: 0 };
+      acc[fecha] = { fecha, presentes: 0, ausentes: 0, tempSum: 0, tempCount: 0 };
     }
     if (asistencia.estado.nombre === 'Presente') {
       acc[fecha].presentes++;
+      if (asistencia.temperatura > 0) {
+        acc[fecha].tempSum += asistencia.temperatura;
+        acc[fecha].tempCount++;
+      }
     } else {
       acc[fecha].ausentes++;
     }
     return acc;
-  }, {} as Record<string, { fecha: string; presentes: number; ausentes: number }>);
+  }, {} as Record<string, { fecha: string; presentes: number; ausentes: number; tempSum: number; tempCount: number }>);
 
-  const datosPorFecha = Object.values(statsPorFecha).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const datosPorFecha = Object.values(statsPorFechaDict)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    .map(d => ({
+      ...d,
+      tempPromedio: d.tempCount > 0 ? Number((d.tempSum / d.tempCount).toFixed(1)) : 0
+    }));
 
   // Datos para gráfico de pie
   const pieData = [
@@ -223,13 +232,13 @@ const AsistenciasStats: React.FC<AsistenciasStatsProps> = ({ asistencias }) => {
         </div>
       )}
 
-      {/* Gráfico temporal */}
+      {/* Gráfico temporal de Asistencias */}
       {datosPorFecha.length > 1 && (
         <div className="col-md-6">
           <div className="card shadow border-0">
             <div className="card-header bg-light">
               <h6 className="mb-0">
-                <i className="bi bi-graph-up me-2"></i>Evolución Temporal
+                <i className="bi bi-graph-up me-2"></i>Evolución de Asistencias
               </h6>
             </div>
             <div className="card-body">
@@ -249,13 +258,38 @@ const AsistenciasStats: React.FC<AsistenciasStatsProps> = ({ asistencias }) => {
         </div>
       )}
 
-      {/* Estadísticas de temperatura */}
+      {/* Gráfico temporal de Temperatura */}
+      {datosPorFecha.length > 1 && (
+        <div className="col-md-6">
+          <div className="card shadow border-0">
+            <div className="card-header bg-light">
+              <h6 className="mb-0">
+                <i className="bi bi-thermometer-half me-2"></i>Evolución de Temperatura
+              </h6>
+            </div>
+            <div className="card-body">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={datosPorFecha}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="fecha" />
+                  <YAxis domain={['dataMin - 0.5', 'dataMax + 0.5']} />
+                  <Tooltip formatter={(value: number) => [`${value}°C`, 'Gradios']} />
+                  <Legend />
+                  <Line type="monotone" dataKey="tempPromedio" stroke="#fd7e14" name="Temp. Promedio" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estadísticas de temperatura Cards */}
       {temperaturas.length > 0 && (
         <div className="col-12">
           <div className="card shadow border-0">
             <div className="card-header bg-light">
               <h6 className="mb-0">
-                <i className="bi bi-thermometer-half me-2"></i>Estadísticas de Temperatura
+                <i className="bi bi-thermometer-sun me-2"></i>Resumen de Temperatura
               </h6>
             </div>
             <div className="card-body">
@@ -263,18 +297,18 @@ const AsistenciasStats: React.FC<AsistenciasStatsProps> = ({ asistencias }) => {
                 <div className="col-md-4">
                   <div className="border-end">
                     <h4 className="text-success">{tempPromedio}°C</h4>
-                    <p className="text-muted mb-0">Temperatura Promedio</p>
+                    <p className="text-muted mb-0">Promedio General</p>
                   </div>
                 </div>
                 <div className="col-md-4">
                   <div className="border-end">
                     <h4 className="text-danger">{tempMax}°C</h4>
-                    <p className="text-muted mb-0">Temperatura Máxima</p>
+                    <p className="text-muted mb-0">Máxima Registrada</p>
                   </div>
                 </div>
                 <div className="col-md-4">
                   <h4 className="text-info">{tempMin}°C</h4>
-                  <p className="text-muted mb-0">Temperatura Mínima</p>
+                  <p className="text-muted mb-0">Mínima Registrada</p>
                 </div>
               </div>
             </div>

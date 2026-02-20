@@ -154,7 +154,7 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         'temperatura': ['gte', 'lte'],
     }
     search_fields = ['persona__nombre']
-    ordering_fields = ['fechaHora', 'temperatura']
+    ordering_fields = ['fechaHora', 'temperatura', 'persona__nombre', 'horario__curso__nombre', 'estado__nombre']
     ordering = ['-fechaHora']
 
     def get_serializer_class(self):
@@ -243,3 +243,79 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
             'tardanzas': tardanzas,
             'fiebre': fiebre
         })
+
+    @action(detail=False, methods=['get'], url_path='chart-data')
+    def chart_data(self, request):
+        """
+        Retorna datos agrupados para el gráfico del dashboard.
+        Agrupa por hora (vista diaria) o por fecha (vista semanal/mensual/custom).
+        Evita que el frontend tenga que paginar todos los registros.
+        """
+        from django.db.models import Count, Avg, Q
+        from django.db.models.functions import TruncHour, TruncDate
+
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Determinar agrupación: por hora si es un solo día, por fecha si es rango
+        group_by = request.query_params.get('group_by', 'date')
+
+        if group_by == 'hour':
+            # Agrupar por hora
+            data = (
+                queryset
+                .annotate(period=TruncHour('fechaHora'))
+                .values('period')
+                .annotate(
+                    presentes=Count('idAsistencia', filter=Q(estado__nombre='Presente')),
+                    ausentes=Count('idAsistencia', filter=Q(estado__nombre='Ausente')),
+                    tardanzas=Count('idAsistencia', filter=Q(estado__nombre='Tardanza')),
+                    avgTemp=Avg('temperatura', filter=Q(temperatura__gt=0)),
+                )
+                .order_by('period')
+            )
+            result = []
+            for item in data:
+                period = item['period']
+                result.append({
+                    'name': f"{period.hour}:00" if period else '',
+                    'presentes': item['presentes'],
+                    'ausentes': item['ausentes'],
+                    'tardanzas': item['tardanzas'],
+                    'avgTemp': round(item['avgTemp'], 1) if item['avgTemp'] else 0,
+                })
+        else:
+            # Agrupar por fecha
+            data = (
+                queryset
+                .annotate(period=TruncDate('fechaHora'))
+                .values('period')
+                .annotate(
+                    presentes=Count('idAsistencia', filter=Q(estado__nombre='Presente')),
+                    ausentes=Count('idAsistencia', filter=Q(estado__nombre='Ausente')),
+                    tardanzas=Count('idAsistencia', filter=Q(estado__nombre='Tardanza')),
+                    avgTemp=Avg('temperatura', filter=Q(temperatura__gt=0)),
+                )
+                .order_by('period')
+            )
+            result = []
+            for item in data:
+                period = item['period']
+                if period:
+                    # Formato corto: "lun. 5", "mar. 6"
+                    import locale
+                    try:
+                        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+                    except locale.Error:
+                        pass
+                    name = period.strftime('%a %d').capitalize()
+                else:
+                    name = ''
+                result.append({
+                    'name': name,
+                    'presentes': item['presentes'],
+                    'ausentes': item['ausentes'],
+                    'tardanzas': item['tardanzas'],
+                    'avgTemp': round(item['avgTemp'], 1) if item['avgTemp'] else 0,
+                })
+
+        return Response(result)

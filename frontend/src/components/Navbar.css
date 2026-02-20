@@ -169,3 +169,31 @@
   background: #181c24;
   color: #fff;
 }
+
+/* =========================================
+   Responsive Navbar
+   ========================================= */
+@media (max-width: 768px) {
+  .custom-navbar {
+    padding: 0 12px;
+    min-height: 48px;
+  }
+
+  .navbar-brand {
+    font-size: 1.2rem;
+  }
+
+  .navbar-username-btn {
+    font-size: 0.95rem;
+    padding: 4px 8px;
+  }
+
+  .navbar-icon-btn {
+    font-size: 1.5rem;
+    padding: 4px 6px;
+  }
+
+  .navbar-dropdown-menu {
+    min-width: 180px;
+  }
+}

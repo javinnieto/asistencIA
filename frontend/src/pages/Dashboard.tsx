@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -21,25 +21,12 @@ interface Curso {
   nombre: string;
 }
 
-interface Estado {
-  nombre: string;
-}
-
-interface Asistencia {
-  id: number;
-  fechaHora: string;
-  estado: Estado;
-  temperatura: number;
-}
-
 interface ChartData {
   name: string;
   presentes: number;
   ausentes: number;
   tardanzas: number;
   avgTemp: number;
-  tempSum: number;
-  tempCount: number;
 }
 
 const Dashboard: React.FC = () => {
@@ -91,53 +78,85 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, [timeRange, scopeType, selectedScopeId, startDate, endDate]);
 
+  // Build filter params shared by stats and chart-data endpoints
+  const buildFilterParams = (): URLSearchParams => {
+    const params = new URLSearchParams();
+    const now = new Date();
+    let startD = new Date();
+
+    if (timeRange === 'day') {
+      params.append('fechaHora__date', now.toISOString().split('T')[0]);
+    } else if (timeRange === 'week') {
+      startD.setDate(now.getDate() - 7);
+      params.append('fechaHora__gte', startD.toISOString());
+    } else if (timeRange === 'month') {
+      startD.setMonth(now.getMonth() - 1);
+      params.append('fechaHora__gte', startD.toISOString());
+    } else if (timeRange === 'custom') {
+      params.append('fechaHora__gte', new Date(startDate).toISOString());
+      const endD = new Date(endDate);
+      endD.setHours(23, 59, 59);
+      params.append('fechaHora__lte', endD.toISOString());
+    }
+
+    // Scope Filters
+    if (scopeType === 'institution' && selectedScopeId) {
+      params.append('institucion', selectedScopeId);
+    } else if (scopeType === 'course' && selectedScopeId) {
+      params.append('horario__curso', selectedScopeId);
+    }
+
+    return params;
+  };
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Build Query Params
-      const params = new URLSearchParams();
-      const now = new Date();
-      let startD = new Date();
+      const filterParams = buildFilterParams();
 
-      if (timeRange === 'day') {
-        params.append('fechaHora__date', now.toISOString().split('T')[0]);
-      } else if (timeRange === 'week') {
-        startD.setDate(now.getDate() - 7);
-        params.append('fechaHora__gte', startD.toISOString());
-      } else if (timeRange === 'month') {
-        startD.setMonth(now.getMonth() - 1);
-        params.append('fechaHora__gte', startD.toISOString());
-      } else if (timeRange === 'custom') {
-        params.append('fechaHora__gte', new Date(startDate).toISOString());
-        const endD = new Date(endDate);
-        endD.setHours(23, 59, 59);
-        params.append('fechaHora__lte', endD.toISOString());
+      // Fetch stats and chart data in PARALLEL
+      const statsParams = new URLSearchParams(filterParams.toString());
+      const chartParams = new URLSearchParams(filterParams.toString());
+      chartParams.append('group_by', timeRange === 'day' ? 'hour' : 'date');
+
+      const [statsRes, chartRes] = await Promise.all([
+        apiRequest(`/asistencias/stats/?${statsParams.toString()}`),
+        apiRequest(`/asistencias/chart-data/?${chartParams.toString()}`),
+      ]);
+
+      // Process stats
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(prev => ({
+          ...prev,
+          total: statsData.total,
+          presentes: statsData.presentes,
+          ausentes: statsData.ausentes,
+          tardanzas: statsData.tardanzas,
+          fiebre: statsData.fiebre,
+        }));
       }
 
-      // Scope Filters
-      if (scopeType === 'institution' && selectedScopeId) {
-        params.append('institucion', selectedScopeId);
-      } else if (scopeType === 'course' && selectedScopeId) {
-        params.append('horario__curso', selectedScopeId);
+      // Process chart data
+      if (chartRes.ok) {
+        const chartResult: ChartData[] = await chartRes.json();
+        setChartData(chartResult);
+
+        // Calculate avgTemp from chart data
+        const tempsWithData = chartResult.filter(d => d.avgTemp > 0);
+        const avgTemp = tempsWithData.length
+          ? Number((tempsWithData.reduce((sum, d) => sum + d.avgTemp, 0) / tempsWithData.length).toFixed(1))
+          : 0;
+        setStats(prev => ({ ...prev, avgTemp }));
       }
 
-      // Load all data for stats (max 10000)
-      params.append('page_size', '10000');
-
-      const res = await apiRequest(`/asistencias/?${params.toString()}`);
-
-      if (res.status === 401) {
+      // Handle 401
+      if (statsRes.status === 401 || chartRes.status === 401) {
         localStorage.removeItem('accessToken');
         navigate('/login');
         return;
       }
 
-      if (!res.ok) throw new Error('Error fetching data');
-
-      const data = await res.json();
-      const results: Asistencia[] = data.results || [];
-
-      processData(results);
     } catch (error) {
       console.error(error);
     } finally {
@@ -145,75 +164,46 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const processData = (data: Asistencia[]) => {
-    // 1. Basic Stats
-    const total = data.length;
-    const presentes = data.filter(a => a.estado.nombre === 'Presente').length;
-    const ausentes = data.filter(a => a.estado.nombre === 'Ausente').length;
-    const tardanzas = data.filter(a => a.estado.nombre === 'Tardanza').length;
+  // Calculate dynamic Y-axis domains based on actual data
+  const attendanceDomain = useMemo((): [number, number] => {
+    if (chartData.length === 0) return [0, 10];
 
-    const fiebre = data.filter(a => a.temperatura > 37.5).length;
-    const temps = data.filter(a => a.temperatura > 0).map(a => a.temperatura);
-    const avgTemp = temps.length ? (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1) : 0;
+    const allValues = chartData.flatMap(d => [d.presentes, d.tardanzas]);
+    const minVal = Math.min(...allValues);
+    const maxVal = Math.max(...allValues);
 
-    setStats({ total, presentes, ausentes, tardanzas, avgTemp: Number(avgTemp), fiebre });
+    // If all values are 0, show 0 to 10
+    if (maxVal === 0) return [0, 10];
 
-    // 2. Chart Data (Group by hour/day depending on range)
-    const grouped = data.reduce((acc: Record<string, ChartData>, curr: Asistencia) => {
-      const date = new Date(curr.fechaHora);
-      let key = '';
+    const range = maxVal - minVal;
 
-      if (timeRange === 'day') {
-        key = date.getHours() + ':00';
-      } else {
-        key = date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
-      }
+    // Add padding: at least 1 unit or 20% of range
+    const padding = Math.max(1, Math.ceil(range * 0.2));
 
-      if (!acc[key]) acc[key] = {
-        name: key,
-        presentes: 0,
-        ausentes: 0,
-        tardanzas: 0,
-        tempSum: 0,
-        tempCount: 0,
-        avgTemp: 0
-      };
+    const domainMin = Math.max(0, minVal - padding);
+    const domainMax = maxVal + padding;
 
-      if (curr.estado.nombre === 'Presente') acc[key].presentes++;
-      else if (curr.estado.nombre === 'Tardanza') acc[key].tardanzas++;
-      else acc[key].ausentes++;
+    return [domainMin, domainMax];
+  }, [chartData]);
 
-      if (curr.temperatura > 0) {
-        acc[key].tempSum += curr.temperatura;
-        acc[key].tempCount++;
-      }
+  const temperatureDomain = useMemo((): [number, number] => {
+    if (chartData.length === 0) return [35, 39];
 
-      return acc;
-    }, {});
+    const temps = chartData.filter(d => d.avgTemp > 0).map(d => d.avgTemp);
+    if (temps.length === 0) return [35, 39];
 
-    // Calculate averages and sort by time if needed 
-    // (Object.values might lose order depending on key creation, but 'day' keys are strings '9:00'. 
-    // We rely on recharts to render in array order. 
-    // If strict order needed, we should sort. For now relying on insertion order or simple sort.)
+    const minTemp = Math.min(...temps);
+    const maxTemp = Math.max(...temps);
+    const range = maxTemp - minTemp;
 
-    let processedChartData = Object.values(grouped).map(item => ({
-      ...item,
-      avgTemp: item.tempCount ? Number((item.tempSum / item.tempCount).toFixed(1)) : 0
-    }));
+    // For temperature: pad by at least 0.5°C or 20% of range
+    const padding = Math.max(0.5, range * 0.2);
 
-    // Simple sort helper might be needed if keys are not chronological
-    // For 'day', '9:00' comes after '10:00' alphabetically? '1' vs '9'. No.
-    // '9:00' comes after '10:00'? No. '1' < '9'.
-    // '13:00' vs '4:00'? 
-    // We should probably rely on the input data being sorted by backend?
-    // The backend provides sorted data date-descending usually.
-    // Reducing it reversely preserves or inverts order.
-    // Let's assume recharts handles it or we accept "As is".
-    // Better: Sort by a timestamp we track?
-    // Let's keep it simple for this iteration as "Refactor" -> "Preserve existing behavior but improved".
+    const domainMin = Math.floor((minTemp - padding) * 2) / 2; // Round down to nearest 0.5
+    const domainMax = Math.ceil((maxTemp + padding) * 2) / 2;  // Round up to nearest 0.5
 
-    setChartData(processedChartData);
-  };
+    return [domainMin, domainMax];
+  }, [chartData]);
 
 
   // Helper function to build Asistencias URL with current dashboard filters
@@ -365,61 +355,82 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={350}>
-          <AreaChart data={chartData}>
-            <defs>
-              <linearGradient id="colorPresentes" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="colorTardanzas" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} unit={chartMode === 'temperature' ? '°C' : ''} />
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
-            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} />
-
-            {chartMode === 'attendance' ? (
-              <>
-                <Area
-                  type="monotone"
-                  dataKey="presentes"
-                  name="Presentes"
-                  stroke="#10b981"
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#colorPresentes)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="tardanzas"
-                  name="Tardanzas"
-                  stroke="#f59e0b"
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#colorTardanzas)"
-                />
-              </>
-            ) : (
-              <Area
-                type="monotone"
-                dataKey="avgTemp"
-                name="Promedio Temp"
-                stroke="#ef4444"
-                strokeWidth={3}
-                fillOpacity={1}
-                fill="url(#colorTemp)"
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350 }}>
+            <div className="dashboard-spinner"></div>
+          </div>
+        ) : chartData.length === 0 ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350, color: '#64748b', fontSize: '1.1rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <i className="bi bi-bar-chart" style={{ fontSize: '3rem', display: 'block', marginBottom: '12px', opacity: 0.5 }}></i>
+              No hay datos para el período seleccionado
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={350}>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorPresentes" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorTardanzas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis
+                stroke="#64748b"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+                domain={chartMode === 'temperature' ? temperatureDomain : attendanceDomain}
+                unit={chartMode === 'temperature' ? '°C' : ''}
+                allowDataOverflow={false}
               />
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
+              <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} />
+
+              {chartMode === 'attendance' ? (
+                <>
+                  <Area
+                    type="monotone"
+                    dataKey="presentes"
+                    name="Presentes"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorPresentes)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="tardanzas"
+                    name="Tardanzas"
+                    stroke="#f59e0b"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorTardanzas)"
+                  />
+                </>
+              ) : (
+                <Area
+                  type="monotone"
+                  dataKey="avgTemp"
+                  name="Promedio Temp"
+                  stroke="#ef4444"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorTemp)"
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
