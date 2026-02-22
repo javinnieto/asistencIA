@@ -42,7 +42,8 @@ const Personas: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           // Transformar datos del backend al formato esperado por el frontend
-          const personasTransformadas = data.results.map((persona: any) => {
+          const personasData = data.results || data || [];
+          const personasTransformadas = personasData.map((persona: any) => {
             const nombreCompleto = persona.nombre || 'Sin Nombre';
             const nombreParts = nombreCompleto.split(' ');
             const primerNombre = nombreParts[0] || '';

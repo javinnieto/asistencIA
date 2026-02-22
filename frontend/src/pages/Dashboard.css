@@ -519,6 +519,37 @@
   .dashboard-card {
     border-radius: 16px;
   }
+
+  .card-header-styled {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .toggle-group {
+    align-self: center;
+  }
+
+  .recent-item {
+    padding: 12px 16px;
+  }
+
+  .avatar-circle {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+    margin-right: 12px;
+  }
+
+  .item-name {
+    font-size: 0.85rem;
+  }
+
+  .time-badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
 }
 
 /* =========================================

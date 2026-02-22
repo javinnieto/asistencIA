@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (
     Institucion, TipoPersona, Curso, Persona, PersonaInstitucion, 
-    EstadoAsistencia, Asistencia, Horario
+    EstadoAsistencia, Asistencia, Horario, ConflictoIdentidad,
+    DiaNoLaborable
 )
 
 
@@ -22,16 +23,32 @@ class TipoPersonaSerializer(serializers.ModelSerializer):
 
 class HorarioSerializer(serializers.ModelSerializer):
     curso = serializers.SerializerMethodField()
+    persona_institucion = serializers.SerializerMethodField()
     
     def get_curso(self, obj):
         # Return simple curso data to avoid recursion depth issues or cyclical dependency
         try:
-            return {
-                "idCurso": obj.curso.idCurso,
-                "nombre": obj.curso.nombre
-            }
+            if obj.curso:
+                return {
+                    "idCurso": obj.curso.idCurso,
+                    "nombre": obj.curso.nombre
+                }
         except:
-            return None
+            pass
+        return None
+            
+    def get_persona_institucion(self, obj):
+        try:
+            if obj.persona_institucion:
+                return {
+                    "idPersonaInstitucion": obj.persona_institucion.idPersonaInstitucion,
+                    "personaId": obj.persona_institucion.persona.idPersona,
+                    "personaNombre": obj.persona_institucion.persona.nombre,
+                    "tipoPersona": obj.persona_institucion.tipo.nombre
+                }
+        except:
+            pass
+        return None
     
     class Meta:
         model = Horario
@@ -51,6 +68,7 @@ class PersonaInstitucionSerializer(serializers.ModelSerializer):
     institucion = InstitucionSerializer(read_only=True)
     tipo = TipoPersonaSerializer(read_only=True)
     curso = CursoSerializer(read_only=True)
+    horarios_personalizados = HorarioSerializer(many=True, read_only=True)
     
     class Meta:
         model = PersonaInstitucion
@@ -63,7 +81,7 @@ class PersonaSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Persona
-        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo', 'roles', 'total_asistencias', 'necesita_clasificacion']
+        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo', 'roles', 'total_asistencias', 'necesita_clasificacion', 'requiere_salida']
 
 
 class EstadoAsistenciaSerializer(serializers.ModelSerializer):
@@ -76,6 +94,7 @@ class AsistenciaSerializer(serializers.ModelSerializer):
     persona = PersonaSerializer(read_only=True)
     estado = EstadoAsistenciaSerializer(read_only=True)
     institucion = InstitucionSerializer(read_only=True)
+    horario = HorarioSerializer(read_only=True)
     
     class Meta:
         model = Asistencia
@@ -89,17 +108,13 @@ class PersonaCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Persona
-        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo']
+        fields = ['idPersona', 'nombre', 'email', 'telefono', 'telefono_emergencia', 'foto', 'activo', 'requiere_salida']
 
 
 class PersonaInstitucionCreateSerializer(serializers.ModelSerializer):
-    def validate(self, data):
-        """Validar que curso sea obligatorio"""
-        if not data.get('curso'):
-            raise serializers.ValidationError({
-                'curso': 'El curso es obligatorio. Una persona debe estar asignada a un curso específico.'
-            })
-        return data
+    # Ya no validamos que curso sea obligatorio porque los administrativos
+    # pueden tener solo un rol sin curso asignado.
+    pass
     
     class Meta:
         model = PersonaInstitucion
@@ -154,4 +169,32 @@ class CursoCreateSerializer(serializers.ModelSerializer):
 class HorarioCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Horario
+        fields = '__all__'
+
+class ConflictoIdentidadSerializer(serializers.ModelSerializer):
+    persona_db = PersonaSerializer(read_only=True)
+    
+    class Meta:
+        model = ConflictoIdentidad
+        fields = '__all__'
+
+class DiaNoLaborableSerializer(serializers.ModelSerializer):
+    institucion = InstitucionSerializer(read_only=True)
+    cursos_afectados = CursoSerializer(many=True, read_only=True)
+    tipos_persona_afectados = TipoPersonaSerializer(many=True, read_only=True)
+    personas_afectadas = serializers.SerializerMethodField()
+    
+    def get_personas_afectadas(self, obj):
+        return [
+            {'idPersona': p.idPersona, 'nombre': p.nombre}
+            for p in obj.personas_afectadas.all()
+        ]
+    
+    class Meta:
+        model = DiaNoLaborable
+        fields = '__all__'
+
+class DiaNoLaborableCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiaNoLaborable
         fields = '__all__'

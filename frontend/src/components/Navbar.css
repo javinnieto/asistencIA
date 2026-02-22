@@ -59,7 +59,9 @@
   border-color: #bfc9da;
   color: #e0e6f0;
   background: transparent;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .btn-outline-light:hover {
@@ -103,7 +105,9 @@
   align-items: center;
   padding: 4px 8px;
   border-radius: 50%;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
   line-height: 1;
 }
 
@@ -112,6 +116,11 @@
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   outline: none;
+}
+
+.navbar-bell-btn {
+  font-size: 1.25rem;
+  padding: 6px;
 }
 
 .dropdown-caret {
@@ -159,7 +168,9 @@
   font-size: 1rem;
   cursor: pointer;
   width: 100%;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
   text-decoration: none;
   display: flex;
   align-items: center;
@@ -191,9 +202,30 @@
   .navbar-icon-btn {
     font-size: 1.5rem;
     padding: 4px 6px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navbar-bell-btn {
+    font-size: 1.2rem;
+    padding: 4px;
   }
 
   .navbar-dropdown-menu {
-    min-width: 180px;
+    position: fixed;
+    top: 52px;
+    right: 12px;
+    left: 12px;
+    min-width: unset;
+    width: auto;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .navbar-user-actions {
+    gap: 4px;
   }
 }

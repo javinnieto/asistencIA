@@ -37,4 +37,16 @@ export const loginRequest = async (username: string, password: string) => {
   });
 };
 
+export const getConflictos = async () => {
+  return apiRequest('/conflictos/?resuelto=false');
+};
+
+export const ignorarConflicto = async (id: number) => {
+  return apiRequest(`/conflictos/${id}/ignorar/`, { method: 'POST' });
+};
+
+export const aceptarConflicto = async (id: number) => {
+  return apiRequest(`/conflictos/${id}/aceptar_cambio/`, { method: 'POST' });
+};
+
 export { API_BASE_URL };

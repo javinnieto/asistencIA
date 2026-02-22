@@ -56,7 +56,8 @@ class Horario(models.Model):
     ]
 
     idHorario = models.AutoField(primary_key=True)
-    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name='horarios')
+    curso = models.ForeignKey(Curso, null=True, blank=True, on_delete=models.CASCADE, related_name='horarios')
+    persona_institucion = models.ForeignKey('PersonaInstitucion', null=True, blank=True, on_delete=models.CASCADE, related_name='horarios_personalizados')
     dia = models.CharField(max_length=20, choices=DIAS_SEMANA)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
@@ -76,6 +77,7 @@ class Persona(models.Model):
     telefono_emergencia = models.CharField(max_length=20, null=True, blank=True)
     foto = models.TextField(null=True, blank=True)  # Stores Base64 strings or URLs from MQTT
     activo = models.BooleanField(default=True)
+    requiere_salida = models.BooleanField(default=False)
     
     def __str__(self):
         return self.nombre
@@ -147,6 +149,7 @@ class Asistencia(models.Model):
     idAsistencia = models.AutoField(primary_key=True)
     persona = models.ForeignKey(Persona, on_delete=models.CASCADE)
     fechaHora = models.DateTimeField()
+    tipo = models.CharField(max_length=10, choices=[('Entrada', 'Entrada'), ('Salida', 'Salida')], default='Entrada')
     temperatura = models.FloatField()
     estado = models.ForeignKey(EstadoAsistencia, on_delete=models.PROTECT)
     # Opcional: especificar para qué institución/contexto es la asistencia
@@ -154,6 +157,41 @@ class Asistencia(models.Model):
     # New fields for strict logic
     horario = models.ForeignKey(Horario, null=True, blank=True, on_delete=models.SET_NULL)
     llegada_tarde_minutos = models.IntegerField(default=0)
+    salida_temprano_minutos = models.IntegerField(default=0)
+    foto = models.TextField(null=True, blank=True) # Foto del momento de la asistencia
+    justificado = models.BooleanField(default=False, help_text="Si es verdadero, la falta/tardanza cuenta como presente en las estadísticas")
 
     def __str__(self):
         return f"{self.persona} - {self.fechaHora} - {self.temperatura}°C"
+
+class ConflictoIdentidad(models.Model):
+    """Registro de conflictos cuando el dispositivo envía un ID que ya existe pero con otro nombre (posible suplantación o error)"""
+    idConflicto = models.AutoField(primary_key=True)
+    persona_db = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='conflictos')
+    nombre_recibido = models.CharField(max_length=200)
+    fechaHora = models.DateTimeField(auto_now_add=True)
+    foto_recibida = models.TextField(null=True, blank=True)
+    resuelto = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Conflicto {self.idConflicto}: ID {self.persona_db.idPersona} (DB: {self.persona_db.nombre} vs Recibido: {self.nombre_recibido})"
+
+class DiaNoLaborable(models.Model):
+    """Días en los que no se espera asistencia (Feriados, Jornadas, etc.)"""
+    idDia = models.AutoField(primary_key=True)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(null=True, blank=True, help_text="Si es nulo, aplica sólo a fecha_inicio")
+    motivo = models.CharField(max_length=200)
+    institucion = models.ForeignKey(Institucion, on_delete=models.CASCADE)
+    aplica_a_todos = models.BooleanField(default=True, help_text="Si es verdadero, aplica a toda la institución")
+    
+    # Relaciones para cuando aplica_a_todos es False
+    cursos_afectados = models.ManyToManyField(Curso, blank=True)
+    tipos_persona_afectados = models.ManyToManyField(TipoPersona, blank=True)
+    personas_afectadas = models.ManyToManyField(Persona, blank=True)
+
+    def __str__(self):
+        rango = f"{self.fecha_inicio}"
+        if self.fecha_fin and self.fecha_fin != self.fecha_inicio:
+            rango += f" → {self.fecha_fin}"
+        return f"{rango} - {self.motivo} ({self.institucion.nombre})"

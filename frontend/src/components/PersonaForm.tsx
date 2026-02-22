@@ -16,6 +16,7 @@ interface Person {
   estado: 'activo' | 'inactivo';
   foto?: string;
   roles?: any[];
+  requiere_salida?: boolean;
 }
 
 interface PersonaFormProps {
@@ -44,7 +45,8 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
     fechaIngreso: new Date().toISOString().split('T')[0],
     estado: 'activo',
     foto: '',
-    roles: []
+    roles: [],
+    requiere_salida: false
   });
 
   const [institutions, setInstitutions] = useState<any[]>([]);
@@ -87,7 +89,8 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
         fechaIngreso: person.fechaIngreso,
         estado: person.estado,
         foto: person.foto || '',
-        roles: person.roles || []
+        roles: person.roles || [],
+        requiere_salida: person.requiere_salida || false
       });
     }
   }, [person, mode]);
@@ -103,11 +106,11 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
   }, [selectedInstId, courses]);
 
   const handleAddRole = () => {
-    if (!selectedInstId || !selectedTypeId || !selectedCourseId) return;
+    if (!selectedInstId || !selectedTypeId) return;
     const inst = institutions.find(i => i.idInstitucion?.toString() === selectedInstId);
     const type = types.find(t => t.idTipoPersona?.toString() === selectedTypeId);
-    const course = courses.find(c => c.idCurso?.toString() === selectedCourseId);
-    setFormData(prev => ({ ...prev, roles: [...(prev.roles || []), { institucion: inst, tipo: type, curso: course, tempId: Date.now() }] }));
+    const course = selectedCourseId ? courses.find(c => c.idCurso?.toString() === selectedCourseId) : null;
+    setFormData(prev => ({ ...prev, roles: [...(prev.roles || []), { institucion: inst, tipo: type, curso: course, horarios_personalizados: [], tempId: Date.now() }] }));
     setSelectedTypeId('');
     setSelectedCourseId('');
     // Limpiar errores al agregar rol válido
@@ -120,18 +123,48 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
     setFormData(prev => ({ ...prev, roles: prev.roles?.filter((_, i) => i !== index) }));
   };
 
+  const handleAddCustomSchedule = (roleIdx: number) => {
+    setFormData((prev: Omit<Person, 'id'>) => {
+      const newRoles = (prev.roles || []).map((role: any, i: number) => {
+        if (i !== roleIdx) return role;
+        return {
+          ...role,
+          horarios_personalizados: [
+            ...(role.horarios_personalizados || []),
+            { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '17:00' }
+          ]
+        };
+      });
+      return { ...prev, roles: newRoles };
+    });
+  };
+
+  const handleUpdateCustomSchedule = (roleIdx: number, scheduleIdx: number, field: string, value: string) => {
+    setFormData((prev: Omit<Person, 'id'>) => {
+      const newRoles = [...(prev.roles || [])];
+      newRoles[roleIdx].horarios_personalizados[scheduleIdx] = {
+        ...newRoles[roleIdx].horarios_personalizados[scheduleIdx],
+        [field]: value
+      };
+      return { ...prev, roles: newRoles };
+    });
+  };
+
+  const handleRemoveCustomSchedule = (roleIdx: number, scheduleIdx: number) => {
+    setFormData((prev: Omit<Person, 'id'>) => {
+      const newRoles = [...(prev.roles || [])];
+      newRoles[roleIdx].horarios_personalizados = newRoles[roleIdx].horarios_personalizados.filter((_: any, i: number) => i !== scheduleIdx);
+      return { ...prev, roles: newRoles };
+    });
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.nombre?.trim()) newErrors.nombre = 'Nombre requerido';
     if (!formData.apellido?.trim()) newErrors.apellido = 'Apellido requerido';
 
-    // Validar que todos los roles tengan curso asignado
-    if (formData.roles && formData.roles.length > 0) {
-      const rolesWithoutCurso = formData.roles.filter(role => !role.curso);
-      if (rolesWithoutCurso.length > 0) {
-        newErrors.roles = `Hay ${rolesWithoutCurso.length} categoría(s) sin curso asignado. Todas las categorías deben tener un curso.`;
-      }
-    }
+    // El curso ya no es obligatorio
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -185,7 +218,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                   {formData.foto && <button type="button" className="btn-cancel-photo" onClick={() => setFormData(prev => ({ ...prev, foto: '' }))}>❌ Eliminar</button>}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="pf-grid-2col">
                 <div className="form-group">
                   <label>👤 Nombre</label>
                   <input className={`form-input ${errors.nombre ? 'error' : ''}`} value={formData.nombre} onChange={e => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: Juan" />
@@ -197,7 +230,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                   {errors.apellido && <span className="error-message">{errors.apellido}</span>}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div className="pf-grid-3col">
                 <div className="form-group">
                   <label>📧 Email</label>
                   <input type="email" className="form-input" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="ejemplo@email.com" />
@@ -221,10 +254,22 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                     <option value="inactivo">❌ Inactivo</option>
                   </select>
                 </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '24px' }}>
+                    <input 
+                      type="checkbox" 
+                      className="form-checkbox" 
+                      checked={formData.requiere_salida || false} 
+                      onChange={e => setFormData({ ...formData, requiere_salida: e.target.checked })} 
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    Requiere marcar salida
+                  </label>
+                </div>
               </div>
               <div className="roles-section">
                 <div className="roles-section-header">🏢 Roles y Cursos</div>
-                <div className="role-input-row" style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                <div className="role-input-row">
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Institución</label>
                     <select className="form-select" value={selectedInstId} onChange={e => { setSelectedInstId(e.target.value); setSelectedTypeId(''); setSelectedCourseId(''); }}>
@@ -239,30 +284,26 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                       {filteredTypes.map(t => <option key={t.idTipoPersona} value={t.idTipoPersona}>{t.nombre}</option>)}
                     </select>
                   </div>
-                  {/* Campo Curso - SIEMPRE OBLIGATORIO */}
+                  {/* Campo Curso - Opcional */}
                   {selectedTypeId && (
                     <div className="form-group" style={{ flex: 1 }}>
-                      <label>Curso <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span></label>
+                      <label>Curso <span style={{ color: '#888', fontWeight: 'normal' }}>(Opcional)</span></label>
                       <select
-                        className={`form-select ${!selectedCourseId && selectedTypeId ? 'error' : ''}`}
+                        className="form-select"
                         value={selectedCourseId}
                         onChange={(e) => setSelectedCourseId(e.target.value)}
-                        required
                       >
-                        <option value="">Seleccionar curso...</option>
+                        <option value="">Ninguno (Horario propio)...</option>
                         {filteredCourses.map(curso => (
                           <option key={curso.idCurso} value={curso.idCurso?.toString()}>
                             {curso.nombre}
                           </option>
                         ))}
                       </select>
-                      {!selectedCourseId && selectedTypeId && (
-                        <span className="error-message" style={{ fontSize: '0.75rem', color: '#ef4444' }}>El curso es obligatorio</span>
-                      )}
                     </div>
                   )}
                   <div style={{ alignSelf: 'flex-end', paddingBottom: '2px' }}>
-                    <button type="button" className="btn-add-role" onClick={handleAddRole} disabled={!selectedInstId || !selectedTypeId || !selectedCourseId}>➕</button>
+                    <button type="button" className="btn-add-role" onClick={handleAddRole} disabled={!selectedInstId || !selectedTypeId}>➕</button>
                   </div>
                 </div>
                 <div className="roles-list">
@@ -270,12 +311,40 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                     <div key={idx} className={`role-item ${!role.curso ? 'role-item-error' : ''}`}>
                       <div className="role-item-content">
                         <div className="role-item-inst">{role.institucion?.nombre}</div>
-                        <div className="role-item-details">
-                          <span>{role.tipo?.nombre}</span>
+                        <div className="role-item-details" style={{ width: '100%' }}>
+                          <span style={{ fontWeight: 'bold' }}>{role.tipo?.nombre}</span>
                           {role.curso ? (
-                            <span className="role-item-course">{role.curso.nombre}</span>
+                            <span className="role-item-course" style={{ marginLeft: '8px' }}>{role.curso.nombre}</span>
                           ) : (
-                            <span className="role-item-error-badge">⚠️ Sin curso</span>
+                            <div className="custom-schedules-container" style={{ marginTop: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#e2e8f0' }}>Horarios Personalizados:</span>
+                                <button type="button" onClick={() => handleAddCustomSchedule(idx)} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#3b82f6', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>+ Agregar</button>
+                              </div>
+                              {role.horarios_personalizados?.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  {role.horarios_personalizados.map((h: any, hIdx: number) => (
+                                    <div key={hIdx} style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                      <select value={h.dia} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'dia', e.target.value)} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }}>
+                                        <option value="Lunes">Lunes</option>
+                                        <option value="Martes">Martes</option>
+                                        <option value="Miércoles">Miércoles</option>
+                                        <option value="Jueves">Jueves</option>
+                                        <option value="Viernes">Viernes</option>
+                                        <option value="Sábado">Sábado</option>
+                                        <option value="Domingo">Domingo</option>
+                                      </select>
+                                      <input type="time" value={h.hora_inicio || '08:00'} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'hora_inicio', e.target.value)} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }} />
+                                      <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>a</span>
+                                      <input type="time" value={h.hora_fin || '17:00'} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'hora_fin', e.target.value)} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }} />
+                                      <button type="button" onClick={() => handleRemoveCustomSchedule(idx, hIdx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', marginLeft: 'auto' }}>✕</button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>Sin horarios. La persona se considerará fuera de horario.</div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -291,8 +360,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
               <button
                 type="submit"
                 className="btn-save"
-                disabled={isSubmitting || (formData.roles && formData.roles.some(r => !r.curso))}
-                title={formData.roles && formData.roles.some(r => !r.curso) ? 'Todas las categorías deben tener un curso asignado' : ''}
+                disabled={isSubmitting}
               >
                 💾 {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
               </button>

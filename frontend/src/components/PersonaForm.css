@@ -491,6 +491,25 @@
   transform: none;
 }
 
+/* Form grid layout classes */
+.pf-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.pf-grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.role-input-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .persona-form-modal {
@@ -511,7 +530,7 @@
   }
 
   .role-input-row {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     gap: 12px;
   }
 
@@ -522,5 +541,57 @@
   .photo-section {
     flex-direction: column;
     text-align: center;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-cancel,
+  .btn-save {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .photo-upload-label {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-cancel-photo {
+    width: 100%;
+  }
+
+  .pf-grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-grid-3col {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .persona-form-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .persona-form-modal {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .persona-form-header {
+    padding: 16px 20px;
+  }
+
+  .persona-form-header h2 {
+    font-size: 18px;
+  }
+
+  .persona-form-content {
+    padding: 16px;
   }
 }

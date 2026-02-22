@@ -404,4 +404,47 @@
     .results-count {
         text-align: center;
     }
+
+    /* Header stacking */
+    .table-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .header-left h2 {
+        font-size: 1.2rem;
+    }
+
+    .header-right {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .header-right .btn {
+        flex: 1;
+        min-width: 100px;
+        justify-content: center;
+    }
+
+    /* Action buttons touch targets */
+    .btn-icon {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    /* Pagination wrapping */
+    .pagination {
+        flex-wrap: wrap;
+        padding: 16px;
+        gap: 4px;
+    }
+
+    .personas-table-container .btn-page {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
 }

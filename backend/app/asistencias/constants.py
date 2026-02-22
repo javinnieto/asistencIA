@@ -20,7 +20,10 @@ ESTADOS_ASISTENCIA = {
     'AUSENTE': 'Ausente', 
     'TARDANZA': 'Tardanza',
     'JUSTIFICADO': 'Justificado',
-    'ENFERMEDAD': 'Enfermedad'
+    'ENFERMEDAD': 'Enfermedad',
+    'FUERA_DE_HORARIO': 'Fuera de Horario',
+    'SE_FUE_ANTES': 'Se fue antes',
+    'NO_PASO_SALIDA': 'No pasó a la salida'
 }
 
 # Configuración MQTT

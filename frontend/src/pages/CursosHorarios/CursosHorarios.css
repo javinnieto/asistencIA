@@ -583,6 +583,71 @@
     font-size: 1rem;
 }
 
+.horarios-by-day {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.horario-day-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 16px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(102, 126, 234, 0.15);
+    border-left: 3px solid #667eea;
+    border-radius: 10px;
+}
+
+.horario-day-label {
+    min-width: 100px;
+    font-weight: 700;
+    color: #a5b4fc;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-top: 6px;
+    flex-shrink: 0;
+}
+
+.horario-slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex: 1;
+}
+
+.horario-slot {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    border-radius: 10px;
+    padding: 10px 16px;
+    position: relative;
+    transition: all 0.2s;
+    min-width: 140px;
+}
+
+.horario-slot:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.horario-slot .horario-edit-hint {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: #3b82f6;
+    font-size: 0.8rem;
+}
+
+.horario-slot:hover .horario-edit-hint {
+    opacity: 1;
+}
+
 .horarios-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -787,6 +852,19 @@
         grid-template-columns: 1fr;
     }
 
+    .horario-day-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .horario-day-label {
+        min-width: unset;
+    }
+
+    .horario-slots {
+        flex-direction: column;
+    }
+
     .horarios-expanded-container {
         padding: 16px 20px;
     }
@@ -868,9 +946,37 @@
         grid-template-columns: 1fr;
     }
 
+    /* Hide expand chevron cell on mobile */
+    .ch-td-expand {
+        display: none !important;
+    }
+
+    /* Make the first visible cell (Name) prominent */
+    .ch-td.bold {
+        font-size: 1.1rem;
+        padding-top: 4px;
+    }
+
     .ch-tab-button {
         border-right: none;
         border-bottom: 1px solid #334155;
+        padding: 14px 16px;
+        gap: 12px;
+    }
+
+    .ch-tab-desc {
+        display: none;
+    }
+
+    .ch-tab-icon-wrapper {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        font-size: 1.2rem;
+    }
+
+    .ch-tab-label {
+        font-size: 0.9rem;
     }
 
     /* Modal responsive */
@@ -885,9 +991,37 @@
         grid-template-columns: 1fr;
     }
 
+    /* Horario items - remove min-width to prevent overflow */
+    .ch-horario-item {
+        min-width: unset;
+        max-width: 100%;
+    }
+
+    /* Search container */
+    .search-container {
+        min-width: unset;
+        width: 100%;
+    }
+
     /* Empty state */
     .ch-empty-state {
         padding: 40px 20px;
+    }
+
+    .ch-no-selection {
+        padding: 40px 20px;
+        margin: 0 16px 16px;
+    }
+
+    /* Horario modal items stack */
+    .horario-item-modal {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .horario-item-number {
+        align-self: flex-start;
     }
 
     /* Expanded rows */
@@ -898,5 +1032,13 @@
 
     .expanded-row td:before {
         display: none !important;
+    }
+
+    /* Action buttons touch targets */
+    .btn-icon {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
     }
 }

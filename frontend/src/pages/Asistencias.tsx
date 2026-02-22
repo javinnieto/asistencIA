@@ -5,10 +5,28 @@ import { includesNormalized } from '../utils/normalize';
 import { useToast } from '../components/Toast';
 import './Asistencias.css';
 
+interface RolHorario {
+  dia: string;
+  hora_inicio: string;
+  hora_fin: string;
+}
+
+interface RolCurso {
+  idCurso: number;
+  nombre: string;
+  horarios?: RolHorario[];
+}
+
+interface Rol {
+  idPersonaInstitucion?: number;
+  curso?: RolCurso;
+}
+
 interface Persona {
   idPersona: number;
   nombre: string;
   foto?: string;
+  roles?: Rol[];
 }
 
 interface Curso {
@@ -32,6 +50,61 @@ interface Asistencia {
   estado: { idEstadoAsistencia: number; nombre: string };
   horario?: Horario;
   llegada_tarde_minutos: number;
+  salida_temprano_minutos: number;
+  tipo?: string;
+  justificado?: boolean;
+}
+
+const DIAS_MAP: Record<string, number> = {
+  Lunes: 1, Martes: 2, Miércoles: 3, Jueves: 4, Viernes: 5, Sábado: 6, Domingo: 0,
+};
+
+/**
+ * Convierte una fecha ISO (UTC) al formato requerido por <input type="datetime-local">
+ * teniendo en cuenta la zona horaria local del navegador.
+ * Ej: "2026-02-22T14:00:00Z" → "2026-02-22T11:00" si el browser está en UTC-3
+ */
+function toLocalDatetimeInput(isoString: string): string {
+  const d = new Date(isoString);
+  const offsetMs = d.getTimezoneOffset() * 60000;
+  const local = new Date(d.getTime() - offsetMs);
+  return local.toISOString().slice(0, 16);
+}
+
+/** Dado que la persona NO tiene horario activo, devuelve el curso cuyo próximo
+ * horario es el más cercano (mismo día o siguiente) a la fecha/hora de la asistencia. */
+function getNextCourseForAsistencia(a: Asistencia): string | null {
+  const roles = a.persona?.roles;
+  if (!roles || roles.length === 0) return null;
+
+  const dt = new Date(a.fechaHora);
+  const dayOfWeek = dt.getDay(); // 0=Dom, 1=Lun...
+  const timeMinutes = dt.getHours() * 60 + dt.getMinutes();
+
+  let best: { minutesAhead: number; nombre: string } | null = null;
+
+  for (const rol of roles) {
+    if (!rol.curso) continue;
+    const horarios = rol.curso.horarios || [];
+    for (const h of horarios) {
+      const hDay = DIAS_MAP[h.dia];
+      if (hDay === undefined) continue;
+      const [hH, hM] = h.hora_inicio.split(':').map(Number);
+      const hMinutes = hH * 60 + hM;
+
+      // Days ahead (0 = same day, 1 = tomorrow, ...)
+      let daysAhead = (hDay - dayOfWeek + 7) % 7;
+      // If same day but the schedule already started (hora_inicio <= current time), push to next week
+      if (daysAhead === 0 && hMinutes <= timeMinutes) daysAhead = 7;
+
+      const minutesAhead = daysAhead * 24 * 60 + (hMinutes - timeMinutes);
+      if (!best || minutesAhead < best.minutesAhead) {
+        best = { minutesAhead, nombre: rol.curso.nombre };
+      }
+    }
+  }
+
+  return best ? best.nombre : (roles[0]?.curso?.nombre || null);
 }
 
 const Asistencias: React.FC = () => {
@@ -49,6 +122,7 @@ const Asistencias: React.FC = () => {
   const [fechaFin, setFechaFin] = useState(searchParams.get('fechaFin') || '');
   const [cursoFiltro, setCursoFiltro] = useState(searchParams.get('curso') || '');
   const [estadoFiltro, setEstadoFiltro] = useState(searchParams.get('estado') || '');
+  const [horarioFiltro, setHorarioFiltro] = useState(searchParams.get('horario') || '');
   const [minTempFiltro, setMinTempFiltro] = useState(searchParams.get('minTemp') || '');
   const [maxTempFiltro, setMaxTempFiltro] = useState(searchParams.get('maxTemp') || '');
 
@@ -84,14 +158,17 @@ const Asistencias: React.FC = () => {
   // Build query string from current state
   const buildQueryString = () => {
     const params = new URLSearchParams();
-    if (searchTerm) params.append('persona__nombre', searchTerm); // Backend uses persona__nombre for search
+    if (searchTerm) params.append('search', searchTerm);
     if (fechaInicio) params.append('fechaHora__gte', `${fechaInicio}T00:00:00`);
     if (fechaFin) params.append('fechaHora__lte', `${fechaFin}T23:59:59`);
-    if (cursoFiltro) params.append('horario__curso', cursoFiltro);
     if (cursoFiltro) params.append('horario__curso', cursoFiltro);
 
     // Filter by status name (e.g. 'Presente')
     if (estadoFiltro) params.append('estado__nombre', estadoFiltro);
+
+    // Filter by schedule (en horario / fuera de horario)
+    if (horarioFiltro === 'en_horario') params.append('horario__isnull', 'false');
+    if (horarioFiltro === 'fuera_horario') params.append('horario__isnull', 'true');
 
     if (minTempFiltro) params.append('temperatura__gte', minTempFiltro);
     if (maxTempFiltro) params.append('temperatura__lte', maxTempFiltro);
@@ -135,6 +212,7 @@ const Asistencias: React.FC = () => {
         if (fechaFin) cleanParams.set('fechaFin', fechaFin);
         if (cursoFiltro) cleanParams.set('curso', cursoFiltro);
         if (estadoFiltro) cleanParams.set('estado', estadoFiltro);
+        if (horarioFiltro) cleanParams.set('horario', horarioFiltro);
         if (minTempFiltro) cleanParams.set('minTemp', minTempFiltro);
         if (ordering) cleanParams.set('ordering', ordering);
 
@@ -182,7 +260,7 @@ const Asistencias: React.FC = () => {
     const query = buildQueryString();
     cargarDatos();
     fetchStats(query);
-  }, [searchTerm, fechaInicio, fechaFin, cursoFiltro, estadoFiltro, minTempFiltro, maxTempFiltro, ordering]);
+  }, [searchTerm, fechaInicio, fechaFin, cursoFiltro, estadoFiltro, horarioFiltro, minTempFiltro, maxTempFiltro, ordering]);
 
   const handleCardClick = (filtro: string) => {
     if (filtro === 'Fiebre') {
@@ -196,13 +274,12 @@ const Asistencias: React.FC = () => {
 
   const handlePageClick = (page: number) => {
     const params = new URLSearchParams();
-    // Use 'persona__nombre' if that's what backend expects for search, OR 'search' if backend `SearchFilter` is configured to `search_fields`.
-    // `buildQueryString` at line 87 uses: `if (searchTerm) params.append('persona__nombre', searchTerm);`
-    // So we stick to that.
-    if (searchTerm) params.append('persona__nombre', searchTerm);
+    if (searchTerm) params.append('search', searchTerm);
     if (fechaInicio) params.append('fechaHora__gte', `${fechaInicio}T00:00:00`);
     if (fechaFin) params.append('fechaHora__lte', `${fechaFin}T23:59:59`);
     if (cursoFiltro) params.append('horario__curso', cursoFiltro);
+    if (horarioFiltro === 'en_horario') params.append('horario__isnull', 'false');
+    if (horarioFiltro === 'fuera_horario') params.append('horario__isnull', 'true');
 
     // Filter by status name (e.g. 'Presente')
     if (estadoFiltro) params.append('estado__nombre', estadoFiltro);
@@ -259,7 +336,9 @@ const Asistencias: React.FC = () => {
         body: JSON.stringify({
           fechaHora: editingAsistencia.fechaHora,
           temperatura: editingAsistencia.temperatura,
-          estado: editingAsistencia.estado.idEstadoAsistencia
+          justificado: editingAsistencia.justificado || false
+          // 'estado' no se envía intencionalmente: el backend lo recalcula
+          // automáticamente basado en fechaHora vs horario del curso.
         })
       });
 
@@ -292,6 +371,7 @@ const Asistencias: React.FC = () => {
     setFechaFin('');
     setCursoFiltro('');
     setEstadoFiltro('');
+    setHorarioFiltro('');
     setMinTempFiltro('');
     setMaxTempFiltro('');
   };
@@ -383,6 +463,16 @@ const Asistencias: React.FC = () => {
             ))}
           </select>
 
+          <select
+            className="as-select"
+            value={horarioFiltro}
+            onChange={e => setHorarioFiltro(e.target.value)}
+          >
+            <option value="">Todos los registros</option>
+            <option value="en_horario">✅ En horario</option>
+            <option value="fuera_horario">⚠️ Fuera de horario</option>
+          </select>
+
           <button className="as-btn-reset" title="Limpiar filtros" onClick={limpiarFiltros}>
             <i className="bi bi-x-circle"></i>
           </button>
@@ -457,10 +547,13 @@ const Asistencias: React.FC = () => {
                   Persona {getSortIcon('persona__nombre')}
                 </th>
                 <th onClick={() => handleSort('horario__curso__nombre')} className="sortable-header">
-                  Curso / Horario {getSortIcon('horario__curso__nombre')}
+                  Horario {getSortIcon('horario__curso__nombre')}
                 </th>
                 <th onClick={() => handleSort('fechaHora')} className="sortable-header">
                   Fecha/Hora {getSortIcon('fechaHora')}
+                </th>
+                <th onClick={() => handleSort('tipo')} className="sortable-header">
+                  Tipo {getSortIcon('tipo')}
                 </th>
                 <th onClick={() => handleSort('temperatura')} className="sortable-header">
                   Temp {getSortIcon('temperatura')}
@@ -481,7 +574,7 @@ const Asistencias: React.FC = () => {
                         {a.persona?.foto ? <img src={a.persona.foto} alt="av" /> : <i className="bi bi-person"></i>}
                       </div>
                       <div className="as-user-info">
-                        <div>{a.persona?.nombre || 'Desc.'}</div>
+                        <div>{a.persona?.nombre || 'Desconocido'}</div>
                         <div>ID: {a.persona?.idPersona || '-'}</div>
                       </div>
                     </div>
@@ -489,12 +582,37 @@ const Asistencias: React.FC = () => {
                   <td>
                     {a.horario ? (
                       <div className="as-user-info">
-                        <div>{a.horario.curso?.nombre || 'Curso Desc.'}</div>
-                        {a.horario.hora_inicio && <div>{a.horario.hora_inicio.slice(0, 5)} - {a.horario.hora_fin.slice(0, 5)}</div>}
+                        <span style={{ background: 'rgba(99,102,241,0.18)', color: '#a5b4fc', borderRadius: '6px', padding: '2px 10px', fontWeight: 700, fontSize: '0.85rem', display: 'inline-block', marginBottom: '3px' }}>
+                          {a.horario.curso?.nombre || '—'}
+                        </span>
+                        {a.horario.hora_inicio && <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{a.horario.hora_inicio.slice(0, 5)} - {a.horario.hora_fin.slice(0, 5)}</div>}
                       </div>
-                    ) : <span style={{ color: '#94a3b8' }}>Sin Horario</span>}
+                    ) : (
+                      <div className="as-user-info">
+                        {(a.persona?.roles && a.persona.roles.length > 0) ? (() => {
+                          const nextCourse = getNextCourseForAsistencia(a);
+                          return (
+                            <>
+                              <span style={{ background: 'rgba(99,102,241,0.18)', color: '#a5b4fc', borderRadius: '6px', padding: '2px 10px', fontWeight: 700, fontSize: '0.85rem', display: 'inline-block', marginBottom: '3px' }}>
+                                {nextCourse || '—'}
+                              </span>
+                              <div style={{ fontSize: '0.8rem', color: '#f59e0b' }}>Fuera de horario</div>
+                            </>
+                          );
+                        })() : (
+                          <span style={{ color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>Sin curso asignado</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td><span style={{ fontWeight: 700 }}>{formatDateTime(a.fechaHora)}</span></td>
+                  <td>
+                    {a.tipo === 'Salida' ? (
+                      <span className="as-badge as-badge-salida"><i className="bi bi-box-arrow-right"></i> Salida</span>
+                    ) : (
+                      <span className="as-badge as-badge-entrada"><i className="bi bi-box-arrow-in-right"></i> Entrada</span>
+                    )}
+                  </td>
                   <td>
                     <span className={`as-badge ${a.temperatura > 37.5 ? 'temp-high' : 'temp-normal'}`}>
                       <i className="bi bi-thermometer-half"></i> {a.temperatura}°C
@@ -505,12 +623,16 @@ const Asistencias: React.FC = () => {
                     {a.estado?.nombre === 'Presente' && <span className="as-badge presente">Presente</span>}
                     {a.estado?.nombre === 'Tardanza' && <span className="as-badge tardanza">Tardanza</span>}
                     {a.estado?.nombre === 'Ausente' && <span className="as-badge ausente">Ausente</span>}
+                    {a.estado?.nombre === 'Se fue antes' && <span className="as-badge se-fue-antes">Se fue antes</span>}
+                    {a.estado?.nombre === 'No pasó a la salida' && <span className="as-badge no-paso-salida">No pasó salida</span>}
                     {/* Fallback for other states */}
-                    {!['Presente', 'Tardanza', 'Ausente'].includes(a.estado?.nombre) &&
+                    {!['Presente', 'Tardanza', 'Ausente', 'Se fue antes', 'No pasó a la salida'].includes(a.estado?.nombre) &&
                       <span className="as-badge">{a.estado?.nombre}</span>}
+                    {a.justificado && <span className="as-badge justificado" style={{ marginLeft: '4px' }}>✓ Justificado</span>}
                   </td>
                   <td>
                     {a.llegada_tarde_minutos > 0 && <span style={{ color: '#fbbf24' }}>+ {a.llegada_tarde_minutos} min</span>}
+                    {a.salida_temprano_minutos > 0 && <span style={{ color: '#f87171' }}>- {a.salida_temprano_minutos} min</span>}
                   </td>
                   <td>
                     <div className="as-actions">
@@ -590,11 +712,32 @@ const Asistencias: React.FC = () => {
                 {/* ... inputs preserved ... */}
                 <div className="as-form-group">
                   <label>Hora de Llegada</label>
-                  <input type="datetime-local" value={editingAsistencia.fechaHora.slice(0, 16)} onChange={e => setEditingAsistencia({ ...editingAsistencia, fechaHora: new Date(e.target.value).toISOString() })} />
+                  <input
+                    type="datetime-local"
+                    value={toLocalDatetimeInput(editingAsistencia.fechaHora)}
+                    onChange={e => setEditingAsistencia({ ...editingAsistencia, fechaHora: new Date(e.target.value).toISOString() })}
+                  />
                 </div>
                 <div className="as-form-group">
                   <label>Temperatura</label>
                   <input type="number" step="0.1" value={editingAsistencia.temperatura} onChange={e => setEditingAsistencia({ ...editingAsistencia, temperatura: parseFloat(e.target.value) })} />
+                </div>
+                <div className="as-form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <label htmlFor="justificado-toggle" style={{ marginBottom: 0 }}>Justificado</label>
+                  <label className="as-switch">
+                    <input
+                      id="justificado-toggle"
+                      type="checkbox"
+                      checked={editingAsistencia.justificado || false}
+                      onChange={e => setEditingAsistencia({ ...editingAsistencia, justificado: e.target.checked })}
+                    />
+                    <span className="as-slider"></span>
+                  </label>
+                  {editingAsistencia.justificado && (
+                    <span style={{ fontSize: '0.8rem', color: '#22c55e' }}>
+                      <i className="bi bi-check-circle-fill"></i> Cuenta como presente
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="as-modal-footer">

@@ -22,6 +22,7 @@ interface Curso {
     fecha_inicio?: string;
     fecha_fin?: string;
     horarios?: Horario[];
+    institucion_id?: string | number; // For form handling
 }
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -449,21 +450,21 @@ const CursosTab: React.FC = () => {
                                     onClick={() => toggleExpand(curso.idCurso)}
                                     style={{ cursor: 'pointer' }}
                                 >
-                                    <td className="ch-td">
+                                    <td className="ch-td ch-td-expand">
                                         <i className={`bi bi-chevron-${expandedCursoId === curso.idCurso ? 'down' : 'right'}`} style={{ transition: 'transform 0.2s', fontSize: '0.9rem', color: '#94a3b8' }}></i>
                                     </td>
-                                    <td className="ch-td dimmed">#{curso.idCurso}</td>
-                                    <td className="ch-td bold">{curso.nombre}</td>
-                                    <td className="ch-td dimmed">{curso.institucion?.nombre}</td>
-                                    <td className="ch-td">
+                                    <td className="ch-td dimmed" data-label="ID">#{curso.idCurso}</td>
+                                    <td className="ch-td bold" data-label="Nombre">{curso.nombre}</td>
+                                    <td className="ch-td dimmed" data-label="Institución">{curso.institucion?.nombre}</td>
+                                    <td className="ch-td" data-label="Horarios">
                                         <span className="horario-count-badge">
                                             {curso.horarios?.length || 0} horario{(curso.horarios?.length || 0) !== 1 ? 's' : ''}
                                         </span>
                                     </td>
-                                    <td className="ch-td dimmed" style={{ fontSize: '0.9rem' }}>
+                                    <td className="ch-td dimmed" data-label="Vigencia" style={{ fontSize: '0.9rem' }}>
                                         {curso.fecha_inicio ? `${curso.fecha_inicio} → ${curso.fecha_fin || '∞'}` : <span style={{ fontStyle: 'italic', opacity: 0.7 }}>Sin fechas</span>}
                                     </td>
-                                    <td className="ch-td">
+                                    <td className="ch-td" data-label="Estado">
                                         <span className={`ch-badge ${curso.activo ? 'active' : 'inactive'}`}>
                                             {curso.activo ? 'ACTIVO' : 'INACTIVO'}
                                         </span>
@@ -496,22 +497,35 @@ const CursosTab: React.FC = () => {
                                                     <span>Horarios de {curso.nombre}</span>
                                                 </div>
                                                 {curso.horarios && curso.horarios.length > 0 ? (
-                                                    <div className="horarios-grid">
-                                                        {curso.horarios.map((h, idx) => (
-                                                            <div
-                                                                key={idx}
-                                                                className="horario-card horario-card-clickable"
-                                                                onClick={() => handleEditHorario(curso, h)}
-                                                                title="Click para editar este horario"
-                                                            >
-                                                                <div className="horario-day">{h.dia}</div>
-                                                                <div className="horario-time">{h.hora_inicio} - {h.hora_fin}</div>
-                                                                {h.materia && <div className="horario-subject">{h.materia}</div>}
-                                                                <div className="horario-edit-hint">
-                                                                    <i className="bi bi-pencil"></i>
+                                                    <div className="horarios-by-day">
+                                                        {(() => {
+                                                            const grouped: Record<string, typeof curso.horarios> = {};
+                                                            const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+                                                            curso.horarios.forEach((h: any) => {
+                                                                if (!grouped[h.dia]) grouped[h.dia] = [];
+                                                                grouped[h.dia].push(h);
+                                                            });
+                                                            const sortedDays = Object.keys(grouped).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+                                                            return sortedDays.map(dia => (
+                                                                <div key={dia} className="horario-day-row">
+                                                                    <div className="horario-day-label">{dia}</div>
+                                                                    <div className="horario-slots">
+                                                                        {grouped[dia].map((h: any, idx: number) => (
+                                                                            <div
+                                                                                key={idx}
+                                                                                className="horario-slot horario-card-clickable"
+                                                                                onClick={() => handleEditHorario(curso, h)}
+                                                                                title="Click para editar este horario"
+                                                                            >
+                                                                                <div className="horario-time">{h.hora_inicio.slice(0, 5)} - {h.hora_fin.slice(0, 5)}</div>
+                                                                                {h.materia && <div className="horario-subject">{h.materia}</div>}
+                                                                                <div className="horario-edit-hint"><i className="bi bi-pencil"></i></div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                            ));
+                                                        })()}
                                                     </div>
                                                 ) : (
                                                     <div className="horarios-empty">
