@@ -9,16 +9,9 @@ TIPOS_ISAE = {
     'DIRECTOR': 'Director'
 }
 
-# Tipos de persona en TecnoAliados
-TIPOS_TECNO = {
-    'ESTUDIANTE': 'Estudiante TecnoAliados',
-    'INSTRUCTOR': 'Instructor TecnoAliados'
-}
-
 # Instituciones
 INSTITUCIONES = {
     'ISAE': 'ISAE',
-    'TECNOALIADOS': 'TecnoAliados'
 }
 
 # Estados de asistencia
@@ -27,7 +20,10 @@ ESTADOS_ASISTENCIA = {
     'AUSENTE': 'Ausente', 
     'TARDANZA': 'Tardanza',
     'JUSTIFICADO': 'Justificado',
-    'ENFERMEDAD': 'Enfermedad'
+    'ENFERMEDAD': 'Enfermedad',
+    'FUERA_DE_HORARIO': 'Fuera de Horario',
+    'SE_FUE_ANTES': 'Se fue antes',
+    'NO_PASO_SALIDA': 'No pasó a la salida'
 }
 
 # Configuración MQTT

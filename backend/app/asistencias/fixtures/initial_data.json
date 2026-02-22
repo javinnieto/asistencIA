@@ -1,0 +1,107 @@
+[
+  {
+    "model": "asistencias.institucion",
+    "pk": 1,
+    "fields": { "nombre": "ISAE", "descripcion": "Instituto Superior de Actividades Especials", "activa": true }
+  },
+  {
+    "model": "asistencias.institucion",
+    "pk": 2,
+    "fields": { "nombre": "Cluster", "descripcion": "Cluster Tecnológico", "activa": true }
+  },
+  {
+    "model": "asistencias.tipopersona",
+    "pk": 1,
+    "fields": { "nombre": "Alumno", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.tipopersona",
+    "pk": 2,
+    "fields": { "nombre": "Docente", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.tipopersona",
+    "pk": 3,
+    "fields": { "nombre": "No Docente", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.tipopersona",
+    "pk": 4,
+    "fields": { "nombre": "Alumno", "institucion": 2, "activo": true }
+  },
+  {
+    "model": "asistencias.tipopersona",
+    "pk": 5,
+    "fields": { "nombre": "Docente", "institucion": 2, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 1,
+    "fields": { "nombre": "1er Grado", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 2,
+    "fields": { "nombre": "2do Grado", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 3,
+    "fields": { "nombre": "3er Grado", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 4,
+    "fields": { "nombre": "4to Grado", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 5,
+    "fields": { "nombre": "5to Grado", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 6,
+    "fields": { "nombre": "6to Grado", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 7,
+    "fields": { "nombre": "7mo Grado", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 8,
+    "fields": { "nombre": "1er Año", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 9,
+    "fields": { "nombre": "2do Año", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 10,
+    "fields": { "nombre": "3er Año", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 11,
+    "fields": { "nombre": "4to Año", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 12,
+    "fields": { "nombre": "5to Año", "institucion": 1, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 13,
+    "fields": { "nombre": "Robótica", "institucion": 2, "activo": true }
+  },
+  {
+    "model": "asistencias.curso",
+    "pk": 14,
+    "fields": { "nombre": "Impresión 3D", "institucion": 2, "activo": true }
+  }
+]

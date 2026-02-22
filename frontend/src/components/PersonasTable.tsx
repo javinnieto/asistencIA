@@ -1,14 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import './PersonasTable.css';
-
-// Iconos simples como componentes
-const FaEdit = ({ className }: { className?: string }) => <span className={className}>✏️</span>;
-const FaTrash = ({ className }: { className?: string }) => <span className={className}>🗑️</span>;
-const FaEye = ({ className }: { className?: string }) => <span className={className}>👁️</span>;
-const FaSearch = ({ className }: { className?: string }) => <span className={className}>🔍</span>;
-const FaFilter = ({ className }: { className?: string }) => <span className={className}>🔧</span>;
-const FaPlus = ({ className }: { className?: string }) => <span className={className}>➕</span>;
-const FaDownload = ({ className }: { className?: string }) => <span className={className}>📥</span>;
+import ConfirmModal from './ConfirmModal';
 
 interface Person {
   id: string;
@@ -21,7 +13,7 @@ interface Person {
   fechaIngreso: string;
   estado: 'activo' | 'inactivo';
   foto?: string;
-  nivelEducativo?: 'Primaria' | 'Secundaria';
+  roles?: any[];
   grado?: string;
 }
 
@@ -30,119 +22,79 @@ interface PersonasTableProps {
   onEdit: (person: Person) => void;
   onDelete: (id: string) => void;
   onView: (person: Person) => void;
-  onAdd: () => void;
 }
 
 const PersonasTable: React.FC<PersonasTableProps> = ({
   personas,
   onEdit,
   onDelete,
-  onView,
-  onAdd
+  onView
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
-  const [filterNivelEducativo, setFilterNivelEducativo] = useState('');
-  const [filterGrado, setFilterGrado] = useState('');
-  const [filterEstado, setFilterEstado] = useState('');
+  const [filterCurso, setFilterCurso] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<keyof Person>('nombre');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const itemsPerPage = 10;
 
-  // Opciones de filtros
-  const categorias = ['Alumnos', 'Docentes', 'Personal No Docente'];
-  const nivelesEducativos = ['Primaria', 'Secundaria'];
-  const gradosPrimaria = ['1er grado', '2do grado', '3er grado', '4to grado', '5to grado', '6to grado', '7mo grado'];
-  const gradosSecundaria = ['1er año', '2do año', '3er año', '4to año', '5to año'];
+  // Modal states
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  // Obtener grados disponibles según el nivel educativo seleccionado
-  const gradosDisponibles = useMemo(() => {
-    if (filterNivelEducativo === 'Primaria') {
-      return gradosPrimaria;
-    } else if (filterNivelEducativo === 'Secundaria') {
-      return gradosSecundaria;
-    }
-    return [];
-  }, [filterNivelEducativo]);
+  // Categorías disponibles
+  const categorias = ['Alumno', 'Docente', 'No Docente'];
 
-  // Filtrar y ordenar datos
-  const filteredAndSortedData = useMemo(() => {
-    let filtered = personas.filter(person => {
-      const matchesSearch = 
+  // Computar cursos únicos
+  const cursosDisponibles = useMemo(() => {
+    const cursos = new Set<string>();
+    personas.forEach(p => {
+      if (p.grado) cursos.add(p.grado);
+      p.roles?.forEach(r => {
+        if (r.curso && r.curso.nombre) cursos.add(r.curso.nombre);
+      });
+    });
+    return Array.from(cursos).sort();
+  }, [personas]);
+
+  // Filtrar datos
+  const filteredData = useMemo(() => {
+    return personas.filter(person => {
+      const matchesSearch =
         person.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.telefono.includes(searchTerm);
-      
-      const matchesCategoria = !filterCategoria || person.departamento === filterCategoria;
-      const matchesNivelEducativo = !filterNivelEducativo || person.nivelEducativo === filterNivelEducativo;
-      const matchesGrado = !filterGrado || person.grado === filterGrado;
-      const matchesEstado = !filterEstado || person.estado === filterEstado;
-      
-      return matchesSearch && matchesCategoria && matchesNivelEducativo && matchesGrado && matchesEstado;
-    });
+        person.apellido.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Ordenar
-    filtered.sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-      
-      if (sortDirection === 'asc') {
-        return (aValue || '') < (bValue || '') ? -1 : (aValue || '') > (bValue || '') ? 1 : 0;
-      } else {
-        return (aValue || '') > (bValue || '') ? -1 : (aValue || '') < (bValue || '') ? 1 : 0;
-      }
-    });
+      const matchesCategoria = !filterCategoria || (
+        person.departamento === filterCategoria ||
+        person.roles?.some(r => r.tipo?.nombre === filterCategoria)
+      );
 
-    return filtered;
-  }, [personas, searchTerm, filterCategoria, filterNivelEducativo, filterGrado, filterEstado, sortField, sortDirection]);
+      const userCourses = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
+      const hasCourse = userCourses.includes(filterCurso) || person.grado === filterCurso;
+      const matchesCurso = !filterCurso || hasCourse;
+
+      return matchesSearch && matchesCategoria && matchesCurso;
+    });
+  }, [personas, searchTerm, filterCategoria, filterCurso]);
 
   // Paginación
-  const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = filteredAndSortedData.slice(startIndex, endIndex);
+  const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
-  const handleSort = (field: keyof Person) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
+  const handlePageChange = (page: number) => setCurrentPage(page);
+
+  const handleDeleteRequest = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setItemToDelete(id);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      onDelete(itemToDelete);
+      setConfirmOpen(false);
+      setItemToDelete(null);
     }
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const exportToCSV = () => {
-    const headers = ['ID', 'Nombre', 'Apellido', 'Email', 'Teléfono', 'Departamento', 'Cargo', 'Fecha Ingreso', 'Estado'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredAndSortedData.map(person => [
-        person.id,
-        person.nombre,
-        person.apellido,
-        person.email,
-        person.telefono,
-        person.departamento,
-        person.cargo,
-        person.fechaIngreso,
-        person.estado
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'personas.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   if (personas.length === 0) {
@@ -151,10 +103,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         <div className="empty-state">
           <div className="empty-icon">👥</div>
           <h3>No hay personas registradas</h3>
-          <p>Comienza agregando la primera persona a tu sistema de gestión.</p>
-          <button className="btn btn-primary" onClick={onAdd}>
-            <FaPlus /> Agregar Primera Persona
-          </button>
+          <p>Las personas se registran automáticamente cuando usan el terminal de reconocimiento facial.</p>
         </div>
       </div>
     );
@@ -162,192 +111,174 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 
   return (
     <div className="personas-table-container">
-      {/* Header con controles */}
-      <div className="table-header">
-        <div className="header-left">
-          <h2>Gestión de Personas</h2>
-          <span className="results-count">
-            Mostrando {currentData.length} de {filteredAndSortedData.length} personas
-          </span>
-        </div>
-        <div className="header-right">
-          <button className="btn btn-primary" onClick={onAdd}>
-            <FaPlus /> Agregar Persona
-          </button>
-          <button className="btn btn-secondary" onClick={exportToCSV}>
-            <FaDownload /> Exportar
-          </button>
-        </div>
-      </div>
+      {/* Combined Compact Header & Filters */}
+      <div className="table-top-bar" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '20px 8px 50px 8px',
+        background: 'rgba(30, 41, 59, 0.4)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        gap: '16px',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1, flexWrap: 'wrap' }}>
+          {/* Search - Flexible Width */}
+          <div className="search-box" style={{ flex: '1 1 200px', minWidth: '200px' }}>
+            <i className="bi bi-search search-icon"></i>
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+              style={{ height: '40px', fontSize: '0.9rem' }}
+            />
+          </div>
 
-      {/* Filtros y búsqueda */}
-      <div className="table-filters">
-        <div className="search-box">
-          <FaSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, apellido, email o teléfono..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
+          {/* Inline Filters */}
+          <select
+            value={filterCategoria}
+            onChange={(e) => setFilterCategoria(e.target.value)}
+            className="filter-select form-select"
+            style={{ width: 'auto', minWidth: '140px' }}
+          >
+            <option value="">Todas las Categorías</option>
+            {categorias.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterCurso}
+            onChange={(e) => setFilterCurso(e.target.value)}
+            className="filter-select form-select"
+            style={{ width: 'auto', minWidth: '140px' }}
+          >
+            <option value="">Todos los Cursos</option>
+            {cursosDisponibles.map(curso => (
+              <option key={curso} value={curso}>{curso}</option>
+            ))}
+          </select>
         </div>
-        
-        <div className="filter-controls">
-          <div className="filter-group">
-            <label>Categoría:</label>
-            <select
-              value={filterCategoria}
-              onChange={(e) => {
-                setFilterCategoria(e.target.value);
-                setFilterNivelEducativo('');
-                setFilterGrado('');
-              }}
-              className="filter-select"
-            >
-              <option value="">Todas las categorías</option>
-              {categorias.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-          
-          {filterCategoria === 'Alumnos' && (
-            <>
-              <div className="filter-group">
-                <label>Nivel Educativo:</label>
-                <select
-                  value={filterNivelEducativo}
-                  onChange={(e) => {
-                    setFilterNivelEducativo(e.target.value);
-                    setFilterGrado('');
-                  }}
-                  className="filter-select"
-                >
-                  <option value="">Todos los niveles</option>
-                  {nivelesEducativos.map(nivel => (
-                    <option key={nivel} value={nivel}>{nivel}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {filterNivelEducativo && (
-                <div className="filter-group">
-                  <label>Grado:</label>
-                  <select
-                    value={filterGrado}
-                    onChange={(e) => setFilterGrado(e.target.value)}
-                    className="filter-select"
-                  >
-                    <option value="">Todos los grados</option>
-                    {gradosDisponibles.map(grado => (
-                      <option key={grado} value={grado}>{grado}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </>
-          )}
-          
-          <div className="filter-group">
-            <label>Estado:</label>
-            <select
-              value={filterEstado}
-              onChange={(e) => setFilterEstado(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Todos los estados</option>
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
-            </select>
-          </div>
-        </div>
+
+        {/* Results Count on right */}
+        <span className="results-count" style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+          {filteredData.length} registros
+        </span>
       </div>
 
       {/* Tabla */}
-      <div className="table-wrapper">
+      <div className="table-wrapper table-responsive">
         <table className="personas-table">
           <thead>
             <tr>
-              <th style={{ width: '23%' }} onClick={() => handleSort('nombre')} className="sortable">
-                Nombre
-                <span className={`sort-indicator ${sortField === 'nombre' ? sortDirection : ''}`}>
-                  {sortField === 'nombre' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                </span>
-              </th>
-              <th style={{ width: '20%' }} onClick={() => handleSort('apellido')} className="sortable">
-                Apellido
-                <span className={`sort-indicator ${sortField === 'apellido' ? sortDirection : ''}`}>
-                  {sortField === 'apellido' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                </span>
-              </th>
-              <th style={{ width: '18%' }} onClick={() => handleSort('departamento')} className="sortable">
-                Departamento
-                <span className={`sort-indicator ${sortField === 'departamento' ? sortDirection : ''}`}>
-                  {sortField === 'departamento' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                </span>
-              </th>
-              <th style={{ width: '21%' }} onClick={() => handleSort('cargo')} className="sortable">
-                Cargo
-                <span className={`sort-indicator ${sortField === 'cargo' ? sortDirection : ''}`}>
-                  {sortField === 'cargo' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                </span>
-              </th>
-              <th style={{ width: '18%' }}>Acciones</th>
+              <th style={{ width: '60px' }}>FOTO</th>
+              <th style={{ width: '20%' }}>NOMBRE</th>
+              <th style={{ width: '20%' }}>APELLIDO</th>
+              <th style={{ width: '15%' }}>CATEGORÍA</th>
+              <th style={{ width: '25%' }}>CURSOS</th>
+              <th style={{ width: '15%', textAlign: 'right' }}>ACCIONES</th>
             </tr>
           </thead>
           <tbody>
-            {currentData.map((person) => (
-              <tr key={person.id} className={person.estado === 'inactivo' ? 'inactive-row' : ''}>
-                <td>
-                  <div className="person-info">
-                    <img 
-                      src={person.foto || 'https://via.placeholder.com/42x42/667eea/ffffff?text=' + person.nombre.charAt(0)} 
-                      alt={`${person.nombre} ${person.apellido}`}
-                      className="person-avatar"
-                    />
-                    <div>
-                      <strong>{person.nombre}</strong>
+            {currentData.map((person) => {
+              const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
+              const cursosText = cursos.length > 0 ? cursos.join(', ') : '-';
+
+              return (
+                <tr
+                  key={person.id}
+                  onClick={() => onView(person)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td data-label="Foto">
+                    {person.foto ? (
+                      <img
+                        src={person.foto}
+                        alt={`${person.nombre} ${person.apellido}`}
+                        className="person-avatar"
+                        style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className="avatar-placeholder" style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: '#e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#64748b',
+                        fontSize: '1.5rem'
+                      }}>
+                        <i className="bi bi-person-circle"></i>
+                      </div>
+                    )}
+                  </td>
+                  <td data-label="Nombre"><strong>{person.nombre}</strong></td>
+                  <td data-label="Apellido">{person.apellido}</td>
+                  <td data-label="Categoría">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {(person.roles && person.roles.length > 0) ? person.roles.map((role, idx) => (
+                        <span key={idx} className="department-badge" style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          background: role.tipo?.nombre === 'Alumno' ? '#dbeafe' :
+                            role.tipo?.nombre === 'Docente' ? '#fef3c7' : '#f3e8ff',
+                          color: role.tipo?.nombre === 'Alumno' ? '#1e40af' :
+                            role.tipo?.nombre === 'Docente' ? '#92400e' : '#6b21a8'
+                        }}>
+                          {role.tipo?.nombre}
+                        </span>
+                      )) : (
+                        <span className="department-badge">-</span>
+                      )}
                     </div>
-                  </div>
-                </td>
-                <td>{person.apellido}</td>
-                <td>
-                  <span className="department-badge">
-                    {person.departamento === 'Alumnos' 
-                      ? person.grado
-                      : person.departamento
-                    }
-                  </span>
-                </td>
-                <td>{person.cargo}</td>
-                <td>
-                  <div className="action-buttons">
-                    <button
-                      className="btn-icon btn-view"
-                      onClick={() => onView(person)}
-                      title="Ver detalles"
-                    >
-                      <FaEye />
-                    </button>
-                    <button
-                      className="btn-icon btn-edit"
-                      onClick={() => onEdit(person)}
-                      title="Editar"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      className="btn-icon btn-delete"
-                      onClick={() => onDelete(person.id)}
-                      title="Eliminar"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td data-label="Cursos" style={{ fontSize: '0.85rem', color: '#64748b' }}>{cursosText}</td>
+                  <td data-label="Acciones">
+                    <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        className="btn-icon btn-view action-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onView(person);
+                        }}
+                        title="Ver detalles"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#3b82f6' }}
+                      >
+                        <i className="bi bi-eye-fill"></i>
+                      </button>
+                      <button
+                        className="btn-icon btn-edit action-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(person);
+                        }}
+                        title="Editar"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#fbbf24' }}
+                      >
+                        <i className="bi bi-pencil-fill"></i>
+                      </button>
+                      <button
+                        className="btn-icon btn-delete action-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRequest(person.id, e);
+                        }}
+                        title="Eliminar"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#f87171', zIndex: 10, position: 'relative' }}
+                      >
+                        <i className="bi bi-trash-fill"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -362,7 +293,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           >
             ← Anterior
           </button>
-          
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
             <button
               key={page}
@@ -372,7 +302,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
               {page}
             </button>
           ))}
-          
           <button
             className="btn-page"
             onClick={() => handlePageChange(currentPage + 1)}
@@ -382,8 +311,18 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           </button>
         </div>
       )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="¿Eliminar Persona?"
+        message="¿Estás seguro que deseas eliminar a esta persona del sistema? Se perderá todo su historial."
+        confirmText="Sí, Eliminar"
+      />
     </div>
   );
 };
 
-export default PersonasTable; 
+export default PersonasTable;

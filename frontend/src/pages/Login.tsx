@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginRequest } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 
-interface LoginProps {
-  setToken: (token: string) => void;
-}
-
-const Login: React.FC<LoginProps> = ({ setToken }) => {
+const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,41 +17,74 @@ const Login: React.FC<LoginProps> = ({ setToken }) => {
     setError(null);
     try {
       const res = await loginRequest(username, password);
+
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Error de autenticación');
+        // Intentar parsear el error, si no es JSON, texto plano
+        let errorMessage = 'Error de autenticación';
+        try {
+          const data = await res.json();
+          errorMessage = data.detail || errorMessage;
+        } catch (e) {
+          // If json parse fails, keep default message
+          console.error('Error parsing 401 response', e);
+        }
+        throw new Error(errorMessage);
       }
+
       const data = await res.json();
-      // Guardar el access token en localStorage y actualizar el estado global
-      localStorage.setItem('accessToken', data.access);
-      setToken(data.access);
-      // Redirigir al dashboard
+      // Usar el contexto para el login (maneja localStorage y estado)
+      login(data.access);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message);
+      console.error(err);
+      setError(err.message || 'Error desconocido');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="login-outer-wrapper" style={{ background: "url('/img/isae.jpg') center center/cover no-repeat", position: 'relative' }}>
-      <div className="login-inner-wrapper">
-        {/* Si querés un logo, descomenta la línea de abajo y poné el logo en public/img/logo.png */}
-        {/* <img src="/img/logo.png" alt="ISAE" style={{ width: 80, marginBottom: 24 }} /> */}
-        <h2 className="mb-4">Iniciar sesión</h2>
+    <div className="login-outer-wrapper">
+      {/* Background Overlay is handled by CSS radial gradient now */}
+      <div className="login-glass-card">
+        <h2 className="mb-4">Bienvenido</h2>
+        <p className="text-secondary mb-4">Inicia sesión para continuar</p>
+
         <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-          <div className="mb-3">
+          <div className="mb-4">
             <label className="form-label">Usuario</label>
-            <input type="text" className="form-control" value={username} onChange={e => setUsername(e.target.value)} required />
+            <input
+              type="text"
+              className="form-control"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              required
+              placeholder="usuario"
+            />
           </div>
-          <div className="mb-3">
+          <div className="mb-4">
             <label className="form-label">Contraseña</label>
-            <input type="password" className="form-control" value={password} onChange={e => setPassword(e.target.value)} required />
+            <input
+              type="password"
+              className="form-control"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+            />
           </div>
-          {error && <div className="alert alert-danger">{error}</div>}
-          <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-            {loading ? 'Ingresando...' : 'Ingresar'}
+
+          {error && (
+            <div className="alert alert-danger" role="alert" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: '1px solid #ef4444', borderRadius: '10px' }}>
+              <i className="bi bi-exclamation-triangle-fill me-2"></i>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" className="btn btn-primary w-100 py-3 mt-2" disabled={loading}>
+            {loading ? (
+              <span><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Ingresando...</span>
+            ) : 'Ingresar al Sistema'}
           </button>
         </form>
       </div>
@@ -61,4 +92,4 @@ const Login: React.FC<LoginProps> = ({ setToken }) => {
   );
 };
 
-export default Login; 
+export default Login;

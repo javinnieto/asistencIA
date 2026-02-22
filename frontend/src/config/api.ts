@@ -6,7 +6,7 @@ const API_BASE_URL = '/api';
 // Función para hacer peticiones autenticadas
 export const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('accessToken');
-  
+
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -24,7 +24,7 @@ export const apiRequest = async (endpoint: string, options: RequestInit = {}) =>
   };
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  
+
   return fetch(url, config);
 };
 
@@ -35,6 +35,18 @@ export const loginRequest = async (username: string, password: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password })
   });
+};
+
+export const getConflictos = async () => {
+  return apiRequest('/conflictos/?resuelto=false');
+};
+
+export const ignorarConflicto = async (id: number) => {
+  return apiRequest(`/conflictos/${id}/ignorar/`, { method: 'POST' });
+};
+
+export const aceptarConflicto = async (id: number) => {
+  return apiRequest(`/conflictos/${id}/aceptar_cambio/`, { method: 'POST' });
 };
 
 export { API_BASE_URL };

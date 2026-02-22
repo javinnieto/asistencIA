@@ -42,11 +42,11 @@ docker compose up -d
 
 ### 4. Acceder a los servicios
 
-- **Frontend (React)**: http://localhost:3000
-- **Backend (Django)**: http://localhost:8000
-- **API REST**: http://localhost:8000/api
-- **Admin Django**: http://localhost:8000/admin
-- **phpMyAdmin**: http://localhost:8080
+- **Frontend (React)**: http://localhost:8088
+- **Backend (Django)**: http://localhost:8001
+- **API REST**: http://localhost:8001/api
+- **Admin Django**: http://localhost:8001/admin
+- **phpMyAdmin**: http://localhost:8082
 
 ## 📊 Estructura del Proyecto
 
@@ -144,7 +144,7 @@ El sistema incluye:
 ## 🌡️ Integración MQTT
 
 El sistema está preparado para recibir datos del terminal biométrico vía MQTT:
-- Broker: Mosquitto (puerto 1883)
+- Broker: Mosquitto (puerto 1884)
 - Topics: `/asistencias/registro`
 - Datos: ID de persona, temperatura, timestamp
 

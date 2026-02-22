@@ -1,319 +1,458 @@
-import React, { useEffect, useState } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap-icons/font/bootstrap-icons.css';
-import { useNavigate } from 'react-router-dom';
-import AttendanceCalendar from '../components/AttendanceCalendar';
-import '../components/AttendanceCalendar.css';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 import { apiRequest } from '../config/api';
+import './Dashboard.css';
 
-interface Asistencia {
-  idAsistencia: number;
-  persona: { idPersona: number; nombre: string; curso: { idCurso: number; nombre: string } | null };
-  fecha_hora: string;
-  temperatura: number;
-  estado: { idEstadoAsistencia: number; nombre: string };
+// Types
+type TimeRange = 'day' | 'week' | 'month' | 'custom';
+type ScopeType = 'all' | 'institution' | 'course';
+type ChartMode = 'attendance' | 'temperature';
+
+interface Institucion {
+  idInstitucion: number;
+  nombre: string;
 }
 
-interface CursoResumen {
-  curso: string;
+interface Curso {
+  idCurso: number;
+  nombre: string;
+}
+
+interface ChartData {
+  name: string;
   presentes: number;
   ausentes: number;
+  tardanzas: number;
+  avgTemp: number;
 }
 
 const Dashboard: React.FC = () => {
-  const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [resumenDia, setResumenDia] = useState({ total: 0, presentes: 0, ausentes: 0 });
-  const [asistenciasPorCurso, setAsistenciasPorCurso] = useState<CursoResumen[]>([]);
-  const [cursoFiltro, setCursoFiltro] = useState<string>('');
-  const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Estado para últimos ingresos del día
-  const [ultimosIngresos, setUltimosIngresos] = useState<Array<{
-    nombre: string;
-    tipo: string;
-    hora: string;
-    tardanza: boolean;
-  }>>([]);
+  // UI State - Init from URL
+  const [timeRange, setTimeRange] = useState<TimeRange>((searchParams.get('timeRange') as TimeRange) || 'day');
+  const [scopeType, setScopeType] = useState<ScopeType>((searchParams.get('scopeType') as ScopeType) || 'all');
+  const [selectedScopeId, setSelectedScopeId] = useState<string>(searchParams.get('scopeId') || '');
+  const [loading, setLoading] = useState(true);
+  const [chartMode, setChartMode] = useState<ChartMode>((searchParams.get('chartMode') as ChartMode) || 'attendance');
+
+  // Custom Date Range State - Init from URL
+  const [startDate, setStartDate] = useState(searchParams.get('startDate') || new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(searchParams.get('endDate') || new Date().toISOString().split('T')[0]);
+
+  // Sync state changes to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('timeRange', timeRange);
+    params.set('scopeType', scopeType);
+    if (selectedScopeId) params.set('scopeId', selectedScopeId);
+    params.set('chartMode', chartMode);
+
+    if (timeRange === 'custom') {
+      params.set('startDate', startDate);
+      params.set('endDate', endDate);
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [timeRange, scopeType, selectedScopeId, chartMode, startDate, endDate]);
+
+  // Data State
+  const [stats, setStats] = useState({ total: 0, presentes: 0, ausentes: 0, tardanzas: 0, avgTemp: 0, fiebre: 0 });
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+
+  // Select Options
+  const [instituciones, setInstituciones] = useState<Institucion[]>([]);
+  const [cursos, setCursos] = useState<Curso[]>([]);
 
   useEffect(() => {
-    // Actualizar fecha y hora cada segundo
-    const timer = setInterval(() => {
-      setCurrentDateTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
+    // Load options
+    apiRequest('/instituciones/').then(r => r.json()).then(d => setInstituciones(d.results || []));
+    apiRequest('/cursos/').then(r => r.json()).then(d => setCursos(d.results || []));
   }, []);
 
   useEffect(() => {
-    // Obtener asistencias del día actual
-    const hoy = new Date().toISOString().slice(0, 10); // formato YYYY-MM-DD
-    apiRequest(`/asistencias/?fechaHora__date=${hoy}`)
-      .then(async res => {
-        if (!res.ok) {
-          // Si es 401 o token inválido, forzar logout
-          let data;
-          try { data = await res.json(); } catch { data = {}; }
-          if (res.status === 401 || (data && data.code === 'token_not_valid')) {
-            localStorage.removeItem('accessToken');
-            navigate('/login');
-            return Promise.reject('Token inválido o expirado');
-          }
-          throw new Error('Error al obtener asistencias');
-        }
-        return res.json();
-      })
-      .then(data => {
-        const asistencias = data.results || [];
-        setAsistencias(asistencias);
-        
-        // Calcular resumen
-        const total = asistencias.length;
-        const presentes = asistencias.filter((a: any) => a.estado.nombre === 'Presente').length;
-        const ausentes = asistencias.filter((a: any) => a.estado.nombre === 'Ausente').length;
-        setResumenDia({ total, presentes, ausentes });
-        
-        // Calcular asistencias por curso
-        const cursos: { [nombre: string]: { presentes: number; ausentes: number } } = {};
-        asistencias.forEach((a: any) => {
-          const curso = a.persona.curso ? a.persona.curso.nombre : 'Sin curso';
-          if (!cursos[curso]) cursos[curso] = { presentes: 0, ausentes: 0 };
-          if (a.estado.nombre === 'Presente') cursos[curso].presentes++;
-          if (a.estado.nombre === 'Ausente') cursos[curso].ausentes++;
-        });
-        setAsistenciasPorCurso(
-          Object.entries(cursos).map(([curso, vals]) => ({ curso, presentes: vals.presentes, ausentes: vals.ausentes }))
-        );
+    fetchDashboardData();
+  }, [timeRange, scopeType, selectedScopeId, startDate, endDate]);
 
-        // Procesar solo los últimos 5 ingresos del día
-        const asistenciasParaLista = asistencias
-          .filter((a: any) => a.estado.nombre === 'Presente') // Solo presentes
-          .sort((a: any, b: any) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime()) // Más recientes primero
-          .slice(0, 5) // Solo los últimos 5
-          .map((a: any) => {
-            const fecha = new Date(a.fechaHora);
-            const hora = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-            const esTardanza = a.estado.nombre === 'Tardanza' || fecha.getHours() > 8;
-            
-            // Determinar tipo basado en el tipo de persona
-            let tipo = 'alumno';
-            if (a.persona.curso === null) {
-              tipo = a.persona.nombre.includes('Prof.') ? 'profesor' : 'personal';
-            }
-            
-            return {
-              nombre: a.persona.nombre,
-              tipo,
-              hora,
-              tardanza: esTardanza
-            };
-          });
+  // Build filter params shared by stats and chart-data endpoints
+  const buildFilterParams = (): URLSearchParams => {
+    const params = new URLSearchParams();
+    const now = new Date();
+    let startD = new Date();
 
-        setUltimosIngresos(asistenciasParaLista);
+    if (timeRange === 'day') {
+      params.append('fechaHora__date', now.toISOString().split('T')[0]);
+    } else if (timeRange === 'week') {
+      startD.setDate(now.getDate() - 7);
+      params.append('fechaHora__gte', startD.toISOString());
+    } else if (timeRange === 'month') {
+      startD.setMonth(now.getMonth() - 1);
+      params.append('fechaHora__gte', startD.toISOString());
+    } else if (timeRange === 'custom') {
+      params.append('fechaHora__gte', new Date(startDate).toISOString());
+      const endD = new Date(endDate);
+      endD.setHours(23, 59, 59);
+      params.append('fechaHora__lte', endD.toISOString());
+    }
 
-        // Obtener último personal autorizado (profesor o administrativo)
-        const personalNoEstudiante = asistencias
-          .filter((a: any) => a.persona.curso === null && a.estado.nombre === 'Presente')
-          .sort((a: any, b: any) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime());
-        
-        if (personalNoEstudiante.length > 0) {
-          const ultimo = personalNoEstudiante[0];
-          const fechaHora = new Date(ultimo.fechaHora);
-          setPersonalAutorizado({
-            nombre: ultimo.persona.nombre,
-            tipo: ultimo.persona.nombre.includes('Prof.') ? 'Profesor' : 'Personal Administrativo',
-            ultimaAsistencia: fechaHora.toLocaleString('es-ES')
-          });
-        }
+    // Scope Filters
+    if (scopeType === 'institution' && selectedScopeId) {
+      params.append('institucion', selectedScopeId);
+    } else if (scopeType === 'course' && selectedScopeId) {
+      params.append('horario__curso', selectedScopeId);
+    }
 
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(typeof err === 'string' ? null : err.message);
-        setLoading(false);
-      });
-  }, [navigate]);
+    return params;
+  };
 
-  // Estado para personal autorizado (último personal en ingresar)
-  const [personalAutorizado, setPersonalAutorizado] = useState<{
-    nombre: string;
-    tipo: string;
-    ultimaAsistencia: string;
-  } | null>(null);
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const filterParams = buildFilterParams();
+
+      // Fetch stats and chart data in PARALLEL
+      const statsParams = new URLSearchParams(filterParams.toString());
+      const chartParams = new URLSearchParams(filterParams.toString());
+      chartParams.append('group_by', timeRange === 'day' ? 'hour' : 'date');
+
+      const [statsRes, chartRes] = await Promise.all([
+        apiRequest(`/asistencias/stats/?${statsParams.toString()}`),
+        apiRequest(`/asistencias/chart-data/?${chartParams.toString()}`),
+      ]);
+
+      // Process stats
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(prev => ({
+          ...prev,
+          total: statsData.total,
+          presentes: statsData.presentes,
+          ausentes: statsData.ausentes,
+          tardanzas: statsData.tardanzas,
+          fiebre: statsData.fiebre,
+        }));
+      }
+
+      // Process chart data
+      if (chartRes.ok) {
+        const chartResult: ChartData[] = await chartRes.json();
+        setChartData(chartResult);
+
+        // Calculate avgTemp from chart data
+        const tempsWithData = chartResult.filter(d => d.avgTemp > 0);
+        const avgTemp = tempsWithData.length
+          ? Number((tempsWithData.reduce((sum, d) => sum + d.avgTemp, 0) / tempsWithData.length).toFixed(1))
+          : 0;
+        setStats(prev => ({ ...prev, avgTemp }));
+      }
+
+      // Handle 401
+      if (statsRes.status === 401 || chartRes.status === 401) {
+        localStorage.removeItem('accessToken');
+        navigate('/login');
+        return;
+      }
+
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate dynamic Y-axis domains based on actual data
+  const attendanceDomain = useMemo((): [number, number] => {
+    if (chartData.length === 0) return [0, 10];
+
+    const allValues = chartData.flatMap(d => [d.presentes, d.tardanzas]);
+    const minVal = Math.min(...allValues);
+    const maxVal = Math.max(...allValues);
+
+    // If all values are 0, show 0 to 10
+    if (maxVal === 0) return [0, 10];
+
+    const range = maxVal - minVal;
+
+    // Add padding: at least 1 unit or 20% of range
+    const padding = Math.max(1, Math.ceil(range * 0.2));
+
+    const domainMin = Math.max(0, minVal - padding);
+    const domainMax = maxVal + padding;
+
+    return [domainMin, domainMax];
+  }, [chartData]);
+
+  const temperatureDomain = useMemo((): [number, number] => {
+    if (chartData.length === 0) return [35, 39];
+
+    const temps = chartData.filter(d => d.avgTemp > 0).map(d => d.avgTemp);
+    if (temps.length === 0) return [35, 39];
+
+    const minTemp = Math.min(...temps);
+    const maxTemp = Math.max(...temps);
+    const range = maxTemp - minTemp;
+
+    // For temperature: pad by at least 0.5°C or 20% of range
+    const padding = Math.max(0.5, range * 0.2);
+
+    const domainMin = Math.floor((minTemp - padding) * 2) / 2; // Round down to nearest 0.5
+    const domainMax = Math.ceil((maxTemp + padding) * 2) / 2;  // Round up to nearest 0.5
+
+    return [domainMin, domainMax];
+  }, [chartData]);
+
+
+  // Helper function to build Asistencias URL with current dashboard filters
+  const buildAsistenciasUrl = (additionalParams: Record<string, string> = {}) => {
+    const params = new URLSearchParams();
+
+    // Add date filters based on current dashboard state
+    const now = new Date();
+    let startD = new Date();
+
+    if (timeRange === 'day') {
+      const dayStr = now.toISOString().split('T')[0];
+      params.append('fechaInicio', dayStr);
+      params.append('fechaFin', dayStr);
+    } else if (timeRange === 'week') {
+      startD.setDate(now.getDate() - 7);
+      params.append('fechaInicio', startD.toISOString().split('T')[0]);
+      params.append('fechaFin', now.toISOString().split('T')[0]);
+    } else if (timeRange === 'month') {
+      startD.setMonth(now.getMonth() - 1);
+      params.append('fechaInicio', startD.toISOString().split('T')[0]);
+      params.append('fechaFin', now.toISOString().split('T')[0]);
+    } else if (timeRange === 'custom') {
+      params.append('fechaInicio', startDate);
+      params.append('fechaFin', endDate);
+    }
+
+    // Add scope filter if applicable
+    if (scopeType === 'course' && selectedScopeId) {
+      params.append('curso', selectedScopeId);
+    }
+
+    // Add additional parameters (like estado, minTemp, etc.)
+    Object.entries(additionalParams).forEach(([key, value]) => {
+      params.append(key, value);
+    });
+
+    const queryString = params.toString();
+    return `/asistencias${queryString ? `?${queryString}` : ''}`;
+  };
 
   return (
-    <div className="container-fluid px-3 px-md-4 mt-3">
-      {/* Header minimalista */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h3 mb-0 text-white">
-          <i className="bi bi-speedometer2 me-2 text-primary"></i>Dashboard
-        </h1>
-        <div className="text-end">
-          <div className="text-muted small">
-                  {currentDateTime.toLocaleDateString('es-ES', { 
-                    weekday: 'long', 
-              day: 'numeric',
-              month: 'long'
-                  })}
+    <div className="dashboard-container">
+      {/* Header with Filters */}
+      <div className="dashboard-header">
+        <div>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Panel de Control
+          </h1>
+          <p style={{ color: '#64748b' }}>Monitoreo en tiempo real</p>
+        </div>
+
+        <div className="filters-container">
+          {/* Time Range */}
+          <div className="filter-group">
+            <button className={`filter-btn ${timeRange === 'day' ? 'active' : ''}`} onClick={() => setTimeRange('day')}>Día</button>
+            <button className={`filter-btn ${timeRange === 'week' ? 'active' : ''}`} onClick={() => setTimeRange('week')}>Semana</button>
+            <button className={`filter-btn ${timeRange === 'month' ? 'active' : ''}`} onClick={() => setTimeRange('month')}>Mes</button>
+            <button className={`filter-btn ${timeRange === 'custom' ? 'active' : ''}`} onClick={() => setTimeRange('custom')}>Personalizado</button>
           </div>
-          <div className="text-primary fw-bold">
-                  {currentDateTime.toLocaleTimeString('es-ES', { 
-                    hour: '2-digit', 
-              minute: '2-digit'
-                  })}
-          </div>
+
+          {timeRange === 'custom' && (
+            <div className="custom-range-inputs" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="date"
+                className="ch-input"
+                style={{ width: '130px', padding: '6px' }}
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+              />
+              <span style={{ color: '#64748b' }}>—</span>
+              <input
+                type="date"
+                className="ch-input"
+                style={{ width: '130px', padding: '6px' }}
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', height: '24px' }}></div>
+
+          {/* Scope Selector */}
+          <select
+            className="scope-select"
+            value={scopeType}
+            onChange={(e) => {
+              setScopeType(e.target.value as ScopeType);
+              setSelectedScopeId('');
+            }}
+          >
+            <option value="all">Todos los Cursos</option>
+            <option value="institution">Por Institución</option>
+            <option value="course">Por Curso Specifico</option>
+          </select>
+
+          {scopeType !== 'all' && (
+            <select
+              className="scope-select"
+              value={selectedScopeId}
+              onChange={(e) => setSelectedScopeId(e.target.value)}
+            >
+              <option value="">Seleccionar...</option>
+              {scopeType === 'institution'
+                ? instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)
+                : cursos.map(c => <option key={c.idCurso} value={c.idCurso}>{c.nombre}</option>)
+              }
+            </select>
+          )}
         </div>
       </div>
-      {loading ? (
-        <div className="text-center my-5">
-          <div className="spinner-border text-info" role="status">
-            <span className="visually-hidden">Cargando...</span>
+
+      {/* Metrics Grid */}
+      <div className="stats-grid">
+        <div onClick={() => navigate(buildAsistenciasUrl())} style={{ cursor: 'pointer' }}>
+          <StatCard icon="bi-people-fill" label="Total Registros" value={stats.total} color="primary" />
+        </div>
+        <div onClick={() => navigate(buildAsistenciasUrl({ estado: 'Presente' }))} style={{ cursor: 'pointer' }}>
+          <StatCard icon="bi-check-circle-fill" label="Presentes" value={stats.presentes} color="success" />
+        </div>
+        <div onClick={() => navigate(buildAsistenciasUrl({ estado: 'Tardanza' }))} style={{ cursor: 'pointer' }}>
+          <StatCard icon="bi-exclamation-circle-fill" label="Tardanzas" value={stats.tardanzas} color="warning" />
+        </div>
+        <div onClick={() => navigate(buildAsistenciasUrl({ minTemp: '37.6' }))} style={{ cursor: 'pointer' }}>
+          <StatCard icon="bi-thermometer-high" label="Fiebre (>37.5)" value={stats.fiebre} color="danger" />
+        </div>
+      </div>
+
+      {/* Merged Chart Section */}
+      <div className="dashboard-card chart-container" style={{ gridColumn: '1 / -1', minHeight: '400px' }}>
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h3 className="card-title">
+            {chartMode === 'attendance' ? 'Tendencia de Asistencia' : 'Historial de Temperatura'}
+          </h3>
+          <div className="filter-group">
+            <button
+              className={`filter-btn ${chartMode === 'attendance' ? 'active' : ''}`}
+              onClick={() => setChartMode('attendance')}
+            >
+              Asistencia
+            </button>
+            <button
+              className={`filter-btn ${chartMode === 'temperature' ? 'active' : ''}`}
+              onClick={() => setChartMode('temperature')}
+            >
+              Temperatura
+            </button>
           </div>
         </div>
-      ) : error ? (
-        <div className="alert alert-danger">{error}</div>
-      ) : (
-        <>
-          {/* Métricas principales - con gradientes coloridos */}
-          <div className="row mb-4 g-3">
-            <div className="col-lg-3 col-md-6">
-              <div className="card shadow border-0 rounded-3" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
-                <div className="card-body text-center py-3 text-white">
-                  <i className="bi bi-people-fill fs-1 mb-2 text-warning"></i>
-                  <h3 className="mb-1">{resumenDia.total}</h3>
-                  <p className="mb-0 small">Total Efectivos</p>
-                </div>
-              </div>
-                  </div>
-            <div className="col-lg-3 col-md-6">
-              <div className="card shadow border-0 rounded-3" style={{background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
-                <div className="card-body text-center py-3 text-white">
-                  <i className="bi bi-person-check-fill fs-1 mb-2 text-success"></i>
-                  <h3 className="mb-1">{resumenDia.presentes}</h3>
-                  <p className="mb-0 small">Presentes</p>
-                </div>
-              </div>
-            </div>
-            <div className="col-lg-3 col-md-6">
-              <div className="card shadow border-0 rounded-3" style={{background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'}}>
-                <div className="card-body text-center py-3 text-white">
-                  <i className="bi bi-person-x-fill fs-1 mb-2 text-danger"></i>
-                  <h3 className="mb-1">{resumenDia.ausentes}</h3>
-                  <p className="mb-0 small">Ausentes</p>
-                </div>
-              </div>
-            </div>
-            <div className="col-lg-3 col-md-6">
-              <div className="card shadow border-0 rounded-3" style={{background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'}}>
-                <div className="card-body text-center py-3 text-white">
-                  <i className="bi bi-percent fs-1 mb-2 text-info"></i>
-                  <h3 className="mb-1">{resumenDia.total > 0 ? Math.round((resumenDia.presentes / resumenDia.total) * 100) : 0}%</h3>
-                  <p className="mb-0 small">Asistencia</p>
-                </div>
-              </div>
+
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350 }}>
+            <div className="dashboard-spinner"></div>
+          </div>
+        ) : chartData.length === 0 ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350, color: '#64748b', fontSize: '1.1rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <i className="bi bi-bar-chart" style={{ fontSize: '3rem', display: 'block', marginBottom: '12px', opacity: 0.5 }}></i>
+              No hay datos para el período seleccionado
             </div>
           </div>
-
-          {/* Información adicional - layout más limpio */}
-          <div className="row mb-4 g-3">
-            <div className="col-md-4">
-              <div className="card h-100 shadow-sm border-0">
-                <div className="card-body text-center py-4">
-                  <div className="mb-3">
-                    <i className="bi bi-person-badge fs-1 text-primary"></i>
-                </div>
-                  <h6 className="fw-bold mb-2">Personal Autorizado</h6>
-                  {personalAutorizado ? (
-                    <>
-                      <p className="mb-1 fw-bold">{personalAutorizado.nombre}</p>
-                      <small className="text-muted">{personalAutorizado.tipo}</small>
-                      <br />
-                      <small className="text-muted">{personalAutorizado.ultimaAsistencia}</small>
-                    </>
-                  ) : (
-                    <p className="text-muted small">Sin registros hoy</p>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="col-md-8">
-              <div className="card h-100 shadow-sm border-0" style={{backgroundColor: '#2c3e50', color: 'white'}}>
-                <div className="card-header border-0 py-3" style={{backgroundColor: '#34495e', color: 'white'}}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h6 className="mb-0 fw-bold text-white">
-                      <i className="bi bi-clock-history me-2 text-primary"></i>Últimos Ingresos
-                    </h6>
-                    <span className="badge bg-primary">Últimos 5</span>
-                  </div>
-                </div>
-                <div className="card-body p-0">
-                  {ultimosIngresos.length > 0 ? (
-                  <div className="list-group list-group-flush">
-                      {ultimosIngresos.map((asistencia, index) => (
-                        <div key={index} className="list-group-item d-flex justify-content-between align-items-center border-0 py-3" style={{backgroundColor: '#2c3e50', color: 'white', borderBottom: '1px solid #34495e'}}>
-                          <div className="d-flex align-items-center">
-                            <div className={`me-3 rounded-circle d-flex align-items-center justify-content-center ${
-                              asistencia.tipo === 'profesor' ? 'bg-warning' : 
-                              asistencia.tipo === 'alumno' ? 'bg-primary' : 'bg-secondary'
-                            }`} style={{width: '40px', height: '40px'}}>
-                              <i className={`bi ${
-                                asistencia.tipo === 'profesor' ? 'bi-mortarboard' : 
-                                asistencia.tipo === 'alumno' ? 'bi-person' : 'bi-gear'
-                              } text-white`}></i>
-                            </div>
-                        <div>
-                          <div className="fw-bold text-white">{asistencia.nombre}</div>
-                              <small className="text-light">
-                            {asistencia.tipo === 'profesor' ? 'Profesor' : 
-                                 asistencia.tipo === 'alumno' ? 'Alumno' : 'Personal'}
-                          </small>
-                        </div>
-                          </div>
-                          <span className={`badge ${asistencia.tardanza ? 'bg-warning' : 'bg-success'} fs-6`}>
-                          {asistencia.hora}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  ) : (
-                    <div className="text-center py-5">
-                      <i className="bi bi-clock fs-1 text-light mb-3"></i>
-                      <p className="text-light">No hay ingresos registrados hoy</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-          {/* Calendario de Asistencias */}
-          <div className="row mb-3">
-            <div className="col-12">
-              <div className="card shadow border-0 rounded-3">
-                <div className="card-header bg-light py-2">
-                  <h6 className="mb-0">
-                    <i className="bi bi-calendar3 me-2"></i>Calendario de Asistencias
-                  </h6>
-                </div>
-                <div className="card-body">
-              <AttendanceCalendar 
-                onDateSelect={(date) => {
-                      // Lógica para cuando se selecciona una fecha en el calendario
-                  console.log('Fecha seleccionada:', date);
-                }}
+        ) : (
+          <ResponsiveContainer width="100%" height={350}>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorPresentes" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorTardanzas" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis
+                stroke="#64748b"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+                domain={chartMode === 'temperature' ? temperatureDomain : attendanceDomain}
+                unit={chartMode === 'temperature' ? '°C' : ''}
+                allowDataOverflow={false}
               />
-                </div>
-              </div>
-            </div>
-          </div>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
+              <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} />
 
-        </>
-      )}
+              {chartMode === 'attendance' ? (
+                <>
+                  <Area
+                    type="monotone"
+                    dataKey="presentes"
+                    name="Presentes"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorPresentes)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="tardanzas"
+                    name="Tardanzas"
+                    stroke="#f59e0b"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorTardanzas)"
+                  />
+                </>
+              ) : (
+                <Area
+                  type="monotone"
+                  dataKey="avgTemp"
+                  name="Promedio Temp"
+                  stroke="#ef4444"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorTemp)"
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
     </div>
   );
 };
 
-export default Dashboard; 
+interface StatCardProps {
+  icon: string;
+  label: string;
+  value: string | number;
+  color: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color }) => (
+  <div className="stat-card">
+    <div className={`stat-icon-wrapper ${color}`}>
+      <i className={`bi ${icon}`}></i>
+    </div>
+    <div>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
+    </div>
+  </div>
+);
+
+export default Dashboard;

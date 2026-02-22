@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import './Sidebar.css';
+// import './Sidebar.css'; // Removed in favor of App.css global styles
 
 interface SidebarProps {
   collapsed: boolean;
@@ -11,30 +11,36 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
   const location = useLocation();
 
+  const menuItems = [
+    { path: '/dashboard', icon: 'bi-grid-1x2-fill', label: 'Dashboard' },
+    { path: '/personas', icon: 'bi-people-fill', label: 'Personas' },
+    { path: '/asistencias', icon: 'bi-calendar-check-fill', label: 'Asistencias' },
+    { path: '/cursos-horarios', icon: 'bi-calendar-week-fill', label: 'Cursos y Horarios' },
+  ];
+
   return (
     <nav className={`sidebar-dark${collapsed ? ' collapsed' : ''}`}>
-      <button className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)}>
-        <i className="bi bi-list"></i>
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        {/* Placeholder for Logo if needed */}
+        {!collapsed && <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.2rem', color: 'white' }}>AsistencIA</h3>}
+
+        <button className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)} style={{ margin: 0 }}>
+          <i className={`bi ${collapsed ? 'bi-list' : 'bi-chevron-left'}`}></i>
+        </button>
+      </div>
+
       <ul>
-        <li className={location.pathname === '/dashboard' ? 'active' : ''}>
-          <Link to="/dashboard"><i className="bi bi-house"></i> <span>Dashboard</span></Link>
-        </li>
-        <li className={location.pathname === '/personas' ? 'active' : ''}>
-          <Link to="/personas"><i className="bi bi-people"></i> <span>Personas</span></Link>
-        </li>
-        <li className={location.pathname === '/asistencias' ? 'active' : ''}>
-          <Link to="/asistencias"><i className="bi bi-clipboard-check"></i> <span>Asistencias</span></Link>
-        </li>
-        <li className={location.pathname === '/reportes' ? 'active' : ''}>
-          <Link to="/reportes"><i className="bi bi-bar-chart"></i> <span>Reportes</span></Link>
-        </li>
-        <li className={location.pathname === '/polo-tecnologico' ? 'active' : ''}>
-          <Link to="/polo-tecnologico"><i className="bi bi-cpu"></i> <span>Tecno Aliados</span></Link>
-        </li>
+        {menuItems.map((item) => (
+          <li key={item.path} className={location.pathname === item.path ? 'active' : ''}>
+            <Link to={item.path} title={collapsed ? item.label : ''}>
+              <i className={`bi ${item.icon}`}></i>
+              {!collapsed && <span>{item.label}</span>}
+            </Link>
+          </li>
+        ))}
       </ul>
     </nav>
   );
 };
 
-export default Sidebar; 
+export default Sidebar;

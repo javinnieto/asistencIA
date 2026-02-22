@@ -180,7 +180,7 @@ sleep 15
 echo "✅ Sistema iniciado correctamente!"
 echo ""
 echo "🌐 Servicios disponibles:"
-echo "   - Frontend (React): http://localhost:3000"
+echo "   - Frontend (React): http://localhost:8088"
 echo "   - Backend (Django): http://localhost:8000"
 echo "   - API: http://localhost:8000/api"
 echo "   - Admin Django: http://localhost:8000/admin"
