@@ -90,7 +90,7 @@ DATABASES = {
         'NAME': os.environ.get('DJANGO_DB_NAME', 'asistencias'),
         'USER': os.environ.get('DJANGO_DB_USER', 'root'),
         'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', '1234'),
-        'HOST': os.environ.get('DJANGO_DB_HOST', 'db'),
+        'HOST': os.environ.get('DJANGO_DB_HOST', 'mysql'),
         'PORT': os.environ.get('DJANGO_DB_PORT', '3306'),
     }
 }
