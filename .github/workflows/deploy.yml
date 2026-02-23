@@ -59,18 +59,18 @@ jobs:
         run: |
           cd ~/asistencIA
           echo "📥 Actualizando código..."
-          git pull origin main
+          sudo git pull origin main
 
           echo "🏗️ Reconstruyendo Docker..."
-          docker compose up -d --build
+          sudo docker compose up -d --build
 
           echo "🔄 Migraciones..."
-          docker compose exec -T backend python app/manage.py migrate
+          sudo docker compose exec -T backend python app/manage.py migrate
 
           echo "✨ Statics..."
-          docker compose exec -T backend python app/manage.py collectstatic --noinput
+          sudo docker compose exec -T backend python app/manage.py collectstatic --noinput
 
           echo "🧹 Limpieza de imágenes..."
-          docker image prune -f
+          sudo docker image prune -f
 
           echo "✅ ¡Despliegue local completado!"
