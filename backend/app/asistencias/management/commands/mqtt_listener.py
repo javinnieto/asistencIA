@@ -18,7 +18,10 @@ logger = logging.getLogger(__name__)
 # Configuración MQTT - USANDO SETTINGS DE DJANGO
 BROKER = settings.MQTT_BROKER
 PORT = settings.MQTT_PORT
-TOPIC = 'mqtt/face/1379241/#'  # Comodín para recibir todos los subtopics
+DEVICE_ID = '1379241'
+TOPIC_DEVICE = f'mqtt/face/{DEVICE_ID}/#'
+TOPIC_HEARTBEAT = 'mqtt/face/heartbeat'
+TOPIC_OFFLINE = 'mqtt/face/basic'
 KEEPALIVE = 60
 
 
@@ -81,10 +84,12 @@ class Command(BaseCommand):
     def on_connect(self, client, userdata, flags, rc):
         """Callback cuando se conecta al broker"""
         if rc == 0:
-            self.stdout.write(self.style.SUCCESS('✅ Conectado al broker MQTT'))
-            client.subscribe(TOPIC, qos=1)
-            self.stdout.write(self.style.SUCCESS(f'📡 Suscripto al topic: {TOPIC}'))
-            logger.info(f'Conectado al broker MQTT y suscripto a {TOPIC}')
+            self.stdout.write(self.style.SUCCESS(f'✅ Conectado al broker MQTT (ID: {DEVICE_ID})'))
+            # Suscribirse solo a lo necesario
+            client.subscribe(TOPIC_DEVICE, qos=1)
+            client.subscribe(TOPIC_HEARTBEAT, qos=1)
+            client.subscribe(TOPIC_OFFLINE, qos=1)
+            self.stdout.write(self.style.SUCCESS(f'📡 Suscripto a eventos, heartbeat y offline para {DEVICE_ID}'))
         else:
             error_msg = f'❌ Error de conexión MQTT: {rc}'
             self.stdout.write(self.style.ERROR(error_msg))
@@ -116,13 +121,27 @@ class Command(BaseCommand):
             operator = data.get('operator')
             info = data.get('info', {})
             
-            # Validar operador
+            # 1. Filtrar por ID de dispositivo (facesluiceId en Heartbeat/Offline)
+            device_msg_id = info.get('facesluiceId')
+            
+            # 2. Validar operador
             if operator == 'RecPush':
-                # Procesar asistencia
-                self.procesar_asistencia(info, client, msg.topic)
+                # El evento de asistencia viene en el tópico específico del dispositivo
+                if DEVICE_ID in msg.topic:
+                    self.procesar_asistencia(info, client, msg.topic)
+            
+            elif operator == 'HeartBeat':
+                if device_msg_id == DEVICE_ID:
+                    self.stdout.write(self.style.SUCCESS(f'💓 HEARTBEAT de {DEVICE_ID} - Equipo Online'))
+            
+            elif operator == 'Offline':
+                if device_msg_id == DEVICE_ID:
+                    self.stdout.write(self.style.WARNING(f'🔌 AVISO: El equipo {DEVICE_ID} se ha desconectado (Offline notice)'))
+            
             else:
-                self.stdout.write(self.style.WARNING(f'⚠️ Mensaje ignorado (operator={operator})'))
-                logger.warning(f'Mensaje ignorado - operador incorrecto/no manejado: {operator}')
+                # Otros mensajes (como Register)
+                if DEVICE_ID in msg.topic or device_msg_id == DEVICE_ID:
+                    self.stdout.write(self.style.INFO(f'ℹ️ Mensaje de {DEVICE_ID}: {operator}'))
                 return
             
         except json.JSONDecodeError as e:
