@@ -64,6 +64,9 @@ jobs:
           echo "🏗️ Reconstruyendo Docker..."
           docker compose up -d --build
 
+          echo "⏳ Esperando a que los servicios se estabilicen..."
+          sleep 15
+
           echo "🔄 Migraciones..."
           docker compose exec -T backend python app/manage.py migrate
 

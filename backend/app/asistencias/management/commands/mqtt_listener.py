@@ -133,7 +133,7 @@ class Command(BaseCommand):
             
             elif operator == 'Online':
                 if device_msg_id == DEVICE_ID:
-                    self.stdout.write(self.style.SUCCESS(f'� EQUIPO ONLINE: {DEVICE_ID} detectado'))
+                    self.stdout.write(self.style.SUCCESS(f'OK - EQUIPO ONLINE: {DEVICE_ID} detectado'))
                     
                     # 💡 SOLUCIÓN OFICIAL (PDF 10.2): Responder Online-Ack
                     response_topic = 'mqtt/face/basic'
@@ -151,7 +151,7 @@ class Command(BaseCommand):
             
             elif operator == 'Offline':
                 if device_msg_id == DEVICE_ID:
-                    self.stdout.write(self.style.WARNING(f'🔌 AVISO: El equipo {DEVICE_ID} se ha desconectado (Offline notice)'))
+                    self.stdout.write(self.style.WARNING(f'AVISO: El equipo {DEVICE_ID} se ha desconectado (Offline notice)'))
             
             elif operator == 'Online-Ack':
                 # Ignorar nuestros propios acuses de recibo para evitar bucles o errores
