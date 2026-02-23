@@ -12,8 +12,7 @@ from asistencias.models import Asistencia, Persona, EstadoAsistencia
 from asistencias.constants import LECTOR_CONFIG, ESTADOS_ASISTENCIA, INSTITUCIONES
 
 # Configuración de logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('mqtt_listener')
 
 # Configuración MQTT - USANDO SETTINGS DE DJANGO
 BROKER = settings.MQTT_BROKER
@@ -114,12 +113,16 @@ class Command(BaseCommand):
             # Decodificar mensaje
             payload = msg.payload.decode('utf-8')
             self.stdout.write(f'📨 Mensaje recibido: {payload[:100]}...')
-            logger.info(f'Mensaje MQTT recibido: {payload}')
-            
             # Parsear JSON
             data = json.loads(payload)
             operator = data.get('operator')
             info = data.get('info', {})
+            
+            # Log inteligente: no mostrar la foto (pic) que es enorme
+            log_data = json.loads(payload)
+            if 'info' in log_data and 'pic' in log_data['info']:
+                log_data['info']['pic'] = '...[FOTO]...'
+            logger.info(f'Mensaje MQTT ({operator}): {json.dumps(log_data)}')
             
             # 1. Filtrar por ID de dispositivo (facesluiceId en Heartbeat/Offline/Online)
             device_msg_id = info.get('facesluiceId')
@@ -158,10 +161,14 @@ class Command(BaseCommand):
                 if device_msg_id == DEVICE_ID:
                     self.stdout.write(self.style.WARNING(f'🔌 AVISO: El equipo {DEVICE_ID} se ha desconectado (Offline notice)'))
             
+            elif operator == 'Online-Ack':
+                # Ignorar nuestros propios acuses de recibo para evitar bucles o errores
+                return
+            
             else:
                 # Otros mensajes (como Register)
                 if DEVICE_ID in msg.topic or device_msg_id == DEVICE_ID:
-                    self.stdout.write(self.style.INFO(f'ℹ️ Mensaje de {DEVICE_ID}: {operator}'))
+                    self.stdout.write(f'ℹ️ Mensaje de {DEVICE_ID}: {operator}')
                 return
             
         except json.JSONDecodeError as e:
