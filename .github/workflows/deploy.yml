@@ -10,7 +10,7 @@ jobs:
   # job 1: CI - Frontend (Corre en GitHub para verificar calidad)
   frontend-ci:
     name: 🏗️ Frontend Build Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # corre en github
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js
@@ -31,7 +31,7 @@ jobs:
   # job 2: CI - Backend (Corre en GitHub para verificar calidad)
   backend-ci:
     name: 🐍 Backend Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # corre en github
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -53,7 +53,7 @@ jobs:
     name: 🚀 Local Deploy
     needs: [frontend-ci, backend-ci]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: self-hosted # <--- Esto le dice que use tu servidor local
+    runs-on: self-hosted # esto corre solamente en el servidor
     steps:
       - name: Pull and Restart
         run: |
