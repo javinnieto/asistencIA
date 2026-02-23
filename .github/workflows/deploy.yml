@@ -1,0 +1,76 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # job 1: CI - Frontend (Corre en GitHub para verificar calidad)
+  frontend-ci:
+    name: 🏗️ Frontend Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          CI: false
+
+  # job 2: CI - Backend (Corre en GitHub para verificar calidad)
+  backend-ci:
+    name: 🐍 Backend Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Django System Check
+        working-directory: backend
+        run: python app/manage.py check
+
+  # job 3: CD - Deployment (ESTE CORRE EN TU SERVIDOR LOCAL)
+  deploy:
+    name: 🚀 Local Deploy
+    needs: [frontend-ci, backend-ci]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: self-hosted # <--- Esto le dice que use tu servidor local
+    steps:
+      - name: Pull and Restart
+        run: |
+          cd ~/asistencIA
+          echo "📥 Actualizando código..."
+          git pull origin main
+
+          echo "🏗️ Reconstruyendo Docker..."
+          docker compose up -d --build
+
+          echo "🔄 Migraciones..."
+          docker compose exec -T backend python app/manage.py migrate
+
+          echo "✨ Statics..."
+          docker compose exec -T backend python app/manage.py collectstatic --noinput
+
+          echo "🧹 Limpieza de imágenes..."
+          docker image prune -f
+
+          echo "✅ ¡Despliegue local completado!"
