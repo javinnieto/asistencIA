@@ -19,7 +19,6 @@ BROKER = settings.MQTT_BROKER
 PORT = settings.MQTT_PORT
 DEVICE_ID = '1379241'
 TOPIC_DEVICE = f'mqtt/face/{DEVICE_ID}/#'
-TOPIC_HEARTBEAT = 'mqtt/face/heartbeat'
 TOPIC_OFFLINE = 'mqtt/face/basic'
 KEEPALIVE = 60
 
@@ -86,9 +85,8 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'✅ Conectado al broker MQTT (ID: {DEVICE_ID})'))
             # Suscribirse solo a lo necesario
             client.subscribe(TOPIC_DEVICE, qos=1)
-            client.subscribe(TOPIC_HEARTBEAT, qos=1)
             client.subscribe(TOPIC_OFFLINE, qos=1)
-            self.stdout.write(self.style.SUCCESS(f'📡 Suscripto a eventos, heartbeat y offline para {DEVICE_ID}'))
+            self.stdout.write(self.style.SUCCESS(f'📡 Suscripto a eventos y offline para {DEVICE_ID}'))
         else:
             error_msg = f'❌ Error de conexión MQTT: {rc}'
             self.stdout.write(self.style.ERROR(error_msg))
@@ -150,12 +148,6 @@ class Command(BaseCommand):
                     }
                     client.publish(response_topic, json.dumps(ack_payload))
                     self.stdout.write(f'📤 Online-Ack enviado a {response_topic}')
-            
-            elif operator == 'HeartBeat':
-                if device_msg_id == DEVICE_ID:
-                    self.stdout.write(self.style.SUCCESS(f'💓 HEARTBEAT de {DEVICE_ID} - Equipo Online'))
-                    # El manual no pide explícitamente ACK para HeartBeat, 
-                    # pero responder un Ok-Ack suele ayudar a la estabilidad
             
             elif operator == 'Offline':
                 if device_msg_id == DEVICE_ID:
