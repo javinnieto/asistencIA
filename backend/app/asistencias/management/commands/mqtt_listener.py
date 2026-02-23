@@ -121,7 +121,7 @@ class Command(BaseCommand):
             operator = data.get('operator')
             info = data.get('info', {})
             
-            # 1. Filtrar por ID de dispositivo (facesluiceId en Heartbeat/Offline)
+            # 1. Filtrar por ID de dispositivo (facesluiceId en Heartbeat/Offline/Online)
             device_msg_id = info.get('facesluiceId')
             
             # 2. Validar operador
@@ -130,9 +130,29 @@ class Command(BaseCommand):
                 if DEVICE_ID in msg.topic:
                     self.procesar_asistencia(info, client, msg.topic)
             
+            elif operator == 'Online':
+                if device_msg_id == DEVICE_ID:
+                    self.stdout.write(self.style.SUCCESS(f'� EQUIPO ONLINE: {DEVICE_ID} detectado'))
+                    
+                    # 💡 SOLUCIÓN OFICIAL (PDF 10.2): Responder Online-Ack
+                    response_topic = 'mqtt/face/basic'
+                    ack_payload = {
+                        "messageId": int(time.time() % 100000),
+                        "operator": "Online-Ack",
+                        "info": {
+                            "facesluiceId": DEVICE_ID,
+                            "result": "ok",
+                            "detail": ""
+                        }
+                    }
+                    client.publish(response_topic, json.dumps(ack_payload))
+                    self.stdout.write(f'📤 Online-Ack enviado a {response_topic}')
+            
             elif operator == 'HeartBeat':
                 if device_msg_id == DEVICE_ID:
                     self.stdout.write(self.style.SUCCESS(f'💓 HEARTBEAT de {DEVICE_ID} - Equipo Online'))
+                    # El manual no pide explícitamente ACK para HeartBeat, 
+                    # pero responder un Ok-Ack suele ayudar a la estabilidad
             
             elif operator == 'Offline':
                 if device_msg_id == DEVICE_ID:
