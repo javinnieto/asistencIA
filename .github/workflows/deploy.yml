@@ -62,7 +62,7 @@ jobs:
           git pull origin main
 
           echo "🏗️ Reconstruyendo Docker..."
-          docker compose up -d --build
+          docker compose up -d --build --remove-orphans
 
           echo "⏳ Esperando a que los servicios se estabilicen..."
           sleep 5
