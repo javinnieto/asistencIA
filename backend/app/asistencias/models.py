@@ -70,6 +70,8 @@ class Horario(models.Model):
 
 class Persona(models.Model):
     """Persona del sistema - completamente genérica"""
+    # Tipos core: 'Estudiante', 'Docente', 'Personal'
+    
     idPersona = models.IntegerField(primary_key=True)
     nombre = models.CharField(max_length=200)
     email = models.EmailField(max_length=254, null=True, blank=True)
@@ -77,7 +79,7 @@ class Persona(models.Model):
     telefono_emergencia = models.CharField(max_length=20, null=True, blank=True)
     foto = models.TextField(null=True, blank=True)  # Stores Base64 strings or URLs from MQTT
     activo = models.BooleanField(default=True)
-    requiere_salida = models.BooleanField(default=False)
+    requiere_salida = models.BooleanField(default=True) # Default True for most people (Docente/Personal)
     
     def __str__(self):
         return self.nombre

@@ -7,6 +7,7 @@ import ntplib
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.db import transaction
+from django import db
 from django.conf import settings
 from asistencias.models import Asistencia, Persona, EstadoAsistencia
 from asistencias.constants import LECTOR_CONFIG, ESTADOS_ASISTENCIA, INSTITUCIONES
@@ -37,10 +38,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Iniciando listener MQTT...'))
         
         # Configurar cliente MQTT
+        client_id = f"django_mqtt_listener_{timezone.now().timestamp()}"
         client = mqtt.Client(
-            client_id=f"django_mqtt_listener_{timezone.now().timestamp()}",
+            client_id=client_id,
             clean_session=True
         )
+        self.stdout.write(f'🤖 Client ID: {client_id}')
         
         # Configurar autenticación si está disponible
         if settings.MQTT_USER and settings.MQTT_PASSWORD:
@@ -135,10 +138,9 @@ class Command(BaseCommand):
                 if device_msg_id == DEVICE_ID:
                     self.stdout.write(self.style.SUCCESS(f'OK - EQUIPO ONLINE: {DEVICE_ID} detectado'))
                     
-                    # 💡 SOLUCIÓN OFICIAL (PDF 10.2): Responder Online-Ack
-                    response_topic = 'mqtt/face/basic'
+                    incoming_msg_id = data.get('messageId', int(time.time() % 100000))
                     ack_payload = {
-                        "messageId": int(time.time() % 100000),
+                        "messageId": incoming_msg_id,
                         "operator": "Online-Ack",
                         "info": {
                             "facesluiceId": DEVICE_ID,
@@ -146,8 +148,8 @@ class Command(BaseCommand):
                             "detail": ""
                         }
                     }
-                    client.publish(response_topic, json.dumps(ack_payload))
-                    self.stdout.write(f'📤 Online-Ack enviado a {response_topic}')
+                    client.publish(msg.topic, json.dumps(ack_payload))
+                    self.stdout.write(f'📤 Online-Ack enviado a {msg.topic}')
             
             elif operator == 'Offline':
                 if device_msg_id == DEVICE_ID:
@@ -177,6 +179,9 @@ class Command(BaseCommand):
     def procesar_asistencia(self, info, client=None, topic=None):
         """Procesa una asistencia recibida por MQTT con lógica flexible"""
         try:
+            # Asegurar que la conexión a la base de datos esté activa
+            db.close_old_connections()
+            
             with transaction.atomic():
                 # ═══════════════════════════════════════════════
                 # 1. EXTRAER DATOS DEL PAYLOAD
@@ -230,10 +235,15 @@ class Command(BaseCommand):
                 creada = False
                 
                 if not persona:
+                    # Si no es alumno (Type 0), por defecto requiere marcar salida
+                    person_type = info.get('PersonType', '1') # Por defecto tratamos como personal si no viene
+                    must_mark_exit = person_type != LECTOR_CONFIG['PERSON_TYPE_ESTUDIANTE']
+                    
                     persona = Persona.objects.create(
                         idPersona=person_id,
                         nombre=nombre or f'Persona {person_id}',
-                        activo=True
+                        activo=True,
+                        requiere_salida=must_mark_exit
                     )
                     
                     if foto_base64 and foto_base64.strip():
@@ -241,16 +251,24 @@ class Command(BaseCommand):
                         persona.save(update_fields=['foto'])
                         self.stdout.write(f'📸 Foto inicial guardada para la nueva persona {persona.nombre}')
                         
-                    self.stdout.write(self.style.SUCCESS(f'🆕 Nueva persona creada: {persona.nombre} (ID: {person_id})'))
+                    status_exit = "SI" if must_mark_exit else "NO"
+                    self.stdout.write(self.style.SUCCESS(f'🆕 Nueva persona: {persona.nombre} (ID: {person_id}, Requiere Salida: {status_exit})'))
                 else:
                     self.stdout.write(f'👤 Persona encontrada: {persona.nombre} (ID: {person_id})')
                     
                     # VERIFICACIÓN CRUZADA DE IDENTIDAD
+                    import re
                     def is_similar(n1, n2):
                         if not n1 or not n2: return True
                         if n1.startswith('Persona ') or n2.startswith('Persona '): return True
-                        words1 = set(n1.lower().split())
-                        words2 = set(n2.lower().split())
+                        
+                        # Normalize names: lowercase and keep only words (alphanumeric)
+                        # Replaces dots, emojis and other symbols with spaces or splits by them
+                        words1 = set(re.findall(r'\w+', n1.lower()))
+                        words2 = set(re.findall(r'\w+', n2.lower()))
+                        
+                        # If characters are not in latin letters, we might need a fallback.
+                        # But \w covers most letters in various languages.
                         return len(words1.intersection(words2)) > 0
                     
                     if not is_similar(persona.nombre, nombre):
