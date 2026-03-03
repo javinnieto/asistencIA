@@ -18,8 +18,7 @@ interface Person {
   estado: 'activo' | 'inactivo';
   foto?: string;
   roles?: any[]; // Full roles data for modal
-  nivelEducativo?: 'Primaria' | 'Secundaria';
-  grado?: string;
+  requiere_salida?: boolean;
 }
 
 const Personas: React.FC = () => {
@@ -75,8 +74,7 @@ const Personas: React.FC = () => {
               estado: (persona.activo !== false ? 'activo' : 'inactivo'),
               foto: persona.foto,
               roles: roles,
-              grado: primaryCourse, // Display primary course in table
-              nivelEducativo: primaryCourse.includes('Año') ? 'Secundaria' : 'Primaria'
+              requiere_salida: persona.requiere_salida || false
             };
           });
           setPersonas(personasTransformadas);
@@ -158,7 +156,8 @@ const Personas: React.FC = () => {
           telefono: personData.telefono,
           activo: personData.estado === 'activo',
           foto: personData.foto,
-          roles: personData.roles // El backend ya sabe manejar esto ahora
+          roles: personData.roles, // El backend ya sabe manejar esto ahora
+          requiere_salida: personData.requiere_salida || false
         };
 
         const response = await apiRequest(`/personas/${selectedPerson.id}/`, {
@@ -193,8 +192,7 @@ const Personas: React.FC = () => {
             estado: updatedPersonFromBE.activo ? 'activo' : 'inactivo',
             foto: updatedPersonFromBE.foto,
             roles: roles,
-            grado: primaryCourse,
-            nivelEducativo: primaryCourse.includes('Año') ? 'Secundaria' : 'Primaria'
+            requiere_salida: updatedPersonFromBE.requiere_salida || false
           };
 
           setPersonas(prev => prev.map(p => p.id === transformed.id ? transformed : p));

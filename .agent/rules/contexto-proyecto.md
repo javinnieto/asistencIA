@@ -6,6 +6,12 @@ trigger: always_on
 
 Esta regla contiene la información crítica sobre la infraestructura, tecnologías y convenciones del proyecto para asegurar consistencia en el desarrollo.
 
+Este es un proyecto para gestión de asistencias gracias a un lector de rostros+temperatura que funciona por MQTT, el mismo es cliente y el broker sería un mosquitto que funciona en este proyecto:
+
+- Básicamente este proyecto tiene el front y el back necesarios para poder gestionar las asistencias de las personas que ingresan/salen de la escuela ISAE, tanto alumnos como personal en general.
+
+- aquí se pueden gestionar las instituciones a las cuales pertenence la persona, sus datos personales y una foto (que se extrae principalmente del lector de asistencias).
+
 ## Infraestructura y Puertos (Docker)
 
 El proyecto utiliza Docker Compose para la orquestación. Los puertos expuestos en el host son:

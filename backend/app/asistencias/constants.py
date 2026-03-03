@@ -3,10 +3,8 @@
 # Tipos de persona en ISAE
 TIPOS_ISAE = {
     'ESTUDIANTE': 'Estudiante',
-    'PROFESOR': 'Profesor', 
-    'ADMINISTRATIVO': 'Personal Administrativo',
-    'MANTENIMIENTO': 'Personal de Mantenimiento',
-    'DIRECTOR': 'Director'
+    'DOCENTE': 'Docente',
+    'PERSONAL': 'Personal'
 }
 
 # Instituciones

@@ -46,7 +46,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
     estado: 'activo',
     foto: '',
     roles: [],
-    requiere_salida: false
+    requiere_salida: true
   });
 
   const [institutions, setInstitutions] = useState<any[]>([]);
