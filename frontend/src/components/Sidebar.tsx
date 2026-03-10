@@ -37,13 +37,12 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
             </Link>
           </li>
         ))}
-
-        {/* Usuarios — solo admins */}
+        {/* Instituciones — solo admins */}
         {isAdmin && (
-          <li className={location.pathname === '/usuarios' ? 'active' : ''}>
-            <Link to="/usuarios" title={collapsed ? 'Usuarios' : ''}>
-              <i className="bi bi-person-lock"></i>
-              {!collapsed && <span>Usuarios</span>}
+          <li className={location.pathname === '/instituciones' ? 'active' : ''}>
+            <Link to="/instituciones" title={collapsed ? 'Instituciones' : ''}>
+              <i className="bi bi-building"></i>
+              {!collapsed && <span>Instituciones</span>}
             </Link>
           </li>
         )}

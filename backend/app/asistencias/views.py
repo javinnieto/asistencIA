@@ -1,4 +1,7 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, mixins
+from simple_history.models import HistoricalRecords
+from django.contrib.admin.models import LogEntry, ADDITION, CHANGE, DELETION
+from django.contrib.contenttypes.models import ContentType
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS
@@ -39,7 +42,38 @@ class SoloAdminPuedeBorrar(BasePermission):
         return True
 
 
-class InstitucionViewSet(viewsets.ModelViewSet):
+class AuditLogMixin:
+    """
+    Mixin para registrar acciones en LogEntry de Django y en Simple History.
+    Esto hace que las acciones de la API aparezcan en el panel "Acciones Recientes" del Admin.
+    """
+    def _log_action(self, instance, action_flag, message=""):
+        try:
+            LogEntry.objects.log_action(
+                user_id=self.request.user.id,
+                content_type_id=ContentType.objects.get_for_model(instance).pk,
+                object_id=instance.pk,
+                object_repr=str(instance),
+                action_flag=action_flag,
+                change_message=message or f"{'Creado' if action_flag==ADDITION else 'Modificado'} vía API"
+            )
+        except Exception:
+            pass
+
+    def perform_create(self, serializer):
+        instance = serializer.save(_history_user=self.request.user)
+        self._log_action(instance, ADDITION)
+
+    def perform_update(self, serializer):
+        instance = serializer.save(_history_user=self.request.user)
+        self._log_action(instance, CHANGE)
+
+    def perform_destroy(self, instance):
+        self._log_action(instance, DELETION, message="Eliminado vía API")
+        instance.delete()
+
+
+class InstitucionViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Institucion.objects.all()
     serializer_class = InstitucionSerializer
     permission_classes = [EsAdminOGuardiaParaEscritura]
@@ -47,7 +81,7 @@ class InstitucionViewSet(viewsets.ModelViewSet):
     search_fields = ['nombre', 'descripcion']
 
 
-class TipoPersonaViewSet(viewsets.ModelViewSet):
+class TipoPersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = TipoPersona.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -59,8 +93,14 @@ class TipoPersonaViewSet(viewsets.ModelViewSet):
             return TipoPersonaCreateSerializer
         return TipoPersonaSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(_history_user=self.request.user)
 
-class CursoViewSet(viewsets.ModelViewSet):
+    def perform_update(self, serializer):
+        serializer.save(_history_user=self.request.user)
+
+
+class CursoViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Curso.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -72,9 +112,15 @@ class CursoViewSet(viewsets.ModelViewSet):
             return CursoCreateSerializer
         return CursoSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(_history_user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(_history_user=self.request.user)
 
 
-class HorarioViewSet(viewsets.ModelViewSet):
+
+class HorarioViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Horario.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -85,12 +131,18 @@ class HorarioViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return HorarioCreateSerializer
         return HorarioSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(_history_user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(_history_user=self.request.user)
     
     # Propagate logic removed: Schedules are now strictly linked to Cursos.
 
 
 
-class PersonaViewSet(viewsets.ModelViewSet):
+class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Persona.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -154,7 +206,12 @@ class PersonaViewSet(viewsets.ModelViewSet):
         return Response(PersonaSerializer(instance).data)
 
     def perform_update(self, serializer):
-        serializer.save()
+        instance = serializer.save(_history_user=self.request.user)
+        self._log_action(instance, CHANGE)
+
+    def perform_create(self, serializer):
+        instance = serializer.save(_history_user=self.request.user)
+        self._log_action(instance, ADDITION)
 
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
@@ -165,7 +222,7 @@ class PersonaViewSet(viewsets.ModelViewSet):
         return Response(status=204)
 
 
-class PersonaInstitucionViewSet(viewsets.ModelViewSet):
+class PersonaInstitucionViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = PersonaInstitucion.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -178,7 +235,7 @@ class PersonaInstitucionViewSet(viewsets.ModelViewSet):
         return PersonaInstitucionSerializer
 
 
-class EstadoAsistenciaViewSet(viewsets.ModelViewSet):
+class EstadoAsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = EstadoAsistencia.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
     serializer_class = EstadoAsistenciaSerializer
@@ -186,7 +243,7 @@ class EstadoAsistenciaViewSet(viewsets.ModelViewSet):
     search_fields = ['nombre', 'descripcion']
 
 
-class AsistenciaViewSet(viewsets.ModelViewSet):
+class AsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Asistencia.objects.all().select_related('persona', 'estado', 'horario', 'horario__curso').order_by('-fechaHora')
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -342,7 +399,12 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
             serializer.validated_data['horario'] = None
             serializer.validated_data['llegada_tarde_minutos'] = 0
 
-        serializer.save()
+        instance = serializer.save(_history_user=self.request.user)
+        self._log_action(instance, CHANGE)
+
+    def perform_create(self, serializer):
+        instance = serializer.save(_history_user=self.request.user)
+        self._log_action(instance, ADDITION)
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
@@ -461,7 +523,9 @@ class ConflictoIdentidadViewSet(viewsets.ModelViewSet):
         """Ignora el conflicto y lo borra / marca resuelto"""
         conflicto = self.get_object()
         conflicto.resuelto = True
+        conflicto._history_user = request.user
         conflicto.save()
+        self._log_action(conflicto, CHANGE, message="Conflicto ignorado vía API")
         return Response({'status': 'Conflicto ignorado y resuelto'})
 
     @action(detail=True, methods=['post'])
@@ -478,18 +542,22 @@ class ConflictoIdentidadViewSet(viewsets.ModelViewSet):
         if conflicto.foto_recibida:
             persona.foto = conflicto.foto_recibida
             
+        persona._history_user = request.user
         persona.save()
+        self._log_action(persona, CHANGE, message="Nombre actualizado por conflicto vía API")
         
         # Marcar conflicto como resuelto
         conflicto.resuelto = True
+        conflicto._history_user = request.user
         conflicto.save()
+        self._log_action(conflicto, CHANGE, message="Conflicto resuelto aceptando cambio vía API")
         
         # Opcional: Resolver todos los conflictos pendientes de esta persona
         ConflictoIdentidad.objects.filter(persona_db=persona, resuelto=False).update(resuelto=True)
         
         return Response({'status': 'nombre actualizado y conflicto resuelto'})
 
-class DiaNoLaborableViewSet(viewsets.ModelViewSet):
+class DiaNoLaborableViewSet(AuditLogMixin, viewsets.ModelViewSet):
     """
     API endpoint para gestionar días no laborables (feriados, excepciones).
     """
@@ -503,11 +571,20 @@ class DiaNoLaborableViewSet(viewsets.ModelViewSet):
             return DiaNoLaborableCreateSerializer
         return DiaNoLaborableSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(_history_user=self.request.user)
 
-class ConfiguracionSemanaViewSet(viewsets.ModelViewSet):
+    def perform_update(self, serializer):
+        serializer.save(_history_user=self.request.user)
+
+
+class ConfiguracionSemanaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     """Gestión de la configuración de Semana A/B (singleton)."""
     queryset = ConfiguracionSemana.objects.all()
     serializer_class = ConfiguracionSemanaSerializer
+
+    def perform_update(self, serializer):
+        serializer.save(_history_user=self.request.user)
 
     @action(detail=False, methods=['get'])
     def actual(self, request):
@@ -517,4 +594,164 @@ class ConfiguracionSemanaViewSet(viewsets.ModelViewSet):
         return Response({
             'semana': semana,
             'fecha_referencia': config.fecha_referencia_semana_a.isoformat() if config else None
+        })
+
+
+# ─── Unified Audit Log ───────────────────────────────────────────────────────
+
+from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
+import itertools
+import operator
+
+HISTORY_MODELS = {
+    'Persona':           lambda: Persona.history.model,
+    'Asistencia':        lambda: Asistencia.history.model,
+    'Curso':             lambda: Curso.history.model,
+    'Institucion':       lambda: Institucion.history.model,
+    'TipoPersona':       lambda: TipoPersona.history.model,
+    'Horario':           lambda: Horario.history.model,
+    'PersonaInstitucion':lambda: PersonaInstitucion.history.model,
+    'EstadoAsistencia':  lambda: EstadoAsistencia.history.model,
+    'DiaNoLaborable':    lambda: DiaNoLaborable.history.model,
+}
+
+HISTORY_TYPE_MAP = {'+': 'Creado', '~': 'Modificado', '-': 'Eliminado'}
+
+
+
+SKIP_DIFF_FIELDS = {
+    'history_id', 'history_date', 'history_change_reason',
+    'history_type', 'history_user_id', 'history_user',
+}
+
+def _get_diff(h):
+    """Return list of {field, old, new} for a history record."""
+    if h.history_type == '+':
+        return None  # new object — no diff needed, just say "Creado"
+    if h.history_type == '-':
+        return None  # deleted — no before state
+
+    try:
+        prev = h.prev_record
+    except Exception:
+        prev = None
+
+    if prev is None:
+        return None
+
+    changes = []
+    for field in h._meta.fields:
+        name = field.name
+        if name in SKIP_DIFF_FIELDS or name.startswith('history_'):
+            continue
+            
+        # Use field.attname (like 'horario_id' instead of 'horario') 
+        # to avoid triggering DB lookups for deleted foreign keys.
+        attname = field.attname
+        new_val = getattr(h, attname, None)
+        old_val = getattr(prev, attname, None)
+        
+        if old_val != new_val:
+            changes.append({
+                'field': name,
+                'old':   str(old_val) if old_val is not None else '',
+                'new':   str(new_val) if new_val is not None else '',
+            })
+    return changes if changes else None
+
+
+class AuditLogView(APIView):
+    """
+    GET /api/audit-log/
+    Retorna un historial unificado de todos los cambios registrados por simple_history.
+    Parámetros opcionales:
+      - model: nombre del modelo (ej. 'Persona', 'Asistencia')
+      - user: username
+      - action: '+', '~' o '-'
+      - date_from: YYYY-MM-DD
+      - date_to:   YYYY-MM-DD
+      - page, page_size
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        filter_model  = request.query_params.get('model')
+        filter_user   = request.query_params.get('user')
+        filter_action = request.query_params.get('action')
+        date_from     = request.query_params.get('date_from')
+        date_to       = request.query_params.get('date_to')
+
+        # Only admins see all logs; staff/guardia only see their own
+        is_admin = request.user.is_superuser
+
+        all_entries = []
+
+        models_to_query = {filter_model: HISTORY_MODELS[filter_model]} if filter_model and filter_model in HISTORY_MODELS else HISTORY_MODELS
+
+        for model_name, model_factory in models_to_query.items():
+            HistModel = model_factory()
+            qs = HistModel.objects.all()
+
+            if filter_user:
+                try:
+                    u = User.objects.get(username=filter_user)
+                    qs = qs.filter(history_user=u)
+                except User.DoesNotExist:
+                    qs = qs.none()
+            if not is_admin:
+                qs = qs.filter(history_user=request.user)
+            if filter_action:
+                qs = qs.filter(history_type=filter_action)
+            if date_from:
+                qs = qs.filter(history_date__date__gte=date_from)
+            if date_to:
+                qs = qs.filter(history_date__date__lte=date_to)
+
+            for h in qs.select_related('history_user'):
+                # django-simple-history appends ' as of [timestamp]' to the string representation.
+                # We split it out to give the frontend a clean object name.
+                obj_repr = str(h)
+                if ' as of ' in obj_repr:
+                    obj_repr = obj_repr.split(' as of ')[0]
+                    
+                all_entries.append({
+                    'id':           h.history_id,
+                    'model':        model_name,
+                    'object_id':    str(h.pk),
+                    'object_repr':  obj_repr,
+                    'action':       HISTORY_TYPE_MAP.get(h.history_type, h.history_type),
+                    'action_raw':   h.history_type,
+                    'user':         h.history_user.username if h.history_user else None,
+                    'date':         h.history_date.isoformat(),
+                    'changes':      _get_diff(h),
+                })
+
+        # Sort all entries by date descending
+        all_entries.sort(key=operator.itemgetter('date'), reverse=True)
+
+        # Manual pagination
+        try:
+            page_size = min(int(request.query_params.get('page_size', 50)), 200)
+        except (ValueError, TypeError):
+            page_size = 50
+        try:
+            page = max(int(request.query_params.get('page', 1)), 1)
+        except (ValueError, TypeError):
+            page = 1
+
+        total = len(all_entries)
+        start = (page - 1) * page_size
+        end   = start + page_size
+        results = all_entries[start:end]
+
+        return Response({
+            'count':    total,
+            'page':     page,
+            'pages':    (total + page_size - 1) // page_size if total else 1,
+            'results':  results,
+            'models':   list(HISTORY_MODELS.keys()),
         })

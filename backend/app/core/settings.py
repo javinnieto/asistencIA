@@ -154,7 +154,7 @@ MQTT_PASSWORD = os.environ.get('DJANGO_MQTT_PASSWORD', None)
 
 # Configuración para nginx reverse proxy
 USE_X_FORWARDED_HOST = True
-FORCE_SCRIPT_NAME = '/back'
+# FORCE_SCRIPT_NAME = '/back'  # Comentado para evitar duplicación con el proxy de Nginx
 
 # Django REST Framework
 REST_FRAMEWORK = {
@@ -169,10 +169,10 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
 }
 
-# Configuración JWT - Extender duración de sesión a 20 minutos
+# Configuración JWT - Extender duración de sesión a 60 minutos
 from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=20),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -194,7 +194,7 @@ SIMPLE_JWT = {
     'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
     'JTI_CLAIM': 'jti',
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=20),
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=60),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 

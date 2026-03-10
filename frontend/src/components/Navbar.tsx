@@ -30,7 +30,7 @@ interface JwtPayload {
 
 const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = ({ token, onToggleMobileSidebar }) => {
   const navigate = useNavigate();
-  const { logout, currentUser } = useAuth();
+  const { logout, currentUser, isAdmin } = useAuth();
   const { showToast } = useToast();
 
   const displayName = currentUser || 'Usuario';
@@ -190,13 +190,16 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
                     {displayName}
                   </div>
                   <div className="dropdown-divider"></div>
-                  <Link
-                    to="/instituciones"
-                    className="dropdown-item"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    <i className="bi bi-building me-2"></i>Gestionar Instituciones
-                  </Link>
+                  {isAdmin && (
+                    <>
+                      <Link to="/usuarios" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                        <i className="bi bi-person-lock me-2"></i>Usuarios
+                      </Link>
+                      <Link to="/audit-log" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                        <i className="bi bi-journal-text me-2"></i>Logs de Auditoría
+                      </Link>
+                    </>
+                  )}
                     <button className="dropdown-item" onClick={handleLogout}>
                       <i className="bi bi-box-arrow-right me-2"></i>Logout
                     </button>

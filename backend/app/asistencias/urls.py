@@ -4,7 +4,7 @@ from .views import (
     InstitucionViewSet, TipoPersonaViewSet, CursoViewSet, PersonaViewSet, 
     PersonaInstitucionViewSet, EstadoAsistenciaViewSet, AsistenciaViewSet,
     HorarioViewSet, ConflictoIdentidadViewSet, DiaNoLaborableViewSet,
-    ConfiguracionSemanaViewSet
+    ConfiguracionSemanaViewSet, AuditLogView
 )
 from .views_usuarios import UsuariosViewSet
 
@@ -26,4 +26,5 @@ router.register(r'usuarios', UsuariosViewSet)
 # URLs de la API
 urlpatterns = [
     path('api/', include(router.urls)),
+    path('api/audit-log/', AuditLogView.as_view(), name='audit-log'),
 ]

@@ -94,11 +94,23 @@
   text-align: center;
 }
 
-.app-layout.collapsed .sidebar-dark li a span {
+.app-layout.collapsed .sidebar-dark li a span,
+.sidebar-dark.collapsed li a span {
   opacity: 0;
   width: 0;
   display: none;
   /* Hide for true collapse */
+}
+
+.app-layout.collapsed .sidebar-dark li a,
+.sidebar-dark.collapsed li a {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.app-layout.collapsed .sidebar-dark li a i,
+.sidebar-dark.collapsed li a i {
+  margin: 0;
 }
 
 /* Main Content */
