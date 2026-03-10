@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-// import './Sidebar.css'; // Removed in favor of App.css global styles
 
 interface SidebarProps {
   collapsed: boolean;
@@ -10,6 +10,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
   const location = useLocation();
+  const { isAdmin, currentUser } = useAuth();
 
   const menuItems = [
     { path: '/dashboard', icon: 'bi-grid-1x2-fill', label: 'Dashboard' },
@@ -21,9 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
   return (
     <nav className={`sidebar-dark${collapsed ? ' collapsed' : ''}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        {/* Placeholder for Logo if needed */}
         {!collapsed && <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.2rem', color: 'white' }}>AsistencIA</h3>}
-
         <button className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)} style={{ margin: 0 }}>
           <i className={`bi ${collapsed ? 'bi-list' : 'bi-chevron-left'}`}></i>
         </button>
@@ -38,7 +37,39 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
             </Link>
           </li>
         ))}
+
+        {/* Usuarios — solo admins */}
+        {isAdmin && (
+          <li className={location.pathname === '/usuarios' ? 'active' : ''}>
+            <Link to="/usuarios" title={collapsed ? 'Usuarios' : ''}>
+              <i className="bi bi-person-lock"></i>
+              {!collapsed && <span>Usuarios</span>}
+            </Link>
+          </li>
+        )}
       </ul>
+
+      {/* Pie: usuario actual */}
+      {!collapsed && (
+        <div style={{
+          marginTop: 'auto',
+          paddingTop: '24px',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          fontSize: '0.78rem',
+          color: 'rgba(255,255,255,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 7,
+        }}>
+          <i
+            className={`bi ${isAdmin ? 'bi-shield-fill' : 'bi-eye-fill'}`}
+            style={{ color: isAdmin ? '#a5b4fc' : '#64748b' }}
+          />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {currentUser} &mdash; {isAdmin ? 'Admin' : 'Lectura'}
+          </span>
+        </div>
+      )}
     </nav>
   );
 };

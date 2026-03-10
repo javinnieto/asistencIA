@@ -30,19 +30,10 @@ interface JwtPayload {
 
 const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = ({ token, onToggleMobileSidebar }) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, currentUser } = useAuth();
   const { showToast } = useToast();
 
-  let displayName = '';
-  if (token) {
-    try {
-      const decoded = jwt_decode<any>(token);
-      displayName = decoded.username || decoded.user_id || 'Usuario';
-    } catch (e) {
-      console.error('Error decoding token:', e);
-      displayName = 'Usuario';
-    }
-  }
+  const displayName = currentUser || 'Usuario';
 
   // Dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -161,7 +152,7 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
                         {conflictos.map(c => (
                           <div key={c.idConflicto} className="card border-danger border-1">
                             <div className="card-body p-2">
-                              <small className="text-muted d-block mb-1">{new Date(c.fechaHora).toLocaleTimeString()} - ID: {c.persona_db.idPersona}</small>
+                              <small className="text-muted d-block mb-1">{new Date(c.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ID: {c.persona_db.idPersona}</small>
                               <div className="mb-2" style={{ fontSize: '0.9rem' }}>
                                 Lector: <strong>{c.nombre_recibido}</strong><br/>
                                 BD: <strong>{c.persona_db.nombre}</strong>
@@ -182,7 +173,7 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
               {/* Menú Usuario */}
               <div className="navbar-dropdown-wrapper" ref={dropdownRef}>
                 <button
-                  className="navbar-icon-btn"
+                  className="navbar-icon-btn d-flex align-items-center gap-2"
                   onClick={() => {
                     setDropdownOpen((open) => !open);
                     setConflictosOpen(false);
@@ -190,6 +181,7 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
                   title="Menú de Usuario"
                 >
                 <i className="bi bi-person-circle"></i>
+                <span className="d-none d-md-inline" style={{ fontSize: '0.9rem', fontWeight: 600 }}>{displayName}</span>
               </button>
               {dropdownOpen && (
                 <div className="navbar-dropdown-menu">

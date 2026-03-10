@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import './PersonasTable.css';
+import { normalizeString } from '../utils/normalize';
+import { useAuth } from '../context/AuthContext';
 import ConfirmModal from './ConfirmModal';
+
 
 interface Person {
   id: string;
@@ -14,7 +17,6 @@ interface Person {
   estado: 'activo' | 'inactivo';
   foto?: string;
   roles?: any[];
-  grado?: string;
 }
 
 interface PersonasTableProps {
@@ -30,6 +32,8 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   onDelete,
   onView
 }) => {
+  const { isAdmin, rol } = useAuth();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
   const [filterCurso, setFilterCurso] = useState('');
@@ -40,14 +44,21 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  // Categorías disponibles
-  const categorias = ['Alumno', 'Docente', 'No Docente'];
+  // Categorías disponibles (deben coincidir con los TipoPersona reales)
+  const categorias = useMemo(() => {
+    const tipos = new Set<string>();
+    personas.forEach(p => {
+      p.roles?.forEach(r => {
+        if (r.tipo?.nombre) tipos.add(r.tipo.nombre);
+      });
+    });
+    return Array.from(tipos).sort();
+  }, [personas]);
 
   // Computar cursos únicos
   const cursosDisponibles = useMemo(() => {
     const cursos = new Set<string>();
     personas.forEach(p => {
-      if (p.grado) cursos.add(p.grado);
       p.roles?.forEach(r => {
         if (r.curso && r.curso.nombre) cursos.add(r.curso.nombre);
       });
@@ -58,9 +69,11 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   // Filtrar datos
   const filteredData = useMemo(() => {
     return personas.filter(person => {
-      const matchesSearch =
-        person.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.apellido.toLowerCase().includes(searchTerm.toLowerCase());
+      const fullName = `${person.nombre} ${person.apellido}`.trim();
+      const normalizedSearch = normalizeString(searchTerm);
+      const matchesSearch = !searchTerm ||
+        normalizeString(fullName).includes(normalizedSearch) ||
+        person.id.includes(searchTerm);
 
       const matchesCategoria = !filterCategoria || (
         person.departamento === filterCategoria ||
@@ -68,7 +81,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
       );
 
       const userCourses = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
-      const hasCourse = userCourses.includes(filterCurso) || person.grado === filterCurso;
+      const hasCourse = userCourses.includes(filterCurso);
       const matchesCurso = !filterCurso || hasCourse;
 
       return matchesSearch && matchesCategoria && matchesCurso;
@@ -226,9 +239,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                           borderRadius: '12px',
                           fontSize: '0.7rem',
                           fontWeight: '600',
-                          background: role.tipo?.nombre === 'Alumno' ? '#dbeafe' :
+                          background: role.tipo?.nombre === 'Estudiante' ? '#dbeafe' :
                             role.tipo?.nombre === 'Docente' ? '#fef3c7' : '#f3e8ff',
-                          color: role.tipo?.nombre === 'Alumno' ? '#1e40af' :
+                          color: role.tipo?.nombre === 'Estudiante' ? '#1e40af' :
                             role.tipo?.nombre === 'Docente' ? '#92400e' : '#6b21a8'
                         }}>
                           {role.tipo?.nombre}
@@ -252,28 +265,32 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       >
                         <i className="bi bi-eye-fill"></i>
                       </button>
-                      <button
-                        className="btn-icon btn-edit action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(person);
-                        }}
-                        title="Editar"
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#fbbf24' }}
-                      >
-                        <i className="bi bi-pencil-fill"></i>
-                      </button>
-                      <button
-                        className="btn-icon btn-delete action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRequest(person.id, e);
-                        }}
-                        title="Eliminar"
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#f87171', zIndex: 10, position: 'relative' }}
-                      >
-                        <i className="bi bi-trash-fill"></i>
-                      </button>
+                      {(isAdmin || rol === 'guardia') && (
+                        <button
+                          className="btn-icon btn-edit action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(person);
+                          }}
+                          title="Editar"
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#fbbf24' }}
+                        >
+                          <i className="bi bi-pencil-fill"></i>
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          className="btn-icon btn-delete action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteRequest(person.id, e);
+                          }}
+                          title="Eliminar"
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#f87171', zIndex: 10, position: 'relative' }}
+                        >
+                          <i className="bi bi-trash-fill"></i>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

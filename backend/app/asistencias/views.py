@@ -1,11 +1,13 @@
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     Institucion, TipoPersona, Curso, Persona, PersonaInstitucion, 
-    EstadoAsistencia, Asistencia, Horario, ConflictoIdentidad, DiaNoLaborable
+    EstadoAsistencia, Asistencia, Horario, ConflictoIdentidad, DiaNoLaborable,
+    ConfiguracionSemana
 )
 from .serializers import (
     InstitucionSerializer, TipoPersonaSerializer, CursoSerializer, 
@@ -13,19 +15,41 @@ from .serializers import (
     AsistenciaSerializer, PersonaCreateSerializer, PersonaInstitucionCreateSerializer,
     AsistenciaCreateSerializer, TipoPersonaCreateSerializer, CursoCreateSerializer,
     HorarioSerializer, HorarioCreateSerializer, ConflictoIdentidadSerializer,
-    DiaNoLaborableSerializer, DiaNoLaborableCreateSerializer
+    DiaNoLaborableSerializer, DiaNoLaborableCreateSerializer,
+    ConfiguracionSemanaSerializer
 )
+
+
+class EsAdminOGuardiaParaEscritura(BasePermission):
+    """
+    Permite GET/HEAD/OPTIONS a cualquier usuario autenticado.
+    Para POST/PUT/PATCH/DELETE requiere is_staff=True.
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.is_staff
+
+class SoloAdminPuedeBorrar(BasePermission):
+    def has_permission(self, request, view):
+        if request.method == 'DELETE':
+            return request.user.is_superuser
+        return True
 
 
 class InstitucionViewSet(viewsets.ModelViewSet):
     queryset = Institucion.objects.all()
     serializer_class = InstitucionSerializer
+    permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [filters.SearchFilter]
     search_fields = ['nombre', 'descripcion']
 
 
 class TipoPersonaViewSet(viewsets.ModelViewSet):
     queryset = TipoPersona.objects.all()
+    permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['institucion', 'activo']
     search_fields = ['nombre']
@@ -38,6 +62,7 @@ class TipoPersonaViewSet(viewsets.ModelViewSet):
 
 class CursoViewSet(viewsets.ModelViewSet):
     queryset = Curso.objects.all()
+    permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['institucion', 'activo']
     search_fields = ['nombre']
@@ -51,6 +76,7 @@ class CursoViewSet(viewsets.ModelViewSet):
 
 class HorarioViewSet(viewsets.ModelViewSet):
     queryset = Horario.objects.all()
+    permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['curso', 'dia', 'activo']
     search_fields = ['materia', 'curso__nombre']
@@ -66,6 +92,7 @@ class HorarioViewSet(viewsets.ModelViewSet):
 
 class PersonaViewSet(viewsets.ModelViewSet):
     queryset = Persona.objects.all()
+    permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo']
     search_fields = ['nombre', 'idPersona']
@@ -131,6 +158,8 @@ class PersonaViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            return Response({'error': 'No tienes permisos para eliminar personas. Debes ser Administrador.'}, status=403)
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=204)
@@ -138,6 +167,7 @@ class PersonaViewSet(viewsets.ModelViewSet):
 
 class PersonaInstitucionViewSet(viewsets.ModelViewSet):
     queryset = PersonaInstitucion.objects.all()
+    permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['persona', 'institucion', 'tipo', 'curso', 'activo']
     search_fields = ['persona__nombre', 'institucion__nombre', 'tipo__nombre', 'curso__nombre']
@@ -150,6 +180,7 @@ class PersonaInstitucionViewSet(viewsets.ModelViewSet):
 
 class EstadoAsistenciaViewSet(viewsets.ModelViewSet):
     queryset = EstadoAsistencia.objects.all()
+    permission_classes = [EsAdminOGuardiaParaEscritura]
     serializer_class = EstadoAsistenciaSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['nombre', 'descripcion']
@@ -157,6 +188,7 @@ class EstadoAsistenciaViewSet(viewsets.ModelViewSet):
 
 class AsistenciaViewSet(viewsets.ModelViewSet):
     queryset = Asistencia.objects.all().select_related('persona', 'estado', 'horario', 'horario__curso').order_by('-fechaHora')
+    permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = {
         'persona': ['exact'],
@@ -177,7 +209,29 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return AsistenciaCreateSerializer
         return AsistenciaSerializer
-    
+
+    def _check_guardia_restrictions(self, request):
+        if not request.user.is_superuser:
+            data_keys = set(request.data.keys())
+            allowed_keys = {'justificado'}
+            if not data_keys.issubset(allowed_keys):
+                from rest_framework.response import Response
+                return Response(
+                    {'error': 'Los Guardias solo pueden justificar asistencias, no modificar horarios o eliminar datos.'},
+                    status=403
+                )
+        return None
+
+    def update(self, request, *args, **kwargs):
+        error = self._check_guardia_restrictions(request)
+        if error: return error
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        error = self._check_guardia_restrictions(request)
+        if error: return error
+        return super().partial_update(request, *args, **kwargs)
+        
     def perform_update(self, serializer):
         """Recalcular estado, tardanza y horario al modificar fechaHora.
         
@@ -448,3 +502,19 @@ class DiaNoLaborableViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return DiaNoLaborableCreateSerializer
         return DiaNoLaborableSerializer
+
+
+class ConfiguracionSemanaViewSet(viewsets.ModelViewSet):
+    """Gestión de la configuración de Semana A/B (singleton)."""
+    queryset = ConfiguracionSemana.objects.all()
+    serializer_class = ConfiguracionSemanaSerializer
+
+    @action(detail=False, methods=['get'])
+    def actual(self, request):
+        """GET /api/configuracion-semana/actual/ → devuelve la semana vigente"""
+        semana = ConfiguracionSemana.get_semana_actual()
+        config = ConfiguracionSemana.objects.first()
+        return Response({
+            'semana': semana,
+            'fecha_referencia': config.fecha_referencia_semana_a.isoformat() if config else None
+        })

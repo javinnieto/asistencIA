@@ -5,23 +5,30 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Personas from './pages/Personas';
 import Asistencias from './pages/Asistencias';
-
+import Usuarios from './pages/Usuarios';
 import CursosHorarios from './pages/CursosHorarios';
 import InstitucionesTab from './pages/CursosHorarios/InstitucionesTab';
-
 import Login from './pages/Login';
 import './App.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
 
-// Componente para proteger rutas privadas
+// Protege rutas privadas (autenticado)
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
-
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+  return <>{children}</>;
+};
+
+// Protege rutas solo-admin
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  const location = useLocation();
+  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 };
 
@@ -121,7 +128,14 @@ const AppContent: React.FC = () => {
               </PrivateRoute>
             }
           />
-
+          <Route
+            path="/usuarios"
+            element={
+              <AdminRoute>
+                <Usuarios />
+              </AdminRoute>
+            }
+          />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

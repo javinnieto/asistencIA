@@ -13,6 +13,7 @@ interface Horario {
     hora_inicio: string;
     hora_fin: string;
     activo: boolean;
+    semana: string;
 }
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -28,15 +29,39 @@ const HorariosTab: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentHorario, setCurrentHorario] = useState<Partial<Horario>>({});
 
+    // Semana A/B
+    const [semanaActual, setSemanaActual] = useState<string>('A');
+    const [filtroSemana, setFiltroSemana] = useState<string>('');
+    const [configSemana, setConfigSemana] = useState<{id?: number, fecha_referencia_semana_a: string}>({fecha_referencia_semana_a: ''});
+    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+
     // Confirm Modal
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
     const [deleting, setDeleting] = useState(false);
 
+    const fetchConfigSemana = async () => {
+        try {
+            const resData = await apiRequest('/configuracion-semana/actual/');
+            if (resData.ok) {
+                const data = await resData.json();
+                setSemanaActual(data.semana || 'A');
+            }
+            const resConfig = await apiRequest('/configuracion-semana/');
+            if (resConfig.ok) {
+                const configData = await resConfig.json();
+                if (configData.results && configData.results.length > 0) {
+                    setConfigSemana(configData.results[0]);
+                }
+            }
+        } catch(e) { console.error(e) }
+    };
+
     useEffect(() => {
         apiRequest('/instituciones/').then(async res => {
             if (res.ok) setInstituciones((await res.json()).results || []);
         });
+        fetchConfigSemana();
     }, []);
 
     useEffect(() => {
@@ -64,7 +89,7 @@ const HorariosTab: React.FC = () => {
             const isEdit = !!currentHorario.idHorario;
             const url = isEdit ? `/horarios/${currentHorario.idHorario}/` : '/horarios/';
             const method = isEdit ? 'PUT' : 'POST';
-            const payload = { ...currentHorario, curso: selectedCursoId, activo: true };
+            const payload = { ...currentHorario, curso: selectedCursoId, activo: true, semana: currentHorario.semana || 'Todas' };
             const res = await apiRequest(url, { method, body: JSON.stringify(payload) });
             if (res.ok) {
                 showToast(isEdit ? 'Horario actualizado' : 'Horario creado', 'success');
@@ -103,9 +128,32 @@ const HorariosTab: React.FC = () => {
         }
     };
 
-    // Group by day
+    const handleSaveConfigSemana = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (configSemana.id) {
+                const res = await apiRequest(`/configuracion-semana/${configSemana.id}/`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ fecha_referencia_semana_a: configSemana.fecha_referencia_semana_a })
+                });
+                if (res.ok) {
+                    showToast('Configuración actualizada', 'success');
+                    setIsConfigModalOpen(false);
+                    fetchConfigSemana();
+                } else {
+                    showToast('Error al actualizar configuración', 'error');
+                }
+            }
+        } catch (e) { showToast('Error de conexión', 'error'); }
+    };
+
+    // Group by day, filtered by semana
+    const horariosFiltrados = filtroSemana 
+        ? horarios.filter(h => h.semana === filtroSemana || h.semana === 'Todas')
+        : horarios;
+
     const horariosAgrupados = DIAS.reduce((acc, dia) => {
-        const delDia = horarios.filter(h => h.dia === dia);
+        const delDia = horariosFiltrados.filter(h => h.dia === dia);
         if (delDia.length > 0) acc[dia] = delDia;
         return acc;
     }, {} as Record<string, Horario[]>);
@@ -151,14 +199,53 @@ const HorariosTab: React.FC = () => {
                         <div className="ch-title-group">
                             <div className="ch-title-bar"></div>
                             <h3 className="ch-page-title">Horarios</h3>
-                            <span className="ch-count-badge">{horarios.length} CLASES</span>
+                            <span className="ch-count-badge">{horariosFiltrados.length} CLASES</span>
+                            <span style={{
+                                padding: '4px 12px',
+                                borderRadius: '12px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                background: semanaActual === 'A' ? 'rgba(59,130,246,0.2)' : 'rgba(168,85,247,0.2)',
+                                color: semanaActual === 'A' ? '#60a5fa' : '#c084fc',
+                                marginLeft: '8px'
+                            }}>
+                                Semana Actual: {semanaActual}
+                            </span>
+                            <button
+                                onClick={() => setIsConfigModalOpen(true)}
+                                style={{
+                                    marginLeft: '8px',
+                                    background: 'none',
+                                    border: '1px solid #475569',
+                                    color: '#94a3b8',
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer'
+                                }}
+                                title="Configurar Semana A/B"
+                            >
+                                <i className="bi bi-gear-fill"></i>
+                            </button>
                         </div>
-                        <button
-                            onClick={() => { setCurrentHorario({ dia: 'Lunes' } as Partial<Horario>); setIsModalOpen(true); }}
-                            className="btn-primary-action"
-                        >
-                            <i className="bi bi-clock-fill"></i> Agregar Horario
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <select
+                                className="ch-select"
+                                value={filtroSemana}
+                                onChange={e => setFiltroSemana(e.target.value)}
+                                style={{ width: 'auto', minWidth: '130px' }}
+                            >
+                                <option value="">Todas las semanas</option>
+                                <option value="A">Semana A</option>
+                                <option value="B">Semana B</option>
+                            </select>
+                            <button
+                                onClick={() => { setCurrentHorario({ dia: 'Lunes', semana: 'Todas' } as Partial<Horario>); setIsModalOpen(true); }}
+                                className="btn-primary-action"
+                            >
+                                <i className="bi bi-clock-fill"></i> Agregar Horario
+                            </button>
+                        </div>
                     </div>
 
                     {diasConHorarios.length > 0 ? (
@@ -174,6 +261,19 @@ const HorariosTab: React.FC = () => {
                                                     <span className="ch-time-text">
                                                         {h.hora_inicio?.slice(0, 5)} - {h.hora_fin?.slice(0, 5)}
                                                     </span>
+                                                    {h.semana !== 'Todas' && (
+                                                        <span style={{
+                                                            padding: '2px 8px',
+                                                            borderRadius: '8px',
+                                                            fontSize: '0.65rem',
+                                                            fontWeight: 700,
+                                                            background: h.semana === 'A' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
+                                                            color: h.semana === 'A' ? '#60a5fa' : '#c084fc',
+                                                            marginLeft: '6px'
+                                                        }}>
+                                                            Sem {h.semana}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="action-buttons">
                                                     <button
@@ -222,18 +322,54 @@ const HorariosTab: React.FC = () => {
                                     {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
                             </div>
+                            <div className="ch-form-group">
+                                <label className="ch-label">Semana</label>
+                                <select className="ch-select" value={currentHorario.semana || 'Todas'} onChange={e => setCurrentHorario({ ...currentHorario, semana: e.target.value })}>
+                                    <option value="Todas">Todas (ambas semanas)</option>
+                                    <option value="A">Semana A</option>
+                                    <option value="B">Semana B</option>
+                                </select>
+                            </div>
                             <div className="ch-form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div>
                                     <label className="ch-label">Entrada</label>
-                                    <input type="time" className="ch-input" style={{ colorScheme: 'dark' }} value={currentHorario.hora_inicio || ''} onChange={e => setCurrentHorario({ ...currentHorario, hora_inicio: e.target.value })} required />
+                                    <input type="time" className="ch-input" lang="en-GB" style={{ colorScheme: 'dark' }} value={currentHorario.hora_inicio || ''} onChange={e => setCurrentHorario({ ...currentHorario, hora_inicio: e.target.value })} required />
                                 </div>
                                 <div>
                                     <label className="ch-label">Salida</label>
-                                    <input type="time" className="ch-input" style={{ colorScheme: 'dark' }} value={currentHorario.hora_fin || ''} onChange={e => setCurrentHorario({ ...currentHorario, hora_fin: e.target.value })} required />
+                                    <input type="time" className="ch-input" lang="en-GB" style={{ colorScheme: 'dark' }} value={currentHorario.hora_fin || ''} onChange={e => setCurrentHorario({ ...currentHorario, hora_fin: e.target.value })} required />
                                 </div>
                             </div>
                             <div className="ch-modal-actions">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="ch-btn-cancel">Cancelar</button>
+                                <button type="submit" className="ch-btn-save">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {isConfigModalOpen && (
+                <div className="ch-modal-overlay">
+                    <div className="ch-modal-content" style={{maxWidth: '400px'}}>
+                        <h2 className="ch-modal-title">Configuración Semana A/B</h2>
+                        <form onSubmit={handleSaveConfigSemana}>
+                            <div className="ch-form-group">
+                                <label className="ch-label">Fecha de referencia (Semana A)</label>
+                                <p style={{fontSize: '0.8rem', color: '#94a3b8', marginBottom: '8px', lineHeight: '1.4'}}>
+                                    Seleccione cualquier fecha que haya caído en <strong>Semana A</strong>. El sistema calculará automáticamente las semanas B y A futuras basándose en esta fecha.
+                                </p>
+                                <input 
+                                    type="date" 
+                                    className="ch-input" 
+                                    style={{ colorScheme: 'dark' }} 
+                                    value={configSemana.fecha_referencia_semana_a || ''} 
+                                    onChange={e => setConfigSemana({ ...configSemana, fecha_referencia_semana_a: e.target.value })} 
+                                    required 
+                                />
+                            </div>
+                            <div className="ch-modal-actions">
+                                <button type="button" onClick={() => setIsConfigModalOpen(false)} className="ch-btn-cancel">Cancelar</button>
                                 <button type="submit" className="ch-btn-save">Guardar</button>
                             </div>
                         </form>

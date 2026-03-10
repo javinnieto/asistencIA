@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { apiRequest } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 import './PersonaForm.css';
 
 interface Person {
@@ -34,6 +35,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
   onSave,
   mode
 }) => {
+  const { rol } = useAuth();
   const [formData, setFormData] = useState<Omit<Person, 'id'>>({
     nombre: '',
     apellido: '',
@@ -131,7 +133,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
           ...role,
           horarios_personalizados: [
             ...(role.horarios_personalizados || []),
-            { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '17:00' }
+            { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '17:00', semana: 'Todas' }
           ]
         };
       });
@@ -319,13 +321,15 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                             <div className="custom-schedules-container" style={{ marginTop: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                 <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#e2e8f0' }}>Horarios Personalizados:</span>
-                                <button type="button" onClick={() => handleAddCustomSchedule(idx)} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#3b82f6', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>+ Agregar</button>
+                                {rol !== 'guardia' && (
+                                  <button type="button" onClick={() => handleAddCustomSchedule(idx)} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#3b82f6', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>+ Agregar</button>
+                                )}
                               </div>
                               {role.horarios_personalizados?.length > 0 ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                   {role.horarios_personalizados.map((h: any, hIdx: number) => (
                                     <div key={hIdx} style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                      <select value={h.dia} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'dia', e.target.value)} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }}>
+                                      <select value={h.dia} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'dia', e.target.value)} disabled={rol === 'guardia'} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }}>
                                         <option value="Lunes">Lunes</option>
                                         <option value="Martes">Martes</option>
                                         <option value="Miércoles">Miércoles</option>
@@ -334,10 +338,17 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                                         <option value="Sábado">Sábado</option>
                                         <option value="Domingo">Domingo</option>
                                       </select>
-                                      <input type="time" value={h.hora_inicio || '08:00'} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'hora_inicio', e.target.value)} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }} />
+                                      <select value={h.semana || 'Todas'} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'semana', e.target.value)} disabled={rol === 'guardia'} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }}>
+                                        <option value="Todas">Todas</option>
+                                        <option value="A">Sem A</option>
+                                        <option value="B">Sem B</option>
+                                      </select>
+                                      <input type="time" value={h.hora_inicio || '08:00'} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'hora_inicio', e.target.value)} disabled={rol === 'guardia'} lang="en-GB" style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }} />
                                       <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>a</span>
-                                      <input type="time" value={h.hora_fin || '17:00'} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'hora_fin', e.target.value)} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }} />
-                                      <button type="button" onClick={() => handleRemoveCustomSchedule(idx, hIdx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', marginLeft: 'auto' }}>✕</button>
+                                      <input type="time" value={h.hora_fin || '17:00'} onChange={(e: any) => handleUpdateCustomSchedule(idx, hIdx, 'hora_fin', e.target.value)} disabled={rol === 'guardia'} lang="en-GB" style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #475569', background: '#1e293b', color: 'white' }} />
+                                      {rol !== 'guardia' && (
+                                        <button type="button" onClick={() => handleRemoveCustomSchedule(idx, hIdx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', marginLeft: 'auto' }}>✕</button>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
