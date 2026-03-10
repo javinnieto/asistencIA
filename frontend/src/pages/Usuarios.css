@@ -1,0 +1,322 @@
+/* Usuarios.css — estilos del módulo de gestión de usuarios */
+
+.usr-container {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.usr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.usr-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.usr-header h2 i {
+  color: #6366f1;
+}
+
+.usr-btn-new {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.usr-btn-new:hover {
+  background: #4f46e5;
+}
+
+/* Tabla */
+.usr-table-wrap {
+  background: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #334155;
+}
+
+.usr-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.usr-table thead {
+  background: #0f172a;
+}
+
+.usr-table th {
+  padding: 14px 18px;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  border-bottom: 1px solid #334155;
+}
+
+.usr-table td {
+  padding: 14px 18px;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  border-bottom: 1px solid #1e293b;
+  vertical-align: middle;
+}
+
+.usr-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.usr-table tbody tr:hover td {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.usr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.usr-badge.admin {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.usr-badge.lectura {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+}
+
+.usr-badge.activo {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.usr-badge.inactivo {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.usr-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.usr-btn-icon {
+  background: transparent;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.85rem;
+}
+
+.usr-btn-icon:hover {
+  border-color: #6366f1;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.usr-btn-icon.danger:hover {
+  border-color: #ef4444;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.usr-self-tag {
+  font-size: 0.72rem;
+  color: #6366f1;
+  margin-left: 6px;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+
+/* Modal */
+.usr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.usr-modal {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  padding: 28px;
+}
+
+.usr-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.usr-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.usr-modal-header button {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: color 0.15s;
+  padding: 0;
+}
+
+.usr-modal-header button:hover {
+  color: #f1f5f9;
+}
+
+.usr-form-group {
+  margin-bottom: 18px;
+}
+
+.usr-form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 7px;
+}
+
+.usr-form-group input,
+.usr-form-group select {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #f1f5f9;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.usr-form-group input:focus,
+.usr-form-group select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.usr-form-group select option {
+  background: #1e293b;
+}
+
+.usr-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.usr-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.usr-btn-cancel {
+  background: transparent;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #94a3b8;
+  padding: 9px 18px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.usr-btn-cancel:hover {
+  border-color: #64748b;
+  color: #f1f5f9;
+}
+
+.usr-btn-save {
+  background: #6366f1;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  padding: 9px 22px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.usr-btn-save:hover {
+  background: #4f46e5;
+}
+
+.usr-btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.usr-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #475569;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .usr-container {
+    padding: 16px;
+  }
+
+  .usr-table th:nth-child(3),
+  .usr-table td:nth-child(3) {
+    display: none;
+  }
+
+  .usr-modal {
+    padding: 20px;
+  }
+}

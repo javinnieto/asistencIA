@@ -4,6 +4,7 @@ import PersonaForm from '../components/PersonaForm';
 import PersonaDetails from '../components/PersonaDetails';
 import { apiRequest } from '../config/api';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../context/AuthContext';
 import './Personas.css';
 
 interface Person {
@@ -23,6 +24,7 @@ interface Person {
 
 const Personas: React.FC = () => {
   const { showToast } = useToast();
+  const { isAdmin, rol } = useAuth();
   const [personas, setPersonas] = useState<Person[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -48,29 +50,23 @@ const Personas: React.FC = () => {
             const primerNombre = nombreParts[0] || '';
             const apellido = nombreParts.slice(1).join(' ') || '-';
 
-            // Safe access to nested properties
             const roles = persona.roles || [];
             let primaryRole = 'Sin asignar';
-            let primaryCourse = '';
 
             if (roles.length > 0) {
-              // Try to find the most relevant role (e.g., Alumno or Docente)
               const mainRole = roles.find((r: any) => r.tipo.nombre !== 'No Docente') || roles[0];
               primaryRole = mainRole.tipo.nombre;
-              if (mainRole.curso) {
-                primaryCourse = mainRole.curso.nombre;
-              }
             }
 
             return {
               id: persona.idPersona?.toString() || '0',
               nombre: primerNombre,
               apellido: apellido,
-              email: persona.email || `${nombreCompleto.toLowerCase().replace(/\s+/g, '.')}@institucion.com`,
-              telefono: persona.telefono || '+1 (555) 000-0000',
+              email: persona.email || '',
+              telefono: persona.telefono || '',
               departamento: primaryRole,
-              cargo: primaryRole, // Map cargo to primary role type
-              fechaIngreso: persona.fechaRegistro || '2023-01-01',
+              cargo: primaryRole,
+              fechaIngreso: persona.fechaRegistro || '',
               estado: (persona.activo !== false ? 'activo' : 'inactivo'),
               foto: persona.foto,
               roles: roles,
@@ -173,11 +169,9 @@ const Personas: React.FC = () => {
           const apellido = nombreParts.slice(1).join(' ') || '-';
           const roles = updatedPersonFromBE.roles || [];
           let primaryRole = 'Sin asignar';
-          let primaryCourse = '';
           if (roles.length > 0) {
             const mainRole = roles.find((r: any) => r.tipo.nombre !== 'No Docente') || roles[0];
             primaryRole = mainRole.tipo.nombre;
-            if (mainRole.curso) primaryCourse = mainRole.curso.nombre;
           }
 
           const transformed: Person = {
@@ -210,6 +204,7 @@ const Personas: React.FC = () => {
           if (errorData.idPersona) errorMsg += ` - ID: ${errorData.idPersona[0]}`;
           if (errorData.roles) errorMsg += ` - Roles inválidos`;
           if (errorData.detail) errorMsg += ` - ${errorData.detail}`;
+          if (errorData.error) errorMsg = errorData.error;
 
           showToast(errorMsg, 'error');
         }

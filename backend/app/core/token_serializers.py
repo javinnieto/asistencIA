@@ -4,6 +4,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # Agrega el username al token
         token['username'] = user.username
-        return token 
+        
+        # Asignar string de rol en base a is_staff y is_superuser
+        if user.is_superuser:
+            token['rol'] = 'admin'
+        elif user.is_staff:
+            token['rol'] = 'guardia'
+        else:
+            token['rol'] = 'lectura'
+            
+        token['is_staff'] = user.is_staff
+        token['email'] = user.email or ''
+        return token

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../config/api';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/ConfirmModal';
 import './CursosHorarios.css';
+
 
 // Interfaces
 interface Institucion {
@@ -14,6 +16,8 @@ interface Institucion {
 
 const InstitucionesTab: React.FC = () => {
     const { showToast } = useToast();
+    const { isAdmin } = useAuth();
+
     const [instituciones, setInstituciones] = useState<Institucion[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -125,13 +129,15 @@ const InstitucionesTab: React.FC = () => {
                             className="search-input-styled"
                         />
                     </div>
-                    <button
-                        onClick={() => { setCurrentInst({ activa: true }); setIsModalOpen(true); }}
-                        className="btn-primary-action"
-                    >
-                        <i className="bi bi-plus-lg"></i>
-                        Nueva Institución
-                    </button>
+                    {isAdmin && (
+                        <button
+                            onClick={() => { setCurrentInst({ activa: true }); setIsModalOpen(true); }}
+                            className="btn-primary-action"
+                        >
+                            <i className="bi bi-plus-lg"></i>
+                            Nueva Institución
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -160,26 +166,29 @@ const InstitucionesTab: React.FC = () => {
                                 </td>
                                 <td className="ch-td text-right">
                                     <div className="action-buttons">
-                                        <button
-                                            type="button"
-                                            onClick={() => { setCurrentInst(inst); setIsModalOpen(true); }}
-                                            className="btn-icon btn-edit"
-                                            title="Editar"
-                                        >
-                                            <i className="bi bi-pencil-fill"></i>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                promptDelete(inst.idInstitucion);
-                                            }}
-                                            className="btn-icon btn-delete"
-                                            title="Eliminar"
-                                        >
-                                            <i className="bi bi-trash-fill"></i>
-                                        </button>
+                                        {isAdmin && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { setCurrentInst(inst); setIsModalOpen(true); }}
+                                                className="btn-icon btn-edit"
+                                                title="Editar"
+                                            >
+                                                <i className="bi bi-pencil-fill"></i>
+                                            </button>
+                                        )}
+                                        {isAdmin && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    promptDelete(inst.idInstitucion);
+                                                }}
+                                                className="btn-icon btn-delete"
+                                                title="Eliminar"
+                                            >
+                                                <i className="bi bi-trash-fill"></i>
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>

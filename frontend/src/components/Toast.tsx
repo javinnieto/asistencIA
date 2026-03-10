@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             top: '20px',
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 9999999, // Max safe z-index
+            zIndex: 2147483647, // Max 32-bit integer z-index
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',

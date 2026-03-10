@@ -1,11 +1,24 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// import jwtDecode from 'jwt-decode'; // Uncomment if using jwt-decode
+
+import jwt_decode from 'jwt-decode';
 
 interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
-    login: (token: string) => void;
+    isAdmin: boolean;
+    rol: 'admin' | 'guardia' | 'lectura' | null;
+    currentUser: string;
+    login: (token: string, refreshToken?: string) => void;
     logout: () => void;
+}
+
+function decodeJwtPayload(token: string): Record<string, any> {
+    try {
+        return jwt_decode<any>(token);
+    } catch (e) {
+        console.error("AuthContext Decode error:", e);
+        return {};
+    }
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -13,8 +26,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
 
+    const payload = token ? decodeJwtPayload(token) : {};
+    const isAdmin: boolean = payload.rol === 'admin';
+    const rol: 'admin' | 'guardia' | 'lectura' | null = payload.rol || null;
+    const currentUser: string = payload.username || '';
+
     useEffect(() => {
-        // Sincronizar con localStorage en otras pestañas
         const syncToken = () => {
             setToken(localStorage.getItem('accessToken'));
         };
@@ -22,20 +39,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => window.removeEventListener('storage', syncToken);
     }, []);
 
-    const login = (newToken: string) => {
+    const login = (newToken: string, refreshToken?: string) => {
         localStorage.setItem('accessToken', newToken);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
         setToken(newToken);
     };
 
     const logout = () => {
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         setToken(null);
     };
 
-    const isAuthenticated = !!token; // Simple check, ideally validate expiry
+    const isAuthenticated = !!token;
 
     return (
-        <AuthContext.Provider value={{ token, isAuthenticated, login, logout }}>
+        <AuthContext.Provider value={{ token, isAuthenticated, isAdmin, rol, currentUser, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

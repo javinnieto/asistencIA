@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
-from asistencias.models import EstadoAsistencia, Institucion, TipoPersona
+from asistencias.models import EstadoAsistencia, ConfiguracionSemana, Institucion, TipoPersona
 from asistencias.constants import ESTADOS_ASISTENCIA, INSTITUCIONES, TIPOS_ISAE
+from datetime import date
 
 class Command(BaseCommand):
     help = 'Inicializa los datos base: Estados y los 3 tipos core (Estudiante, Docente, Personal)'
@@ -9,7 +10,12 @@ class Command(BaseCommand):
         # 1. Estados de Asistencia
         for key, nombre in ESTADOS_ASISTENCIA.items():
             EstadoAsistencia.objects.get_or_create(nombre=nombre)
-        self.stdout.write(self.style.SUCCESS('✅ Estados de Asistencia creados'))
+        self.stdout.write(self.style.SUCCESS('✅ Baseline definitions created (EstadosAsistencia)'))
+
+        # Crear configuración de semana si no existe
+        if not ConfiguracionSemana.objects.exists():
+            ConfiguracionSemana.objects.create(fecha_referencia_semana_a=date.today())
+            self.stdout.write(self.style.SUCCESS('📅 Configuración de Semana A/B creada (hoy = Semana A)'))
 
         # 2. Institución ISAE
         isae, _ = Institucion.objects.get_or_create(nombre='ISAE')

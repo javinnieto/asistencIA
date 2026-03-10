@@ -3,7 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../config/api';
 import { includesNormalized } from '../utils/normalize';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../context/AuthContext';
 import './Asistencias.css';
+
 
 interface RolHorario {
   dia: string;
@@ -53,6 +55,7 @@ interface Asistencia {
   salida_temprano_minutos: number;
   tipo?: string;
   justificado?: boolean;
+  foto?: string; // Foto tomada en el momento de la asistencia
 }
 
 const DIAS_MAP: Record<string, number> = {
@@ -109,7 +112,9 @@ function getNextCourseForAsistencia(a: Asistencia): string | null {
 
 const Asistencias: React.FC = () => {
   const { showToast } = useToast();
+  const { isAdmin, rol } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+
 
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
   const [cursos, setCursos] = useState<Curso[]>([]);
@@ -330,16 +335,19 @@ const Asistencias: React.FC = () => {
     e.preventDefault();
     if (!editingAsistencia) return;
     try {
+      const payload: any = {
+        justificado: editingAsistencia.justificado || false
+      };
+
+      if (rol !== 'guardia') {
+        payload.fechaHora = editingAsistencia.fechaHora;
+        payload.temperatura = editingAsistencia.temperatura;
+      }
+
       const response = await apiRequest(`/asistencias/${editingAsistencia.idAsistencia}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fechaHora: editingAsistencia.fechaHora,
-          temperatura: editingAsistencia.temperatura,
-          justificado: editingAsistencia.justificado || false
-          // 'estado' no se envía intencionalmente: el backend lo recalcula
-          // automáticamente basado en fechaHora vs horario del curso.
-        })
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
@@ -347,9 +355,17 @@ const Asistencias: React.FC = () => {
         setEditingAsistencia(null);
         cargarDatos(previousUrl ? undefined : undefined); // Refresh current filters
         showToast('Asistencia actualizada correctamente', 'success');
+      } else {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          showToast(errorData.error || errorData.detail || 'Error al actualizar', 'error');
+        } else {
+          showToast('Error al actualizar', 'error');
+        }
       }
     } catch (error) {
-      showToast('Error al actualizar', 'error');
+      showToast('Error de red al actualizar', 'error');
     }
   };
 
@@ -359,9 +375,18 @@ const Asistencias: React.FC = () => {
       if (response.ok) {
         setDeleteConfirm(null);
         cargarDatos();
+        showToast('Asistencia eliminada', 'success');
+      } else {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          showToast(errorData.error || errorData.detail || 'Error al eliminar', 'error');
+        } else {
+          showToast('Error al eliminar', 'error');
+        }
       }
     } catch (error) {
-      console.error(error);
+      showToast('Error de red al eliminar', 'error');
     }
   };
 
@@ -411,7 +436,8 @@ const Asistencias: React.FC = () => {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: false
     });
   };
 
@@ -571,7 +597,7 @@ const Asistencias: React.FC = () => {
                   <td>
                     <div className="as-user-cell">
                       <div className="as-avatar">
-                        {a.persona?.foto ? <img src={a.persona.foto} alt="av" /> : <i className="bi bi-person"></i>}
+                        {(a.foto || a.persona?.foto) ? <img src={a.foto || a.persona?.foto} alt="av" /> : <i className="bi bi-person"></i>}
                       </div>
                       <div className="as-user-info">
                         <div>{a.persona?.nombre || 'Desconocido'}</div>
@@ -636,15 +662,17 @@ const Asistencias: React.FC = () => {
                   </td>
                   <td>
                     <div className="as-actions">
-                      <button className="as-btn-action as-btn-edit" onClick={() => handleEdit(a)}><i className="bi bi-pencil"></i></button>
-                      {deleteConfirm === a.idAsistencia ? (
+                      {(isAdmin || rol === 'guardia') && (
+                        <button className="as-btn-action as-btn-edit" onClick={() => handleEdit(a)}><i className="bi bi-pencil"></i></button>
+                      )}
+                      {(isAdmin || rol === 'guardia') && (deleteConfirm === a.idAsistencia ? (
                         <>
                           <button className="as-btn-action as-btn-confirm" onClick={() => handleDelete(a.idAsistencia)}><i className="bi bi-check"></i></button>
                           <button className="as-btn-action as-btn-cancel" onClick={() => setDeleteConfirm(null)}><i className="bi bi-x"></i></button>
                         </>
                       ) : (
                         <button className="as-btn-action as-btn-delete" onClick={() => setDeleteConfirm(a.idAsistencia)}><i className="bi bi-trash"></i></button>
-                      )}
+                      ))}
                     </div>
                   </td>
                 </tr>
@@ -716,11 +744,18 @@ const Asistencias: React.FC = () => {
                     type="datetime-local"
                     value={toLocalDatetimeInput(editingAsistencia.fechaHora)}
                     onChange={e => setEditingAsistencia({ ...editingAsistencia, fechaHora: new Date(e.target.value).toISOString() })}
+                    disabled={rol === 'guardia'}
                   />
                 </div>
                 <div className="as-form-group">
                   <label>Temperatura</label>
-                  <input type="number" step="0.1" value={editingAsistencia.temperatura} onChange={e => setEditingAsistencia({ ...editingAsistencia, temperatura: parseFloat(e.target.value) })} />
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={editingAsistencia.temperatura} 
+                    onChange={e => setEditingAsistencia({ ...editingAsistencia, temperatura: parseFloat(e.target.value) })}
+                    disabled={rol === 'guardia'}
+                  />
                 </div>
                 <div className="as-form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <label htmlFor="justificado-toggle" style={{ marginBottom: 0 }}>Justificado</label>

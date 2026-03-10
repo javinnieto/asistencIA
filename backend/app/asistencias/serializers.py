@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     Institucion, TipoPersona, Curso, Persona, PersonaInstitucion, 
     EstadoAsistencia, Asistencia, Horario, ConflictoIdentidad,
-    DiaNoLaborable
+    DiaNoLaborable, ConfiguracionSemana
 )
 
 
@@ -198,3 +198,14 @@ class DiaNoLaborableCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiaNoLaborable
         fields = '__all__'
+
+
+class ConfiguracionSemanaSerializer(serializers.ModelSerializer):
+    semana_actual = serializers.SerializerMethodField()
+
+    def get_semana_actual(self, obj):
+        return ConfiguracionSemana.get_semana_actual()
+
+    class Meta:
+        model = ConfiguracionSemana
+        fields = ['id', 'fecha_referencia_semana_a', 'semana_actual']

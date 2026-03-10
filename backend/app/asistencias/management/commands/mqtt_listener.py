@@ -306,8 +306,13 @@ class Command(BaseCommand):
 
                 # Buscar horarios candidatos para hoy
                 from django.db.models import Q
+                from asistencias.models import ConfiguracionSemana
+                semana_actual = ConfiguracionSemana.get_semana_actual(fecha_hora.date())
+                self.stdout.write(f'📅 Semana actual: {semana_actual}')
+                
                 horarios_candidatos = Horario.objects.filter(
                     Q(curso_id__in=cursos_ids) | Q(persona_institucion_id__in=roles_ids),
+                    Q(semana=semana_actual) | Q(semana='Todas'),
                     dia=dia_actual,
                     activo=True
                 )

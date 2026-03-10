@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { apiRequest } from '../../config/api';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/ConfirmModal';
 import './CursosHorarios.css';
+
 
 interface Institucion { idInstitucion: number; nombre: string; }
 interface Horario {
@@ -13,6 +15,7 @@ interface Horario {
     hora_fin: string;
     materia: string;
     activo?: boolean;
+    semana?: string;
 }
 interface Curso {
     idCurso: number;
@@ -29,6 +32,8 @@ const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sáb
 
 const CursosTab: React.FC = () => {
     const { showToast } = useToast();
+    const { isAdmin } = useAuth();
+
     const [instituciones, setInstituciones] = useState<Institucion[]>([]);
     const [cursos, setCursos] = useState<Curso[]>([]);
     const [selectedInstId, setSelectedInstId] = useState<string>('');
@@ -79,7 +84,7 @@ const CursosTab: React.FC = () => {
         } else {
             setCurrentCurso({ activo: true, institucion: instituciones.find(i => i.idInstitucion === parseInt(selectedInstId)) });
             // Start with a smart default for new course too
-            setHorarios([{ dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true }]);
+            setHorarios([{ dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true, semana: 'Todas' }]);
         }
         setFormError(null);
         setHorarioErrors({});
@@ -151,7 +156,8 @@ const CursosTab: React.FC = () => {
                     hora_inicio: h.hora_inicio,
                     hora_fin: h.hora_fin,
                     materia: h.materia || '',
-                    activo: h.activo !== false
+                    activo: h.activo !== false,
+                    semana: h.semana || 'Todas'
                 }))
             };
 
@@ -193,7 +199,8 @@ const CursosTab: React.FC = () => {
                             hora_inicio: h.hora_inicio,
                             hora_fin: h.hora_fin,
                             materia: h.materia || '',
-                            activo: h.activo !== false
+                            activo: h.activo !== false,
+                            semana: h.semana || 'Todas'
                         })
                     });
                 }
@@ -270,13 +277,14 @@ const CursosTab: React.FC = () => {
                     hora_inicio: startStr,
                     hora_fin: endStr,
                     materia: '',
-                    activo: true
+                    activo: true,
+                    semana: 'Todas'
                 };
             }
         }
 
         // Fallback if no slot found easily
-        return { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true };
+        return { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true, semana: 'Todas' };
     };
 
     const addHorario = () => {
@@ -398,12 +406,14 @@ const CursosTab: React.FC = () => {
                             Administración académica
                         </p>
                     </div>
-                    <button
-                        onClick={() => openModal()}
-                        className="btn-primary-action"
-                    >
-                        <i className="bi bi-plus-lg"></i> Nuevo Curso
-                    </button>
+                    {isAdmin && (
+                        <button
+                            onClick={() => openModal()}
+                            className="btn-primary-action"
+                        >
+                            <i className="bi bi-plus-lg"></i> Nuevo Curso
+                        </button>
+                    )}
                 </div>
 
                 {/* Bottom Row: Filters */}
@@ -471,20 +481,24 @@ const CursosTab: React.FC = () => {
                                     </td>
                                     <td className="ch-td">
                                         <div className="action-buttons">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); openModal(curso); }}
-                                                className="btn-icon btn-edit"
-                                                title="Editar"
-                                            >
-                                                <i className="bi bi-pencil-fill"></i>
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); promptDelete(curso.idCurso); }}
-                                                className="btn-icon btn-delete"
-                                                title="Eliminar"
-                                            >
-                                                <i className="bi bi-trash-fill"></i>
-                                            </button>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); openModal(curso); }}
+                                                    className="btn-icon btn-edit"
+                                                    title="Editar"
+                                                >
+                                                    <i className="bi bi-pencil-fill"></i>
+                                                </button>
+                                            )}
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); promptDelete(curso.idCurso); }}
+                                                    className="btn-icon btn-delete"
+                                                    title="Eliminar"
+                                                >
+                                                    <i className="bi bi-trash-fill"></i>
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -513,13 +527,14 @@ const CursosTab: React.FC = () => {
                                                                         {grouped[dia].map((h: any, idx: number) => (
                                                                             <div
                                                                                 key={idx}
-                                                                                className="horario-slot horario-card-clickable"
-                                                                                onClick={() => handleEditHorario(curso, h)}
-                                                                                title="Click para editar este horario"
+                                                                                className={`horario-slot ${isAdmin ? 'horario-card-clickable' : ''}`}
+                                                                                onClick={() => isAdmin ? handleEditHorario(curso, h) : undefined}
+                                                                                title={isAdmin ? "Click para editar este horario" : ""}
+                                                                                style={{ cursor: isAdmin ? 'pointer' : 'default' }}
                                                                             >
-                                                                                <div className="horario-time">{h.hora_inicio.slice(0, 5)} - {h.hora_fin.slice(0, 5)}</div>
+                                                                                <div className="horario-time">{h.hora_inicio.slice(0, 5)} - {h.hora_fin.slice(0, 5)} {h.semana && h.semana !== 'Todas' ? `[Sem. ${h.semana}]` : ''}</div>
                                                                                 {h.materia && <div className="horario-subject">{h.materia}</div>}
-                                                                                <div className="horario-edit-hint"><i className="bi bi-pencil"></i></div>
+                                                                                {isAdmin && <div className="horario-edit-hint"><i className="bi bi-pencil"></i></div>}
                                                                             </div>
                                                                         ))}
                                                                     </div>
@@ -640,16 +655,28 @@ const CursosTab: React.FC = () => {
                                                         value={h.dia}
                                                         onChange={e => updateHorario(idx, 'dia', e.target.value)}
                                                         className="ch-input"
-                                                        style={horarioErrors[idx] ? { borderColor: '#ef4444' } : {}}
+                                                        style={{ ...(horarioErrors[idx] ? { borderColor: '#ef4444' } : {}), minWidth: '100px' }}
                                                         required
                                                     >
                                                         {DIAS_SEMANA.map(d => <option key={d} value={d}>{d}</option>)}
+                                                    </select>
+                                                    <select
+                                                        value={h.semana || 'Todas'}
+                                                        onChange={e => updateHorario(idx, 'semana', e.target.value)}
+                                                        className="ch-input"
+                                                        style={{ minWidth: '90px' }}
+                                                        required
+                                                    >
+                                                        <option value="Todas">S. Todas</option>
+                                                        <option value="A">Semana A</option>
+                                                        <option value="B">Semana B</option>
                                                     </select>
                                                     <input
                                                         type="time"
                                                         value={h.hora_inicio}
                                                         onChange={e => updateHorario(idx, 'hora_inicio', e.target.value)}
                                                         className="ch-input"
+                                                        lang="en-GB"
                                                         style={{ colorScheme: 'dark', ...(horarioErrors[idx] ? { borderColor: '#ef4444' } : {}) }}
                                                         required
                                                     />
@@ -658,6 +685,7 @@ const CursosTab: React.FC = () => {
                                                         value={h.hora_fin}
                                                         onChange={e => updateHorario(idx, 'hora_fin', e.target.value)}
                                                         className="ch-input"
+                                                        lang="en-GB"
                                                         style={{ colorScheme: 'dark', ...(horarioErrors[idx] ? { borderColor: '#ef4444' } : {}) }}
                                                         required
                                                     />

@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 class Institucion(models.Model):
@@ -34,6 +35,7 @@ class Curso(models.Model):
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin = models.DateField(null=True, blank=True)
     activo = models.BooleanField(default=True)
+    history = HistoricalRecords()
     
     class Meta:
         unique_together = ['nombre', 'institucion']
@@ -55,6 +57,12 @@ class Horario(models.Model):
         ('Domingo', 'Domingo'),
     ]
 
+    SEMANAS = [
+        ('Todas', 'Todas'),
+        ('A', 'Semana A'),
+        ('B', 'Semana B'),
+    ]
+
     idHorario = models.AutoField(primary_key=True)
     curso = models.ForeignKey(Curso, null=True, blank=True, on_delete=models.CASCADE, related_name='horarios')
     persona_institucion = models.ForeignKey('PersonaInstitucion', null=True, blank=True, on_delete=models.CASCADE, related_name='horarios_personalizados')
@@ -63,9 +71,11 @@ class Horario(models.Model):
     hora_fin = models.TimeField()
     materia = models.CharField(max_length=100, null=True, blank=True)
     activo = models.BooleanField(default=True)
+    semana = models.CharField(max_length=5, choices=SEMANAS, default='Todas')
 
     def __str__(self):
-        return f"{self.curso} - {self.dia} {self.hora_inicio}-{self.hora_fin} ({self.materia})"
+        semana_str = f' [{self.semana}]' if self.semana != 'Todas' else ''
+        return f"{self.curso} - {self.dia} {self.hora_inicio}-{self.hora_fin}{semana_str}"
 
 
 class Persona(models.Model):
@@ -80,6 +90,7 @@ class Persona(models.Model):
     foto = models.TextField(null=True, blank=True)  # Stores Base64 strings or URLs from MQTT
     activo = models.BooleanField(default=True)
     requiere_salida = models.BooleanField(default=True) # Default True for most people (Docente/Personal)
+    history = HistoricalRecords()
     
     def __str__(self):
         return self.nombre
@@ -162,6 +173,7 @@ class Asistencia(models.Model):
     salida_temprano_minutos = models.IntegerField(default=0)
     foto = models.TextField(null=True, blank=True) # Foto del momento de la asistencia
     justificado = models.BooleanField(default=False, help_text="Si es verdadero, la falta/tardanza cuenta como presente en las estadísticas")
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.persona} - {self.fechaHora} - {self.temperatura}°C"
@@ -197,3 +209,37 @@ class DiaNoLaborable(models.Model):
         if self.fecha_fin and self.fecha_fin != self.fecha_inicio:
             rango += f" → {self.fecha_fin}"
         return f"{rango} - {self.motivo} ({self.institucion.nombre})"
+
+
+class ConfiguracionSemana(models.Model):
+    """Singleton: define qué semana (A/B) está vigente basado en una fecha de referencia"""
+    fecha_referencia_semana_a = models.DateField(
+        help_text="Una fecha conocida que cae en Semana A. El sistema calcula automáticamente si la semana actual es A o B."
+    )
+
+    class Meta:
+        verbose_name = 'Configuración de Semana'
+        verbose_name_plural = 'Configuración de Semana'
+
+    def __str__(self):
+        return f"Referencia Semana A: {self.fecha_referencia_semana_a}"
+
+    @staticmethod
+    def get_semana_actual(fecha=None):
+        """Calcula si la fecha dada (o hoy) es Semana A o B.
+        Retorna 'A' o 'B'.
+        Si no hay configuración, retorna 'A' por defecto."""
+        from datetime import date
+        if fecha is None:
+            fecha = date.today()
+        try:
+            config = ConfiguracionSemana.objects.first()
+            if not config:
+                return 'A'
+            ref = config.fecha_referencia_semana_a
+            # Diferencia en semanas ISO
+            diff_weeks = (fecha.isocalendar()[1] - ref.isocalendar()[1]) + \
+                         52 * (fecha.isocalendar()[0] - ref.isocalendar()[0])
+            return 'A' if diff_weeks % 2 == 0 else 'B'
+        except Exception:
+            return 'A'
