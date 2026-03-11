@@ -1,0 +1,6696 @@
+1HTTPinterfaceprotocolforface
+recognitionallinonemachine
+V1.33
+2catalog
+1.summary.......................................................................................................................................7
+2.Interfaceprinciple...............................................................................................................7
+2.1requestmethod.................................................................................................................7
+2.2datatypeandformat....................................................................................................7
+Grammar.......................................................................................................................................7
+2.4identityauthentication..............................................................................................8
+3.Specificfunctioninterface..............................................................................................9
+3.1soundsettings.................................................................................................................9
+3.1.1obtainingaudiosettingparameters..........................................................12
+3.1.2settingaudioparameters..............................................................................13
+3.1.3getthenumberandfilenameofplayingfiles....................................14
+3.1.4playspecifiedfilesound............................................................................15
+3.2dooropeningconditions............................................................................................16
+3.2.1obtainthesettingparametersofdooropeningconditions..............20
+3.2.2settingdooropeningconditionparameters............................................22
+3.2.3introductionofdooropeningmode............................................................24
+3.3settingusernameandpassword..............................................................................26
+3.4networkparameters......................................................................................................26
+3.4.1obtainingnetworkparameters......................................................................28
+3.4.2settingnetworkparameters..........................................................................28
+3.5timeparameters.............................................................................................................29
+3.5.1obtainingsystemtime....................................................................................29
+3.5.2settingsystemtime........................................................................................30
+3.6NTPparameters...............................................................................................................31
+3.5.1obtainingNTPparameters..............................................................................33
+3.5.2settingNTPparameters..................................................................................33
+3.7centralconnection......................................................................................................34
+3.5.1obtainingcentralconnectionparameters................................................35
+3.5.2settingcentralconnectionparameters....................................................35
+3.8restorationoffactory..............................................................................................36
+3.9equipmentinformation................................................................................................39
+3.9.1obtainingequipmentinformation................................................................40
+3.9.2settingdeviceinformation..........................................................................40
+3.10addition,editingandmodificationofthelist............................................41
+3.10.1singlelistaddition....................................................................................48
+3.2addmorethan10lists......................................................................................52
+3.10.3listeditingandmodification..................................................................54
+3.10.4gettingtheoldandnewdatabaseversions..........................................57
+3.10.5Wiganaccesscardnumberandbuilt-inswipeIDcardnumber........58
+3.11deletionofthelist................................................................................................59
+3.11.1deletionofsingleormultiplelists....................................................59
+3.11.2deletionofallpersonnellist................................................................62
+3.12datasubscription......................................................................................................62
+33.12.1pushinformationdoesnotrequireauthentication............................66
+3.12.2usernameandpasswordshallbeprovidedduringsubscription,and
+authenticationisrequiredforsubmission........................................................69
+3.12.3strangerssnapshotReport..........................................................................71
+3.12.4reportingofcertificationresults........................................................73
+3.12.5QRcodereporting..........................................................................................82
+3.12.6reportingofIDcardinformation............................................................83
+3.12.7reportofICcardnumbercertificationresults(accesscontrol)
+...........................................................................................................................................84
+3.12.8reportofpasswordauthenticationresults(accesscontrolmachine)
+...........................................................................................................................................85
+3.12.9querysubscribedinformation....................................................................85
+3.13unsubscribe...................................................................................................................88
+3.14subscriptionheartbeat............................................................................................91
+3.15accesscameraparameters........................................................................................92
+3.15.1accesscameraparameters............................................................................93
+3.15.2settingaccesscameraparameters............................................................94
+3.16serverparametersoffacecapturecomparison................................................95
+3.16.1getserverparameters..................................................................................96
+3.16.2settingserverparameters..........................................................................97
+3.17personneltypeparameters......................................................................................97
+3.17.1getpersonneltypeparameter....................................................................98
+3.17.2settingpersonneltypeparameters..........................................................99
+3.18faceservicefunction............................................................................................100
+3.18.1imageextractionfeaturecode................................................................100
+3.18.2featurecodecomparisonsimilarity......................................................101
+3.18.3obtainingfaceimages................................................................................103
+3.19listsearchquery....................................................................................................104
+3.19.1singlelistquery........................................................................................108
+3.19.2totalnumberofquerylists....................................................................111
+3.19.3multiplelistqueries................................................................................113
+3.20dooropeningcontrol..............................................................................................118
+3.21passwordoperation..................................................................................................120
+3.21.1temporarypasswordacquisition..............................................................120
+3.21.2passwordaddition........................................................................................121
+3.21.3passworddeletion........................................................................................121
+3.21.4allpasswordsarecleared........................................................................122
+3.22controlrecordquery..............................................................................................123
+3.22.1totalnumberofcontrolrecordsquery................................................126
+3.22.2controlrecordpersonnelinformationquery......................................127
+3.23commonconfigurationsettings............................................................................138
+3.23.1obtainingcommonsettingparameters....................................................139
+3.23.2settingcommonparameters........................................................................140
+3.24restartthedevice..................................................................................................140
+43.25imageservicefunction..........................................................................................141
+3.25.1picturecomparisonsimilarity................................................................141
+3.25.2searchlocalfacedatabasebygraph....................................................142
+3.25.3facedetection..............................................................................................146
+3.25.4manualcapture..............................................................................................147
+3.26capturerecordquery..............................................................................................148
+3.26.1queryoftotalnumberofsnapshotrecords........................................150
+3.26.2personnelinformationqueryofcapturerecord................................151
+3.27temperatureparameters..........................................................................................158
+3.27.1obtainingtemperatureparameters..........................................................159
+3.27.2settingtemperatureparameters..............................................................160
+3.28handshakeprotocoldata........................................................................................161
+3.28.1obtaininghandshakeprotocoldata........................................................162
+3.28.2settinghandshakeprotocoldata............................................................162
+Version3.29upgrade........................................................................................................163
+3.29.1versionupgradeinterface1....................................................................163
+3.30systemparameters....................................................................................................164
+3.30.1obtainingsystemparameters....................................................................166
+3.30.2settingsystemparameters........................................................................167
+3.31mqttparameters........................................................................................................168
+3.31.1gettingmqttparameters............................................................................170
+3.31.2settingmqttparameters............................................................................170
+3.32manualpushcontrolrecord..................................................................................171
+3.32.1settingmanualpushcontrolrecord......................................................172
+3.33WiFiparameters........................................................................................................173
+3.33.1gettingWiFiparameters............................................................................174
+3.33.2settingWiFiparameters............................................................................175
+3.34facerecognitionparameters................................................................................175
+3.34.1obtainingfacerecognitionparameters................................................176
+3.34.2settingfacerecognitionparameters....................................................177
+AppendixA:Revisionhistory..................................................................................................178
+AppendixB:Authenticationfailureormessagereplyofsettinginterface..........187
+B.1authenticationfailed............................................................................................187
+B.2setmessagereply....................................................................................................187
+AppendixC:Specificfunctionsofpacketcaptureinterface......................................189
+C.1soundsettings..........................................................................................................189
+C.1.1getaudiosettingparameters..................................................................189
+C.1.2settingaudioparameters..........................................................................190
+C.1.3getthenumberandfilenameofplayingfiles................................191
+C.1.4playspecifiedfilesound........................................................................192
+C.2dooropeningconditions........................................................................................193
+C.2.1settingofdooropeningconditions......................................................193
+C.2.2settingdooropeningconditionparameters........................................195
+C.3.Setusernameandpassword................................................................................196
+5C.4networkparameters..................................................................................................197
+C.Obtainingnetworkparameters..........................................................................197
+C.4.2settingnetworkparameters......................................................................198
+C.5timeparameters........................................................................................................199
+C.5.1obtainingsystemtime................................................................................199
+C.5.2settingsystemtime....................................................................................200
+C.6NTPparameters..........................................................................................................201
+C.6.1obtainingNTPparameters..........................................................................201
+C.6.2settingNTPparameters..............................................................................202
+C.7centerconnection....................................................................................................203
+C.7.1obtainingcentralconnectionparameters............................................203
+C.7.2settingcentralconnectionparameters................................................204
+C.8restorefactory........................................................................................................205
+C.9settinginformation................................................................................................206
+C.9.1obtainingequipmentinformation............................................................206
+C.9.2settingdeviceinformation......................................................................207
+C.10addition,editingandmodificationofthelist........................................208
+C.10.1singlelistaddition................................................................................208
+C.10.2multiplelistsadded................................................................................210
+C.10.3listeditingandmodification..............................................................211
+C.10.4gettingtheoldandnewdatabaseversions......................................212
+C.11listdeleted............................................................................................................213
+C.12datasubscription..................................................................................................214
+C.12.1pushmessagesdonotrequireauthentication..................................214
+C.12.2usernameandpasswordshallbeprovidedduringsubscription,and
+authenticationisrequiredforsubmission......................................................215
+C.3.12reporttostrangers..................................................................................216
+C.12.4reportingofcertificationresults....................................................217
+C.12.4.1replythedatapacketwiththeserverofnetworkinterruptionand
+continuoustransmission..........................................................................................218
+C.12.5reportingofIDcardinformation........................................................219
+C.12.6querysubscribedmessages......................................................................219
+C.13unsubscribe...............................................................................................................220
+C.14subscriptionheartbeat........................................................................................221
+C.19searchlist...............................................................................................................222
+C.19.1singlelistquery......................................................................................222
+C.19.2totalnumberofquerylists..................................................................223
+C.19.3multiplelistqueries..............................................................................224
+C.20dooropeningcontrol............................................................................................226
+C.20.1dooropeningcontrol..........................................................................................226
+C.22controlrecordquery............................................................................................226
+C.23commonsettingparametersetting....................................................................229
+C.23.1obtainingcommonsettingparameters..................................................229
+C.23.2settingcommonparameters......................................................................230
+6C.24restartdevice........................................................................................................231
+C.24.1restartingthedevice...........................................................................................231
+C.25pictureservicefunction....................................................................................232
+C.25.1picturecomparisonsimilarity..............................................................232
+C.25.2searchlocalfacedatabasebygraph..................................................233
+C.25.3facedetectioninpictures....................................................................234
+AppendixDothers.......................................................................................................................235
+D.1nation...............................................................................................................................235
+71.summary
+ThisdocumentismainlyusedforHTTPdockingoffacerecognition
+all-in-onemachine,andisapplicabletosystemdevelopmentand
+maintenancepersonnel.
+2.Interfaceprinciple
+ThisdatainterfacespecificationadoptsstandardHTTPprotocolfor
+communication,andtherequirementsareasfollows:
+2.1requestmethod
+Therequestmethodusesthepostmethod,andthedatasentanduploaded
+isplacedintheentitybody.
+2.2datatypeandformat
+2.2.1allstringsshallbeencodedinUTF-8characterset.
+2.2.2thedataexchangedbybothpartiesshallbepackagedinJSON
+format.Thebasicformatisasfollows:
+{
+"operator":"<Operator>",
+"info":{<Info>},
+……
+}
+Formoredetails,pleasecheck3.SpecificfunctioninterfaceThespecific
+dataformatofeachinterface.
+2.2.3Base64encodingorimageURIisusedforallimagedata.
+2.2.4contentlengthmustbeincludedintheheaderofallHTTP
+interactions.Payattentiontocasesensitivity.
+Grammar
+RequestURIformat:http://<serverIPADDR>/action/<
+operator>.Where<serverIPADDR>:IPaddressoftherequestedall-in-one
+8facerecognitionmachine;<operator>:operationcontent,pleasecheck3.
+Specificfunctioninterface。
+2.4identityauthentication
+Inordertoensurethesecurityofdatatransmission,thebasicm
+odeisusedtemporarilyforauthenticationwhenthedataisformally
+transmitted.Thetypicaldataoftheauthorizationheaderis"authoriz
+ation:basicjdhahy0=",wherebasicrepresentsbasicauthentication,
+andjdhahy0=isthebase64encoded"user:passwd"string.Forexampl
+e,iftheusernameoftheall-in-onemachineis"admin"andthepass
+wordis"admin",thenthebase64codeof"admin:admin"intheheader
+ofsendingdatais"ywrtaw46ywrtaw4=",andtheauthenticationofse
+ndingdataIDcardisasfollows:
+Ifpostmanisusedasanexampletodebugtheinterface,selectbasic
+authunderauthorization,entertheusernameandpassword,andclick
+updaterequest.Postmanwillautomaticallyencrypttheusernameand
+passwordtotheheaders,asshowninthefollowingfigure:
+9
+Aftersetting,selectpostrequestmode,inputtheURLof
+correspondingfunctioninterface,andclicksend.
+3.Specificfunctioninterface
+3.1soundsettings
+Getsorsetsparametersforsystemaudiosettings.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetSoundor
+SetSoundGetSound:Getsthe
+parametersofthe
+audiosettings
+SetSound:Setting
+audio data
+parameters
+info jsonobject concretecontent
+VerifySuccAudioint
+(optional)0~1 Whether the
+authenticationis
+successfulornot
+0:Nobroadcasting
+1:Broadcast
+VerifyFailAudioint
+(optional)0~1 Ifauthentication
+fails,isvoice
+broadcast
+100:Nobroadcasting
+1:Broadcast
+RemoteCtrlAudioint
+(optional)0~1 Remotecontrolof
+soundplayback
+0:Nonremote
+1:Remoteplayback
+Volume int
+(optional)5~100
+Increase
+every5
+valuesVolumevalue
+VerifySuccGuiTipint
+(optional)0~1 Is the
+authentication
+successful
+interfaceprompted
+0:Nohint
+1:Tips
+VerifyFailGuiTipint
+(optional)0~1 Is the
+authentication
+failureinterface
+prompted
+0:Nohint
+1:Tips
+UnregisteredGuiT
+ipint
+(optional)0~1 Listnotregistered
+interfaceprompt
+0:Nohint
+1:Tips
+IPHide int
+(optional)0~1 IstheinterfaceIP
+hidden
+0:Don'thideit
+1:hide
+IsShowName int
+(optional)0~2 Ifthecomparisonis
+successful,isthe
+name prompt
+displayed
+0:Donotshow
+1:display
+2:Partialdisplay(hide
+backpart)
+IsShowTitle int
+(optional)0~1 Display(discard)
+screenTitleprompt
+0:Donotshow
+(default)
+1:display
+11IsShowVersionint
+(optional)0~1 Display the
+interfaceversion
+number prompt
+(discard)
+0:Donotshow
+(default)
+1:display
+IsShowDate int
+(optional)0~1 Discarddate
+0:Donotshow
+1:display
+IDCardNumHideint
+(optional)0~1 Whether the
+interfacecard
+numberishidden
+(built-incard
+reader)
+0:Don'thideit
+1:hide
+ICCardNumHideint
+(optional)0~1 WhethertheICcard
+numberofthe
+interfaceishidden
+(exceptforthe
+built-in card
+reader)
+0:Don'thideit
+1:hide
+DisplayPictureint
+(optional)0~1 Imagedisplayed
+aftercomparison
+0:Captureimages
+1:Registration
+image
+IsShowDeviceIDint
+(optional)0~1 DisplaynativeID
+0:Donotshow
+1:display
+IsShowPersonNumint
+(optional)0~1 Displaysthenumber
+ofregisteredlists
+0:Donotshow
+1:display
+VerifyTipContentString
+(optional)custom UItextpromptfor
+successful
+authentication(the
+lengthislessthan
+32bytes,which
+12cannotbetoolong,
+otherwisetheUI
+display is
+incomplete)
+Default:pleasepass
+UnregisterTipCon
+tentString
+(optional)custom UItextpromptisnot
+registeredinthe
+list(thelengthis
+lessthan32bytes,
+otherwisetheUI
+display is
+incomplete)
+Default:stranger
+BlacklistTipCont
+entString
+(optional)custom UItextpromptof
+authentication
+failure(thelength
+islessthan32
+bytes,otherwisethe
+UIdisplayis
+incomplete)
+Default:noaccess
+3.1.1obtainingaudiosettingparameters
+Operator:GetSound
+URI:http://<serveripaddr>/action/GetSound
+e.g.,
+http://172.168.2.10/action/GetSound
+Replytobody:
+{
+"operator":"GetSound",
+"info":{
+"VerifySuccAudio":1,
+"VerifyFailAudio":1,
+"RemoteCtrlAudio":0,
+"Volume":80,
+"VerifySuccGuiTip":1,
+"VerifyFailGuiTip":1,
+"UnregisteredGuiTip":1,
+"IPHide":0,
+13"IsShowName":1,
+"DisplayPicture":0,
+"IsShowTitle":0,
+"IsShowVersion":0,
+"IsShowDate":1,
+"IsShowTime":1,
+"ICCardNumHide":0,
+"Verifytipcontent":"pleasepass",
+"Unregistertipcontent":"stranger,",
+"Blacklisttipcontent":"noaccess"
+}
+}
+3.1.2settingaudioparameters
+Operator:SetSound
+URI:http://<serveripaddr>/action/SetSound
+e.g.,
+http://172.168.2.10/action/SetSound
+Issuebody:
+{
+"operator":"SetSound",
+"info":
+{
+"VerifySuccAudio":1,
+"VerifyFailAudio":1,
+"RemoteCtrlAudio":1,
+"Volume":50,
+"VerifySuccGuiTip":1,
+"VerifyFailGuiTip":1,
+"UnregisteredGuiTip":1,
+"IPHide":0,
+"IsShowName":1,
+"DisplayPicture":0,
+"ICCardNumHide":0,
+"Verifytipcontent":"pleasepass",
+"Unregistertipcontent":"stranger,",
+"Blacklisttipcontent":"noaccess"
+14}
+}
+3.1.3getthenumberandfilenameofplayingfiles
+Parameterinformation:
+Key Type Values Description
+operator char GetAudio SetAudio:Get a
+playableaudiofile
+info jsonobject concretecontent
+AudioNum int Numberofaudiofiles
+AudioName jsonarrayAcollectionofsingle
+ormultipleaudiofile
+namesintheformatof
+aJSONarrayofaudio
+filenames
+Operator:GetAudio
+URI:http://<serveripaddr>/action/GetAudio
+e.g.,
+http://172.168.2.10/action/GetAudio
+Replytobody:
+{
+"operator":"GetAudio",
+"info":{
+"AudioNum":1,
+"AudioName":[
+"welcome.wav",...
+]
+}
+}
+153.1.4playspecifiedfilesound
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char SetAudio SetAudio:Settoplay
+thespecifiedaudio
+file
+info jsonobject concretecontent
+DeviceID int DeviceID
+AudioType int 0~1 Typeofplaybackfile
+0:Playmachinelocal
+files
+1:Playcustomfile
+AudioName char
+(optional)Nameofaudiofileto
+beplayed(mustbewav
+file,samplingrate:
+16000hz,sampling
+bits:16bits,mono.64
+bytefilename)
+Operator:SetAudio
+URI:http://<serveripaddr>/action/SetAudio
+e.g.,
+http://172.168.2.10/action/SetAudio
+Issuebody:
+{
+"operator":"SetAudio",
+"info":{
+"DeviceID":1300001,
+"AudioType":0,
+"AudioName":"welcome.wav"
+}
+}
+163.2dooropeningconditions
+Getsorsetsthedooropeningconditionparameters.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetDoorCondition
+or
+SetDoorConditionGetDoorCondition:Get
+dooropeningcondition
+settingparameters
+SetDoorCondition:
+Settingdooropening
+conditionparameters
+info jsonobject concretecontent
+FaceThresholdint
+(optional)50~100 Blackandwhitelist
+comparisonthreshold
+IDCardThresholdint
+(optional)50~100 ThresholdcomparisonID
+card
+OpendoorWayint
+(optional)0~3 0:Faceopeningmode,
+1:Remotedooropening
+mode,
+2:Remotedooropening
+orfacemode3:Face
+verification+remote
+dooropeningmode
+VerifyMode int
+(optional)1: General
+neutralmachine:
+1~4or21~26
+2:Maskor
+temperature
+measuring
+machine:whether
+maskdetectionor
+temperature
+detectionor(|)
+operationbased
+dooropeningBasicdooropening
+verificationmode.(the
+followingbasetypes
+aredecimal)
+1: Whitelist
+verification
+2:IDcardverification
+3:Whitelist+IDcard
+4:WhitelistorIDcard
+5:Singlemaskorbody
+17verification
+method is
+required.
+Supportmask
+detectionor(|)
+operation,and
+0x100indicates
+maskdetection
+and
+verification;
+Support
+temperature
+detectionor(|)
+operation,and
+0x200indicates
+thatithas
+temperature
+detection
+verification;
+Supportmask+
+bodytemperature
+detectionor(|)
+operation,and
+0x300indicates
+thatithasmask+
+bodytemperature
+detection
+verification;
+Forexample:
+1:Ordinary
+neutralmachine
+1)Whitelist
+verification:1
+2)Wegenka+
+whitelist
+verification:25
+2:Maskor
+temperature
+measuring
+machinetemperatureorseparate
+mask+bodytemperature
+21:RFcardverification
+(built-inswipecard
+model)
+22:RFcardverification
++whitelist
+Verification(built-in
+swipecardmodel)
+23:RFcardverification
+or whitelist
+verification(built-in
+swipecardmodel)
+24:Wegenka
+verification
+25:Wegenka+whitelist
+verification
+26:Wegenkaorwhitelist
+verification
+181)Singlepass
+mask
+2)Mask+
+whitelist
+verification
+(0x101=0x100&1
+=257)
+3)Individual
+bodytemperature
+pass(0x205=
+0x200&5=517)
+4) Body
+temperature+
+whitelist
+verification
+(0x201=0x200&1
+=513)
+5)Singlemask+
+bodytemperature
+(0x305=0x300&5
+=773)
+6)Mask+body
+temperature+
+Wiganswipecard
++whitelist
+verification
+(0x319=0x300&
+25=793)
+VerifyResetTimeint
+(optional)1~10 Verifyresettime(seconds)
+TheUIdisplaystheprompt
+informationandthetimethat
+thesamepersondoesnot
+recognizeagainduringthe
+resettime
+Wiegand int
+(optional)0~1 ThetypeofWiganagreement.
+0:26
+1:34
+194:26bits(8+16):
+facilitycode+userid
+(equipmentcode+card
+number);
+5:34bits(8+24);
+6:Thenumberofdigits
+tobefilledinis26
+(16);
+7:34digits(8+24tobe
+filledinseparately);
+PublicMjCardNounsigned
+int
+(optional)Publicaccesscard
+number
+AutoMjCardBgnNounsigned
+int
+(optional)Automaticallygenerate
+thestartcardnumberof
+theaccesscontrolcard
+number
+AutoMjCardEndNounsigned
+int
+(optional)Automaticallygenerate
+theendcardnumberof
+accesscontrolcard
+number
+ControlTypeint
+(optional)0~2 Controldooropening
+interfacemode.
+0:Wiganinterface
+1:Switchingvalue
+2:Wiganinterface+
+switchingvalue
+IOType int
+(optional)0~1 Openthedoorwhen
+controllingtheopening
+interfacemode.
+0:close
+1:tobreakoff
+IOStayTime int
+(optional)Holdingtime(MS)
+Endian int
+(optional)0~1 Cardreadingmode
+0:Bigendmode
+1:Smallendmode
+20CardMode int
+(optional)0~1 Cardnumbermode
+0:decimalsystem
+1:hexadecimal
+IsOutFF int
+(optional)0~1 StrangerWiganoutputs
+8F's(Wiganopensthe
+door)
+0:Nooutput
+1:output
+SnapResetTimeint
+(optional)0-15(default0)Identification
+intervaltime(s):
+identifythenext
+personbycomparingthe
+waitingtimeafter
+passingthecomparison
+3.2.1obtainthesettingparametersofdooropening
+conditions
+Operator:GetDoorCondition
+URI:http://<serveripaddr>/action/GetDoorCondition
+e.g.,
+http://172.168.2.10/action/GetDoorCondition
+Replytobody:
+3.2.1.1.Theopeninginterfacemodeisswitchvalue:
+{
+"operator":"GetDoorCondition",
+"info":{
+"FaceThreshold":80,
+"IDCardThreshold":50,
+"VerifyResetTime":2,
+"OpendoorWay":0,
+"VerifyMode":1,
+"ControlType":1,
+"IOType":0,
+"IOStayTime":6,
+"Endian":0,
+21"CardMode":0,
+"SnapResetTime":0
+}
+}
+1.1.1.2.1.1.2.1.2.1.2.1.1.2.1.1.2.1.2.1.1.2.1.1.1.1.1.1.1.1.1.1.1.1.1.
+1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1
+{
+"operator":"GetDoorCondition",
+"info":{
+"FaceThreshold":80,
+"IDCardThreshold":50,
+"VerifyResetTime":2,
+"OpendoorWay":0,
+"VerifyMode":1,
+"Wiegand":0,
+"ControlType":0,
+"PublicMjCardNo":2,
+"AutoMjCardBgnNo":2,
+"AutoMjCardEndNo":4,
+"IOStayTime":6,
+"Endian":0,
+"CardMode":0
+}
+}
+3.2.1.2.TheopeninginterfacemodeisWiganinterface+switchvalue:
+{
+"operator":"GetDoorCondition",
+"info":{
+"FaceThreshold":80,
+"IDCardThreshold":50,
+"OpendoorWay":0,
+"VerifyMode":1,
+"Wiegand":0,
+"ControlType":0,
+22"PublicMjCardNo":2,
+"AutoMjCardBgnNo":2,
+"AutoMjCardEndNo":4,
+"IOStayTime":6,
+"Endian":0,
+"CardMode":0
+}
+}
+3.2.2settingdooropeningconditionparameters
+Operator:SetDoorCondition
+URI:http://<serveripaddr>/action/SetDoorCondition
+e.g.,
+http://172.168.2.68/action/SetDoorCondition
+Issuebody:
+3.2.2.1.Theopeninginterfacemodeisswitchvalue:
+{
+"operator":"SetDoorCondition",
+"info":{
+"FaceThreshold":90,
+"IDCardThreshold":50,
+"OpendoorWay":0,
+"VerifyMode":1,
+"ControlType":1,
+"IOType":0,
+"IOStayTime":200,
+"Endian":0,
+"CardMode":1,
+"SnapResetTime":0
+}
+}
+233.2.2.2.2.ThedooropeninginterfacemodeisWiganinterface:
+{
+"operator":"SetDoorCondition",
+"info":{
+"FaceThreshold":90,
+"IDCardThreshold":50,
+"OpendoorWay":0,
+"VerifyMode":1,
+"ControlType":0,
+"Wiegand":0,
+"PublicMjCardNo":2,
+"AutoMjCardBgnNo":2,
+"AutoMjCardEndNo":4,
+"IOStayTime":200,
+"Endian":0,
+"CardMode":1
+}
+}
+3.2.2.3.ThemodeofdooropeninginterfaceisWiganinterface+switch
+value:
+{
+"operator":"SetDoorCondition",
+"info":{
+"FaceThreshold":90,
+"IDCardThreshold":50,
+"OpendoorWay":0,
+"VerifyMode":1,
+"ControlType":0,
+"Wiegand":0,
+"PublicMjCardNo":2,
+"AutoMjCardBgnNo":2,
+"AutoMjCardEndNo":4,
+"IOStayTime":200,
+"Endian":0,
+"CardMode":1
+24}
+}
+3.2.3introductionofdooropeningmode
+Atpresent,thefollowingfacerecognitionmodesaresupported:Face
+openingmode,remotedooropeningmode,remotedooropeningorface
+openingmode,faceverification+remotedooropeningmode.
+0:faceopeningmode:facerecognitionintegratedopportunitytopush
+thestrangersnapshotinformationandauthenticationcomparison
+information,anddirectlyexecutethedooropeningandUIprompt
+informationafterthecomparison.Inthismode,callingtheremotedoor
+openingcommandwillbeinvalid.
+1:Thismethodisusedforremotecomparisonofdooropening
+information,whichcanbeusedforremotecomparisonofdooropening
+information,remotecaptureofdooropeninginformation,remotecapture
+ofdooropeninginformation,remotecaptureofdooropeningmode
+information.
+2:Remotedooropeningorfacemode:facerecognitionintegrationcan
+pushthestrangersnapshotinformationandauthenticationcomparison
+information,anddirectlyexecutethedooropeningandUIprompt
+informationafterthecomparison.Inthismode,theremotedooropening
+commandcanbecalled.
+3:Faceverification+remotedooropeningmode:thefacerecognition
+integrationopportunitypushesthestrangersnapshotinformationand
+authenticationcomparisoninformation.Ifthecomparisonispassed,the
+dooropeningandUIinformationpromptswillnotbeexecuteddirectly.
+ThedooropeninginformationandUIpromptneedtobeattachedwiththe
+openinginformationandUIpromptinthereplytothereceived
+authenticationpushdatapackage.ThismoderequiresHTTPtobesetinthe
+modeofofflineandcontinuoustransmission,andtheauthentication
+subscriptionisenabled.Inthiscase,ifyoureceivetheconfirmation
+informationfromtheJSONopen-doorplatform,youwilldirectlysendthe
+confirmationmessagetotheJSONopen-doorauthenticationplatform(if
+youdonotneedtosendtheconfirmationmessagetotheJSONopen-door
+authenticationplatform),ifyoudonotneedtosendtheconfirmation
+messagetotheHTTPopen-doorauthenticationplatform,youneedtosend
+theconfirmationmessagedirectlytotheJSONopen-doorauthentication
+platform.Inthismode,itisnecessarytoexcludewhetherthe
+authenticationdatapushedistheauthenticationcomparisondataof
+networkdisconnectionandcontinuoustransmission.Ifitisthe
+authenticationdataofnetworkdisconnectionandremotedooropening,the
+25returneddatapacketdoesnotneedtoperformtheopeningactionagain.
+Faceverification+remotedooropeningmethodisadoptedtoreply
+theinformationconfirmationpackagereceivedfromauthentication
+subscriptionwhenthenetworkisdisconnectedforcontinuoustransmission
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+code int 200 Requiredfieldin
+continuous
+transmissionmode
+desc char OK Requiredfieldin
+continuous
+transmissionmode
+openDoor int
+(optional)0~1 Dooropeningaction
+0:don'topenthedoor
+1:Openthedoor
+showInfo String
+(optional)64bytes
+(including
+terminator)UI prompt
+information
+e.G.,replytoneedtoopenthedoor+UIpromptmessage
+{
+"code":200,
+"desc":"OK",
+"openDoor":1,
+"Showinfo":"XXpleasepass"
+}
+e.G.,replynoneedtoopenthedoor+UIpromptmessage
+{
+"code":200,
+"desc":"OK",
+"openDoor":0,
+"Showinfo":"XXhasnopermissiontopass"
+}
+263.3settingusernameandpassword
+Settheusernameandpasswordoftheall-in-onefacerecognitionmachine.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar SetUserPwd Settheusernameand
+passwordoftheface
+recognitionallinone
+machine
+info jsonobject concretecontent
+User char Username Username,maximum
+length64characters
+(includingterminator)
+Pwd char Password Password,maximum
+length64characters
+(includingterminator)
+Operator:SetUserPwd
+URI:http://<serveripaddr>/action/SetUserPwd
+e.g.,
+http://<serveripaddr>/action/SetUserPwd
+Issuebody
+{
+"operator":"SetUserPwd",
+"info":{
+"User":"admin",
+"Pwd":"admin"
+}
+}
+3.4networkparameters
+Getsorsetsnetworkparameters.Intheprocessofsettingnetwork
+27parameters,themachinewillrestartafterchangingIPandotherbehaviors.
+Atthesametime,thesettingresultwillnotbereturnedatpresent.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetNetParam
+or
+SetNetParamGetNetParam: Get
+networkparameters
+SetNetParam:Setting
+networkparameters
+info jsonobject concretecontent
+IPAddr char
+(optional)DeviceIPaddress(upto
+64bytes)
+Submask char
+(optional)DeviceIPsubnetmask
+(upto32bytes)
+Gateway char
+(optional)DeviceIPgateway(upto
+32bytes)
+ListenPortint
+(optional)Dataserviceport
+WebPort int
+(optional)WebService
+DHCP int
+(optional)0~1 DHCP(onlysupportedby
+Hisilicon)
+0:notenabled(not
+enabledbydefault)
+1:Enable(when
+enabling,itis
+recommendedthattheUI
+interfaceshouldnot
+hideIP)
+DefRoute int
+(optional)0~1 Defaultrouting(WiFi/
+4Gversionspecific)
+0:wiredrouting
+1:WiFirouting
+2:4Grouting
+283.4.1obtainingnetworkparameters
+Operator:GetNetParam
+URI:http://<serveripaddr>/action/GetNetParam
+e.g.,
+http://192.168.2.10/action/GetNetParam
+Replybody
+{
+"operator":"GetNetParam",
+"info":{
+"IPAddr":"192.168.2.10",
+"Submask":"255.255.255.0",
+"Gateway":"192.168.2.1",
+"ListenPort":5000,
+"WebPort":80
+}
+}
+3.4.2settingnetworkparameters
+Operator:SetNetParam
+URI:http://<serveripaddr>/action/SetNetParam
+e.g.,
+http://192.168.2.10/action/SetNetParam
+Issuedbody
+{
+"operator":"SetNetParam",
+"info":{
+"IPAddr":"192.168.2.10",
+"Submask":"255.255.255.0",
+"Gateway":"192.168.2.1",
+"ListenPort":5000,
+29"WebPort":80
+}
+}
+3.5timeparameters
+Getsorsetsthetimeparameter.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar GetSysTime
+or
+SetSysTimeGetSysTime:Gettime
+parameters
+SetSysTime:Setting
+timeparameters
+info Jsonobject concretecontent
+Year unsignedshort
+(optional)1900~ year
+Month unsignedshort
+(optional)1~12 month
+Day unsignedshort
+(optional)1~31 day
+Hour unsignedshort
+(optional)0~23 Hour
+Minute unsignedshort
+(optional)0~59 branch
+Second unsignedshort
+(optional)0~59 second
+3.5.1obtainingsystemtime
+Operator:GetSysTime
+URI:http://<serveripaddr>/action/GetSysTime
+e.g.,
+http://192.168.2.10/action/GetSysTime
+30Replytobody
+{
+"operator":"GetSysTime",
+"info":{
+"Year":2018,
+"Month":3,
+"Day":25,
+"Hour":20,
+"Minute":30,
+"Second":50
+}
+}
+3.5.2settingsystemtime
+Operator:SetSysTime
+URI:http://<serveripaddr>/action/SetSysTime
+e.g.,
+http://192.168.2.10/action/SetSysTime
+Issuebody
+{
+"operator":"SetSysTime",
+"info":{
+"Year":2018,
+"Month":3,
+"Day":25,
+"Hour":20,
+"Minute":30,
+"Second":50
+}
+}
+313.6NTPparameters
+GetsorsetstheNTPparameter.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar GetSysNTP
+or
+SetSysNTPGetSysNTP:GetNTPparameters
+SetSysNTP:SettingNTP
+parameters
+info jsonobject concretecontent
+NtpEnableint
+(optional)0~1 WhethertoenableNTPtiming
+0:Notenabled
+1:Enable
+NtpUrl char
+(optional)NTPserverIPaddress(upto64
+bytes)
+NtpPortint
+(optional)NTPserverport
+NtpTimeZoneint
+(optional)1~30 timezone
+1:(gmt-12:00)westofthe
+Japaneseborder
+2:(gmt-11:00)midway,Samoa
+3:(gmt-10:00)Hawaii
+4:(gmt-09:00)Alaska
+5:(gmt-08:00)Pacifictime
+(USAandCanada)
+6:(gmt-07:00)mountaintime
+(USAandCanada)
+7:(gmt-06:00)Centraltime
+(USAandCanada)
+8:(gmt-05:00)Easterntime
+(USAandCanada)
+9:(gmt-04:00)Atlantictime
+(Canada)
+10:(gmt-03:30)Newfoundland
+11:(gmt-03:00)Georgetown,
+Brasilia
+3212:(gmt-02:00)MidAtlantic
+13:(gmt-01:00)CapeVerde,
+Azores
+14:(GMT+00:00)Dublin,
+Edinburgh,London
+15:(GMT+01:00)Amsterdam,
+Berlin,Rome,Paris
+16:(GMT+02:00)Athens,
+Jerusalem,Istanbul
+17:(GMT+03:00)Bagdad,
+Kuwait,Moscow
+18:(GMT+03:30)Teheran
+19:(GMT+04:00)Caucasus
+standardtime
+20:(GMT+04:30)Kabul
+21:(GMT+05:00)Islamabad,
+Karachi,Tashkent
+22:(GMT+05:30)Madras,
+Mumbai,NewDelhi
+23:(GMT+06:00)Almaty,
+Novosibirsk,Dhaka
+24:(GMT+07:00)Bangkok,
+Hanoi,Jakarta
+25:(GMT+08:00)Beijing,
+Urumqi,Singapore
+26:(GMT+09:00)Seoul,Tokyo,
+Osaka,Sapporo
+27:(GMT+09:30)Adelaide,
+Darwin
+28:(GMT+10:00)Melbourne,
+Sydney,Canberra
+29:(GMT+11:00)Magadan,
+SolomonIslands
+30:(GMT+12:00)Auckland,
+Wellington
+33NtpIntervalunsignedint NTPcalibrationinterval,
+unit:hour
+3.5.1obtainingNTPparameters
+Operator:GetSysNTP
+URI:http://<serveripaddr>/action/GetSysNTP
+e.g.,
+http://192.168.2.10/action/GetSysNTP
+Replytobody
+{
+"operator":"GetSysNTP",
+"info":{
+"NtpEnable":0,
+"NtpUrl":"time.windows.com",
+"NtpPort":123,
+"NtpTimeZone":25,
+"NtpInterval":1
+}
+}
+3.5.2settingNTPparameters
+Operator:SetSysNTP
+URI:http://<serveripaddr>/actionSetSysNTP
+e.g.,
+http://192.168.2.10/action/SetSysNTP
+Issuebody
+{
+"operator":"SetSysNTP",
+"info":{
+34"NtpEnable":0,
+"NtpUrl":"time.windows.com",
+"NtpPort":123,
+"NtpTimeZone":14,
+"NtpInterval":1
+}
+}
+3.7centralconnection
+Getsorsetsthecentralconnectionparameters.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetCenter
+or
+SetCenterGetCenter:Getcentral
+connectionparameters
+SetCenter:Central
+connectionparameter
+setting
+info jsonobject concretecontent
+ConnectCenterint
+(optional)0~1 Enable central
+connection
+0:Notenabled
+1:Enable
+CenterUrl char
+(optional)IPaddressofcentral
+server(maximum64
+bytes)
+CenterPort int
+(optional)Centralserverport
+CenterUser char
+(optional)Username,themaximum
+lengthis30characters
+(includingtheending
+character)
+CenterPwd char
+(optional)Password,upto30
+characters long
+35(includingterminator)
+SendSnapImageint
+(optional)0~1 Sendrealtimepictures
+0:Donotsend
+1:sendout
+SendVerifyResultint
+(optional)0~1 Whethertosend
+authenticationresults
+0:Donotsend
+1:sendout
+3.5.1obtainingcentralconnectionparameters
+Operator:GetCenter
+URI:http://<serveripaddr>/action/GetCenter
+e.g.,
+http://192.168.2.10/action/GetCenter
+Replytobody
+{
+"operator":"GetCenter",
+"info":{
+"ConnectCenter":0,
+"CenterUrl":"192.168.2.10",
+"CenterPort":6666,
+"CenterUser":"admin",
+"CenterPwd":"admin",
+"SendSnapImage":1,
+"SendVerifyResult":1
+}
+}
+3.5.2settingcentralconnectionparameters
+Operator:SetCenter
+URI:http://<serveripaddr>/action/SetCenter
+36e.g.,
+http://192.168.2.10/action/SetCenter
+Issuebody
+{
+"operator":"SetCenter",
+"info":{
+"ConnectCenter":0,
+"CenterUrl":"192.168.2.10",
+"CenterPort":6666,
+"CenterUser":"admin",
+"CenterPwd":"admin",
+"SendSnapImage":1,
+"SendVerifyResult":1
+}
+}
+3.8restorationoffactory
+Therestorationoffactoryinterfacemainlyinvolvesthesettingof
+factorymode,listandcontrolrecord,etc.Itisirreversibletorestore
+thesnapshotrecord,personnellistdatabaseandcontrolrecord.Please
+operatewithcaution.Forthosepartsthatdonotneedtoberestored,
+partialrecoveryissupported.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char SetFactoryDefaultSetdevicetofactory
+info jsonobject concretecontent
+DefaltDoorSetunsigned
+char
+(optional)0~1 Whetherthedoor
+openingconditionsare
+restoredtothefactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltSoundSeunsigned0~1 Isthesoundsetting
+37t char
+(optional)restoredtofactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltNetParunsigned
+char
+(optional)0~1 Arenetworkparameters
+restoredtofactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltCenterP
+arunsigned
+char
+(optional)0~1 Whetherthecentral
+connectionparameters
+arerestoredtothe
+factory
+0:Noreturntofactory
+1:Returntofactory
+DefaltCaptureunsigned
+char
+(optional)0~1 Isthesnapshotrecord
++controlrecord
+restoredtothefactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltLogunsigned
+char
+(optional)0~1 Isthelogrecord
+restoredtothefactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltPersonunsigned
+char
+(optional)0~1 Whetherthepersonnel
+listdatabase+control
+recordsarerestoredto
+thefactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltRecordunsigned
+char
+(optional)0~1 Whetherthecontrol
+recordsarerestoredto
+thefactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltMaintai
+nTimeunsigned
+char0~1 Isthefactory
+maintenancetimeofthe
+38(optional) systemrestored
+0:Noreturntofactory
+1:Returntofactory
+DefaltSystemS
+ettingsunsigned
+char
+(optional)0~1 Systemparameters:The
+typeofIDcardreader;
+whethertorecord
+snapshot,IDcard,
+authenticationrecord
+andotherparameters
+arerestoredtofactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltEnterIP
+Cunsigned
+char
+(optional)0~1 (usedbytheface
+analysisserver),
+whethertheparameters
+oftheaccesscamera
+arerestoredtothe
+factory
+0:Noreturntofactory
+1:Returntofactory
+DefaltServerB
+asicParaunsigned
+char
+(optional)0~1 Basic parameter
+configuration:
+informationrelease;
+channelselection;
+clear interface
+captureandcomparison
+informationWhether
+torestorethefactory
+0:Noreturntofactory
+1:Returntofactory
+DefaltWorktyp
+eunsigned
+char
+(optional)0~1 (usedbytheface
+analysisserver),
+whetherthepersonnel
+typeparametersare
+restoredtothefactory
+390:Noreturntofactory
+1:Returntofactory
+Operator:SetFactoryDefault
+URI:http://<serveripaddr>/action/SetFactoryDefault
+e.g.,
+http://192.168.2.10/action/SetFactoryDefault
+Issuebody
+{
+"operator":"SetFactoryDefault",
+"info":{
+"DefaltDoorSet":0,
+"DefaltSoundSet":0,
+"DefaltNetPar":0,
+"DefaltCenterPar":0,
+"DefaltCapture":0,
+"DefaltLog":0,
+"DefaltPerson":0,
+"DefaltRecord":0,
+"DefaltMaintainTime":0,
+"DefaltSystemSettings":0,
+"DefaltEnterIPC":0,
+"DefaltServerBasicPara":0,
+"DefaltWorktype":0
+}
+}
+3.9equipmentinformation
+Getsorsetsdeviceinformation.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+40operator char GetSysParamor
+SetSysParamGetsorsetssystem
+deviceinformation
+info jsonobject concretecontent
+Name char
+(optional)Devicename,upto64
+charactersinlength
+(includingterminator)
+DeviceID int
+(optional)DeviceID(not
+settable)
+Version char
+(optional)Systemversion(not
+settable)
+3.9.1obtainingequipmentinformation
+Operator:GetSysParam
+URI:http://<serveripaddr>/action/GetSysParam
+e.g.,
+http://192.168.2.10/action/GetSysParam
+Replytobody
+{
+"operator":"GetSysParam",
+"info":{
+"Name":"facegate1",
+"DeviceID":1300001,
+"Version":"v4.0.5-0.0.6.0"
+}
+}
+3.9.2settingdeviceinformation
+Allowsyoutosetthenameofthedevice.
+Operator:SetSysParam
+URI:http://<serveripaddr>/action/SetSysParam
+41e.g.,
+http://192.168.2.10/action/SetSysParam
+Replytobody
+{
+"operator":"SetSysParam",
+"info":{
+"Name":"facegate_test"
+}
+}
+3.10addition,editingandmodificationofthelist
+Additionandmodificationofthelist.Correspondingtothe
+distributedpersonnellistimages,thepicturedatacanbefilledin
+Base64withthekeyvalueofpicinfo,ortheURIaddressofthepicture
+canbefilledinbythekeyvalueofpicuri,andthecorrespondingimage
+datacanbeobtainedbythefacerecognitionall-in-onemachine.Choose
+oneofthesetwomethods.Whenpicinfoandpicuripassindataatthesame
+time,thedatacorrespondingtopicinfoisobtainedbydefault.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar AddPerson
+or
+EditPersonAddPerson:Addlistto
+listLibrary
+EditPerson:Modifythe
+personnelinformation
+inthelistlibrary
+info jsonobject concretecontent
+DeviceIDint ThedeviceIDnumberof
+theequipmenttobe
+operatedcanbe
+accessedthrough3.9
+equipmentinformation
+acquisitionGet.
+42IdType int 0~2 ThetypeofIDthat
+needstobeoperatedon,
+0:CustomizeID,
+1:Libid,(modified)
+2:PersonUUID
+CustomizeIDunsignedint
+(optional)UserdefinedID
+Requiredwhenidtype=0
+LibID int
+(optional)DatabaseID(for
+modification)
+Requiredwhenidtype=1
+PersonUUIDchar
+(optional)UserdefinedUUID
+Requiredwhenidtype=2
+PersonTypeint
+(optional)0~1(allinone
+machine)
+0~11(analysis
+server)Listtype
+0:Whitelist
+1:blacklist
+2-11:personneltype
+(usedbyanalysis
+server)
+Name char
+(optional)Name,maximumlength32
+characters(including
+ending)
+Gender int
+(optional)0~1 Gender
+0:male
+1:female
+Nation int
+(optional)1~57 nation
+1:"Han"
+SeeAppendix D.1
+Nationalities
+CardTypeint
+(optional)Documenttype
+0:ID
+IdCard char
+(optional)IDnumber,themaximum
+lengthis32characters
+(includingending
+character)
+Birthdaychar YYYY-MM-DD Birthday,e.g.,January
+43(optional) 1,2018
+Telnum char
+(optional)Phonenumber,upto32
+characters long
+(includingterminator)
+Native char
+(optional)Nativeplace,the
+maximumlengthis32
+characters(including
+endingcharacter)
+Address char
+(optional)Address,withamaximum
+lengthof72characters
+(includingterminator)
+Notes char
+(optional)Note,themaximum
+lengthis64characters
+(includingterminator)
+MjCardFromint
+(optional)0~3 Thegeneratingmodeof
+wiegenkanumber
+0:Publiccardnumber
+1:Automaticgeneration
+2:Manualinput
+3:Donotuseaccess
+cardnumber
+WiegandTypeint
+(optional)0~1or6~7TheWiegandagreement
+accordingtowhichthe
+wagenkanumberiscomposed;
+whenmjcardfrom=2is
+required;
+0:26
+1:34
+6:26digits(8+16facilitycode
++userid(equipmentcode+
+cardnumber)shouldbefilled
+inseparately);
+7:34digits(8+24facilitycode
++userid)
+Default:1(34bits)
+WGFacilityCo
+deint
+(optional)Facilitycode;required
+whenwiegandtype=6or
+7;usedwith
+mjcardno.When
+44wiegandtype=0or1,it
+isnotnecessarytofill
+in.See3.10.5Wigan
+accesscardnumberand
+built-inswipeIDcard
+number
+MjCardNounsignedint
+(optional)UserID;requiredwhen
+Wiegandtype=6or7,
+usedtogetherwith
+wgfacilitycode.When
+Wiegandtype=0or1,it
+formsthewiegenka
+numberalone.See3.10.5
+Wiganaccesscard
+numberandbuilt-in
+swipeIDcardnumber
+CardModeunsignedint
+(optional)0~1 Theaccesscontrolcard
+numberadoptsthemode
+0:Decimalcardnumber
+1: Hexadecimal
+compositioncardnumber
+Default0:Forthecard
+numberofdecimal
+system,pleaserefer
+to3.10.5Wiganaccess
+cardnumberand
+built-inswipeIDcard
+number
+RFCardModeunsignedint
+(optional)0~1 TheRF(ID)cardnumber
+adoptsthemode,aiming
+atthebuilt-incard
+reader
+0:Decimalcardnumber
+1:Hexadecimal
+compositioncardnumber
+Default1:Hexadecimal
+compositioncardnumber
+45RFIDCardChar
+(optional)Ifrfcardmode=
+0,fillinthe
+decimalstring
+("1369406761");
+ifrfcardmode=
+1,fillinthe
+hexadecimal
+string
+("519f7d29")IDcardnumber,the
+maximumlengthis18
+characters,forthe
+built-incardreader
+(includingtheend
+character).See3.10.5
+Wiganaccesscard
+numberandbuilt-in
+swipeIDcardnumber
+Tempvalidint
+(optional)0~3 Isitatemporarylist
+0:Permanenteffective
+list
+1:Provisionallist1
+(startandendperiod)
+2:Temporarylist2
+(dailytimeperiod,new
+database version
+support)
+3:Temporarylist3
+(validtimes,supported
+bynewdatabase
+version)
+CustomizeIDunsignedint
+(optional)TheIDnumberofthe
+usercanbemodifiedby
+the user ID
+number.Note:youcan't
+usethesameIDtoadd
+personnelrepeatedly,
+otherwiseitwillcause
+errorsinmodification,
+deletionandother
+operations.
+PersonUUIDchar
+(optional)The user-defined
+personnelUUIDnumber
+canbemodifiedor
+46deletedtomanagethe
+corresponding
+personnel
+information.Note:itis
+notallowedtoadd
+personnelwiththesame
+ID repeatedly,
+otherwiseitwillcause
+errorsinmodification,
+deletionandother
+operations(nomore
+than48bytes)
+ValidBeginchar
+(optional)YYYY-MM-DDThh:mm
+:ssIfitistemporarylist
+1,thestarttimeofthe
+temporarylisttaking
+effect, e.g.,
+2018-03-12t09:09:20
+Ifitisatemporary
+list,2:e.g.,
+2018-03-12t09:09:20
+March12,2018isthe
+startingtimeforthe
+provisionallistto
+takeeffect;
+09:09:20isthestart
+timeofthetemporary
+listtakingeffect,
+minutesandseconds;
+ValidEndchar
+(optional)YYYY-MM-DDThh:mm
+:ssIfitistemporarylist
+1,theendtimeof
+temporarylist1
+effective, e.g.,
+2018-03-12t09:10:00
+Ifitisatemporary
+list,2:e.g.,
+472018-03-12t09:09:20
+March12,2018isthe
+endtimeofthe
+provisionallisttaking
+effect;
+09:09:20istheendtime
+whenthetemporarylist
+takeseffect;
+ChannelAutho
+rityXint
+(optional)0~1 Channel x
+permission:0:No
+channelpermission
+1:Have channel
+permission(forface
+multi-channelserver)
+EffectNumberunsignedint
+(optional)0<EffectNumber<
+2^32Numberofvalidpasses
+forprovisionallist3,
+1~4294967295
+isCheckSimil
+arityint
+(optional)0~1 Whethertocheckthe
+image(ifthe
+similarityoftheadded
+imageisgreaterthan
+thethresholdvalueof
+theblackandwhite
+list,thelistalready
+exists).Thedefault
+valueis0:nocheck,1:
+check
+IdCardIdchar
+(optional)IDcardID,themaximum
+lengthis32characters
+(including
+terminator).(onlyfor
+accesscontrol,other
+modelsareinvalid)
+AccessIdchar
+(optional)Themaximumlengthof
+theaccesscardnumber
+48is24characters
+(includingtheending
+character).(onlyfor12
+inchaccesscontrol
+machine,othermodels
+areinvalid)
+WardenIdchar
+(optional)Administrator
+authorizationcard,the
+maximumlengthis32
+characters(including
+the ending
+character).(onlyfor
+accesscontrol,other
+modelsareinvalid)
+RoomNum char
+(optional)Roomnumber,the
+maximumlengthis24
+characters(including
+the ending
+character).(onlyfor
+accesscontrol,other
+modelsareinvalid)
+picinfo char
+AndpicuriBase64encodeddataof
+faceimage(nomorethan
+1m)
+picURI char
+Andpicinfohttps://btngps.o
+ss-cn-beijing.al
+iyuncs.com/image
+/xxx.jpgCloudURIaddressof
+faceimagedata
+3.10.1singlelistaddition
+TheerrorcodesaddedtoasinglelistarereturnedintheappendixC.10.1.1adderrorcodeto
+singlelist。
+Operator:AddPerson
+URI:http://<serveripaddr>/action/AddPerson
+49e.g.,
+http://192.168.2.10/action/AddPerson
+e.G.1,addpermanentlist+Wiganaccesscontrolcardnumber1046239
+(decimalcardnumber,Wigan34digits)+picturedataisencodedbyBase64
+{
+"operator":"AddPerson",
+"info":{
+"DeviceID":1300001,
+"PersonType":0,
+"Name":ZhangSan,
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1990-11-04",
+"Telnum":"18888888888",
+"Native":Guangdong,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+"WiegandType":1,
+"CardMode":0,
+"MjCardNo":1046239,
+"Tempvalid":0,
+"CustomizeID":123456,
+"PersonUUID":"4476c20c-23ce-4178-8672-b292d33a3cd8",
+"isCheckSimilarity":0
+},
+"picinfo":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB......"
+}
+Or
+50e.G.2,addtemporarylist1+WiganaccesscontrolcardNo.9a018b2d
+(hexadecimalcardnumber,Wigan8+24)+imagedataadoptsURI
+{
+"operator":"AddPerson",
+"info":{
+"DeviceID":1300001,
+"PersonType":0,
+"Name":"test",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1990-11-04",
+"Telnum":"18888888888",
+"Native":Guangdong,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+"WiegandType":7,
+"CardMode":1,
+"WGFacilityCode":9A,
+"MjCardNo":018B2D,
+"Tempvalid":1,
+"CustomizeID":123456,
+"PersonUUID":"4476c20c-23ce-4178-8672-b292d33a3cd8",
+"isCheckSimilarity":0,
+"ValidBegin":"2018-03-12T09:09:20",
+"ValidEnd":"2020-12-14T23:59:59",
+},
+"picURI":"https://btngps.oss-cn-beijing.aliyuncs.com/image/xxx.jp
+g"
+}
+e.G.3,addtemporarylist3+WiganaccesscontrolcardNo.9a0192b3
+(hexadecimalcardnumber,Wigan8+24,Wiganoutputuse)+IDcardNo.
+51Issuebody9a0192b3(built-inswipecardmodel,swipecardcomparedwithcommonuse)
++imagedataadoptsURI
+{
+"operator":"AddPerson",
+"info":{
+"DeviceID":1300001,
+"PersonType":0,
+"Name":"test",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1990-11-04",
+"Telnum":"18888888888",
+"Native":Guangdong,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+"WiegandType":7,
+"CardMode":1,
+"WGFacilityCode":9A,
+"MjCardNo":0192B3,
+"RFIDCard":"9A0192B3",
+"Tempvalid":3,
+"CustomizeID":123456,
+"PersonUUID":"4476c20c-23ce-4178-8672-b292d33a3cd8",
+"isCheckSimilarity":0,
+"EffectNumber":5,
+},
+"picURI":"https://btngps.oss-cn-beijing.aliyuncs.com/image/xxx.jp
+g"
+}
+523.2addmorethan10lists
+Operator:AddPersons
+URI:http://<serveripaddr>/action/AddPersons
+e.g.
+http://192.168.2.10/action/AddPersons
+Issuebody
+{
+"operator":"AddPersons",
+"DeviceID":1310023,
+"Total":3,
+"Personinfo_0":{
+"PersonType":0,
+"Name":"test",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1990-11-04",
+"Telnum":"18888888888",
+"Native":Guangdong,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+"WiegandType":1,
+"CardMode":0,
+"MjCardNo":1046240,
+"Tempvalid":0,
+"CustomizeID":120,
+"PersonUUID":"4476c20c-23ce-4178-8672-b292d33a3cd6",
+"isCheckSimilarity":0,
+"ValidBegin":"2019-02-12T09:09:20",
+"ValidEnd":"2019-03-12T09:09:20",
+"picinfo":"data:image/jpeg;base64,/9j/4AAQSAAQAB......"
+53},
+"Personinfo_1":{
+......
+}
+......
+}
+Or
+{
+"operator":"AddPersons",
+"DeviceID":1310023,
+"Total":3,
+"Personinfo_0":{
+"PersonType":0,
+"Name":"test",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1990-11-04",
+"Telnum":"18888888888",
+"Native":Guangdong,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+"WiegandType":7,
+"CardMode":1,
+"WGFacilityCode":9A,
+"MjCardNo":0192B3,
+"RFIDCard":"9A0192B3",
+"Tempvalid":0,
+"CustomizeID":120,
+"PersonUUID":"4476c20c-23ce-4178-8672-b292d33a3cd6",
+"isCheckSimilarity":0,
+54"ValidBegin":"2019-02-12T09:09:20",
+"ValidEnd":"2019-03-12T09:09:20",
+"picURI":"https://btngps.oss-cn-beijing.aliyuncs.com/image/xx
+x.jpg"
+},
+"Personinfo_1":{
+......
+}
+......
+}
+3.10.3listeditingandmodification
+Editandmodifythelistaccordingtolibid(databaseID)or
+customizeidorUUID.Theparameterstobemodifiedareoptional.Ifno
+modificationisneeded,thecorrespondingkeyshouldnotappearinthe
+distributeddata.
+Operator:EditPerson
+URI:http://<serveripaddr>/action/EditPerson
+e.g.,
+http://192.168.2.10/action/EditPerson
+Issuebody
+{
+"operator":"EditPerson",
+"info":{
+"DeviceID":1300001,
+"IdType":0,
+"CustomizeID":123,
+"PersonType":0,
+"Name":"hahaha",
+55"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1999-11-04",
+"Telnum":"19999999999",
+"Native":Mars,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+"WiegandType":1,
+"CardMode":0,
+"MjCardNo":1046239,
+"Tempvalid":0,
+"IdType":0,
+"ValidBegin":"2018-03-12T09:09:20",
+"ValidEnd":"2018-03-12T09:09:20",
+},
+"picinfo":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEBXgFeAABD……"
+}
+Or
+{
+"operator":"EditPerson",
+"info":{
+"DeviceID":1300001,
+"IdType":1,
+"LibID":123,
+"PersonType":0,
+"Name":"hahaha",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1999-11-04",
+"Telnum":"19999999999",
+56"Native":Mars,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+"WiegandType":7,
+"CardMode":1,
+"WGFacilityCode":9A,
+"MjCardNo":018B91,
+"Tempvalid":1,
+"ValidBegin":"2018-03-12T09:09:20",
+"ValidEnd":"2018-03-12T09:09:20",
+"ChannelAuthority0":"1",
+"ChannelAuthority1":"1",
+"ChannelAuthority2":"1",
+"ChannelAuthority3":"1"
+},
+"picURI":"https://btngps.oss-cn-beijing.aliyuncs.com/image/xxx.jpg"
+}
+Or
+{
+"operator":"EditPerson",
+"info":{
+"DeviceID":1300001,
+"IdType":2,
+"PersonUUID":"5763a498-2fce-4d25-aa00-45b8278d9788",
+"PersonType":0,
+"Name":"hahaha",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1999-11-04",
+"Telnum":"19999999999",
+"Native":Mars,
+"Address":ShenzhenBao'an,
+57"Notes":,
+"MjCardFrom":2,
+"WiegandType":7,
+"CardMode":1,
+"WGFacilityCode":9A,
+"MjCardNo":123CB3,
+"RFIDCard":"9A123CB3",
+"Tempvalid":3,
+"EffectNumber":10
+},
+"picinfo":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEBXgFeAABD……"
+}
+3.10.4gettingtheoldandnewdatabaseversions
+Thenewdatabasesupportstemporarylist2andtemporarylist3.Theold
+databaseisrestoredtothefactoryinthelatestversion,andthedevice
+isrestarted.Afterthedeviceisstarted,itisthelatestdatabase.
+Parameterinformation:
+Key Type Values Description
+operator char GetDatabaseVerGetsthedatabase
+versionofthedevice
+info jsonobject concretecontent
+DatabaseVersio
+nint 0~1 Databaseversion
+0:olddatabase
+1:Newdatabase
+Operator:GetDatabaseVer
+URI:http://<serveripaddr>/action/GetDatabaseVer
+e.g.,
+http://192.168.2.10/action/GetDatabaseVer
+Replytobody
+{
+"operator":"GetDatabaseVer",
+58"info":{
+"DatabaseVersion":1
+}
+}
+3.10.5Wiganaccesscardnumberandbuilt-inswipeID
+cardnumber
+TheWeiganaccesscontrolcardnumberismainlyforthetypeof
+externalcardreader,whichneedstobefilledinforthecomparisonand
+passageunderthecardswipingmode;theWeiganoutputoftheexternal
+cardreaderusesthisWeiganaccesscardnumber.Inthemodeof8+16or
+8+24,wgfacilitycodeandmjcardnofieldtogetherconstitutetheWeigan
+accesscardnumber;inthemodeof26bitor34bitWiganprotocol,the
+mjcardnofieldaloneconstitutestheWeiganaccesscardnumber.
+TheRFIDcard(IDcardnumber)fieldiscommonlyusedintheface
+recognitionall-in-onemachinewithbuilt-incardreader.Ifthebuilt-in
+cardreaderwantstooutputtheweigencardnumber,italsoneedstofollow
+the3.10addition,editingandmodificationofthelistFillinthe
+correspondingWiganaccesscontrolcardnumberaccordingtotherules;
+thatis,therfidcardfieldisusedforcomparisonandWiganoutputin
+thecardswipingmode,whilethebuilt-inswipingcardmodeloutputsthe
+Weiganaccesscardnumberwhenthefaceswipingmodeisused.Forthe
+built-inswipingcardmodel,inordertooutputthesamenumberinthe
+facebrushingandcardswipingmodes,thesamefieldneedstobefilled
+inaccordingtothecorrespondingrules.
+about3.12.4reportingofcertificationresultsand3.19listsearch
+queryand3.22controlrecordqueryAllthefieldsofweigenaccesscard
+numberreturnedinarebasedon3.2settingofdooropeningconditionsThe
+Wiegandandcardmodeparametersofthe.IfthesystemparameterWiegand
+is4or5or6or7,thereturnedwgfacilitycodeandmjcardnofield
+togetherconstitutetheWeiganaccesscardnumber;whentheWiegandis
+0or1,themjcardnofieldseparatelyconstitutestheWeiganaccesscard
+number;whenthecardmodecardnumbermodeis0(decimal),thereturned
+59Wiganaccesscardnumberisdecimal,andthecardmodecardnumbermode
+is1(hexadecimal)mode,ReturntoWigan.Theaccesscardnumberis
+hexadecimal.Thereturnofrfidcardfieldisastring.Whenadding/
+modifyingthelist,thecorrespondingdecimal/hexadecimalvaluewill
+besavedaccordingtothevalueofrfcardmode.
+3.11deletionofthelist
+Thedeletepersonnellistinterfacewilldeletethecontrolrecord
+(authenticationrecord)ofthecorrespondingpersonnellistatthesame
+time,andcannotberecovered.Therefore,itshouldbeoperatedwith
+caution;ifthedeletionofallpersonnellistsissuccessful,theface
+recognitionintegrationopportunitywillrestartautomatically.
+3.11.1deletionofsingleormultiplelists
+Thelistcanbedeletedbylibidorcustomid.Libidorcustomidcannot
+be0
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar DeletePersonor
+DeleteAllPersonDeletePerson:Delete
+the personnel
+informationinthelist
+library
+DeleteAllPerson:Delete
+allpersonnellist
+information
+info jsonobject concretecontent
+DeviceIDint ThedeviceIDnumberof
+theequipmenttobe
+operatedcanbe
+accessedthrough3.9
+equipmentinformation
+acquisitionGet.
+60TotalNumint 1~256 Howmanypersonnel
+informationneedtobe
+deletedinthis
+operation
+IdTypeint 0~2 0:User defined
+customizationID,1:
+devicedatabaselibid,
+2:personuuid
+LibID jsonarray
+(optional)Acollectionofsingle
+ormultiplelibidsof
+typeunsignedintinthe
+formatofJSONarrayof
+libids
+Requiredwhenidtype=1
+CustomizeI
+Djsonarray
+(optional)Acollectionofsingle
+or multiple
+customizeidsoftype
+intintheformofaJSON
+arrayofcustomizeids
+Requiredwhenidtype=0
+PersonUUIDjsonarray
+(optional)Acollectionofsingle
+ormultipleUUIDs.UUID
+isachartypestringof
+nomorethan48bytesin
+theformatofJSONarray
+ofUUIDs
+Requiredwhenidtype=2
+DeleteAllP
+ersonCheckjsonarray 1 Requiredwhenoperator
+isdeleteallperson
+Operator:DeletePerson
+URI:http://<serveripaddr>/action/DeletePerson
+e.g.,
+http://192.168.2.10/action/DeletePerson
+61Issuebody
+{
+"operator":"DeletePerson",
+"info":{
+"DeviceID":1300001,
+"TotalNum":N,
+"IdType":0,
+"CustomizeID":[1,2,3,.....]
+}
+}
+Or
+{
+"operator":"DeletePerson",
+"info":{
+"DeviceID":1300001,
+"TotalNum":N,
+"IdType":1,
+"LibID":[1,2,3,.....]
+}
+}
+Or
+{
+"operator":"DeletePerson",
+"info":{
+"DeviceID":1300001,
+"TotalNum":N,
+"IdType":2,
+"PersonUUID":["4476c20c-23ce-4178-8672-b292d33a3cd8",....]
+}
+}
+623.11.2deletionofallpersonnellist
+Allpersonnellistdeletioninterfacewilldeletethecontrolrecords
+(authenticationrecords)ofallpersonnellistsatthesametimeand
+cannotberestored.Therefore,itisnecessarytooperatecautiously.If
+thedeletionofallpersonnellistsissuccessful,thefacerecognition
+integrationopportunitywillrestartautomatically.
+Operator:DeleteAllPerson
+URI:http://<serveripaddr>/action/DeleteAllPerson
+e.g.,
+http://192.168.2.10/action/DeleteAllPerson
+Issuebody
+{
+"operator":"DeleteAllPerson",
+"info":
+{
+"DeleteAllPersonCheck":1
+}
+}
+3.12datasubscription
+Thetypesofdatasubscriptioninclude:authenticationresultinformationsubscription,
+strangersnapshotsubscriptionandsoon.Ifthebreakpointcontinuoustransmissionfunctionis
+enabled,theserverneedstoreturnthepushedstrangersnapshotinformationand
+authenticationinformation.SeeC.12.4.1replythedatapacketwiththeserverofnetwork
+interruptionandcontinuoustransmission。
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar SubscribeMessagesubscription
+info json
+objectconcretecontent
+63DeviceIDint ThedeviceIDnumberofthe
+equipmenttobeoperatedcanbe
+accessedthrough3.9equipment
+informationacquisitionGet.
+Num int 1~4 Howmanytypesofinformationto
+subscribeto
+Topics jsonarray"Snap",
+"Verify",
+"VerifyWithS
+nap",
+"VerifyWithR
+eg",
+"VerifyNoPic
+",
+"QRCode",
+"Card",
+"PassWord"，
+"IDCard"Acollectionofsingleormultiple
+subscriptionmessagetypes(upto128
+bytes),suchas:
+["snap":subscribetoreal-timesnapshot
+reporting
+or
+["verify":subscribetothereportof
+authenticationresults(withsnapshot+
+registrationimage)
+or
+["verifywithsnap"]:subscribetothereport
+ofauthenticationresults(onlywith
+capturedpictures)
+or
+["verifywithreg":subscribetothereportof
+authentication results (only with
+registrationimages)
+or
+["verifynopic"):subscribetothereportof
+authenticationresults(withoutpictures)
+or
+["QRcode":subscribetoQRcodereport
+or
+["snap","verify"]subscriptionsnapshot
+andauthenticationresultreporting
+or
+["card"]subscriptionaccesscontrolICcard
+certificationresultsreport(12inchaccess
+controlmodelisvalid)
+64or
+["password"]subscriptionaccesscontrol
+passwordauthenticationresultsreport(12
+inchaccesscontrolmodelisvalid)
+["IDcard"]subscriptionIDcardinformation
+reporting
+SubscribeA
+ddrchar http://<
+Subscribe
+server
+ip>:portSubscriptionaddress,including
+IPandport,e.g.,http://
+192.168.2.11:8080
+SubscribeU
+rljson
+objectAcollectionofsingleor
+multiplereportedURLs,
+including snapshot,
+authentication result,
+heartbeat,QRcode,ICcard
+numberauthenticationresult
+(accesscontrol),password
+authenticationresult(access
+control),andIDcard
+information.
+e.g.,
+{"Snap":"/Subscribe/Snap",
+"Verify":"/Subscribe/Verify",
+"HeartBeat":"/Subscribe/heartb
+eat",
+"Card":"/Subscribe/Card",
+"QRCode":"/Subscribe/QRCode",
+"PassWord":"/Subscribe/
+PassWord",
+"IDCard":"/Subscribe/IDCard"}
+BeatInterv
+alint(optio
+nal)Heartbeatinterval,unitsecond,
+ifnotset,thedefaultis30
+seconds
+bTimedPushint(optio
+nal)0~1 Snapshot,authentication,QR
+code,etc.arepushedtothe
+65serverregularly,andarenot
+openedbydefault.
+0:Donotturnontimedpush
+1:Turnontimedpush
+PushInterv
+alint(optio
+nal)Whenbtimedpush=1,itis
+requiredtosetthepushinterval
+Auth char
+(optional
+)“none”
+or“Basic”Dopostsubmitthesubmitted
+informationforauthentication
+None:Noauthentication
+processingisrequired
+Basic:Postbasic
+authentication
+User char
+(optional
+)Username,maximumlength64
+characters (including
+terminator)
+Auth=basicisrequired
+Pwd char
+(optional
+)Password,maximumlength64
+characters (including
+terminator)
+Auth=basicisrequired
+Resumefrom
+Breakpointint 0~1 Whethertoenablebreakpoint
+continuation(inthemodeof
+strangersnapshotsubscription
+or authentication
+subscription),0:notenabled,
+1:enabled.Donotopenthe
+breakpointresumefunction,only
+ensurethepushdata,donotneed
+theservertoreturn.Ifthe
+functionisenabled,theserver
+needstoreturnthefollowing
+JSONpacketsforthepushed
+strangersnapshotinformation
+andauthenticationinformation:
+{
+66"code":200,
+"desc":"OK",
+}
+After10seconds,ifthe
+all-in-onemachinedoesnot
+receivethecorrectdatapacket
+fromtheserver,itwillcontinue
+topushthismessage.
+BeginTimechar
+(optional
+)YYYY-MM-DDTh
+h:mm:ssThedefaultstarttimeof
+breakpointcontinuationcanbe
+leftblank.Thedefaultistoset
+thetimeforstrangersnapshot
+subscription,authentication
+subscriptionandbreakpoint
+continuationfunction.Whenthe
+strangersnapshotand
+authentication snapshot
+informationpushbeforethe
+breakpointiscompleted,this
+timewillbecomethetimeto
+completethebreakpoint
+continuoustransmissionand
+push.e.g.,2018-03-12T09:10:00
+3.12.1pushinformationdoesnotrequire
+authentication
+Operator:Subscribe
+URI:http://<serveripaddr>/action/Subscribe
+e.g.,
+http://192.168.2.10/action/Subscribe
+Issuebody
+{
+67"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":2,
+"Topics":["Snap","Verify"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Snap":"/Subscribe/Snap",
+"Verify":"/Subscribe/Verify","HeartBeat":"/Subscribe/heartbeat"},
+"BeatInterval":30,
+"ResumefromBreakpoint":0,
+"Auth":"none"
+}
+}
+Or
+{
+"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":2,
+"Topics":["Snap","VerifyWithReg"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Snap":"/Subscribe/Snap",
+"Verify":"/Subscribe/Verify","HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":1,
+"Auth":"none"
+}
+}
+Or
+{
+"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+"Topics":["QRCode"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+68"SubscribeUrl":{"QRCode":"/Subscribe/QRCode",
+"HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"Auth":"none"
+}
+}
+Or
+{
+"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+"Topics":["PassWord"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"PassWord":"/Subscribe/PassWord",
+"HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"Auth":"none"
+}
+}
+Or
+{
+"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+"Topics":["Card"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Card":"/Subscribe/Card",
+"HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"Auth":"none"
+}
+}
+69...
+3.12.2usernameandpasswordshallbeprovidedduring
+subscription,andauthenticationisrequiredfor
+submission
+Operator:Subscribe
+URI:http://<serveripaddr>/action/Subscribe
+e.g.,
+http://192.168.2.10/action/Subscribe
+Issuebody
+{
+"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":2,
+"Topics":["Snap","Verify"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Snap":"/Subscribe/Snap",
+"Verify":"/Subscribe/Verify","HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":1,
+"Auth":"Basic",
+"User":"admin",
+"Pwd":"amdin"
+}
+}
+Or
+{
+"operator":"Subscribe",
+70"info":{
+"DeviceID":1300001,
+"Num":2,
+"Topics":["Snap","VerifyWithReg"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Snap":"/Subscribe/Snap",
+"Verify":"/Subscribe/Verify","HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":1,
+"Auth":"Basic",
+"User":"admin",
+"Pwd":"amdin"
+}
+}
+Or
+{
+"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+"Topics":["QRCode"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"QRCode":"/Subscribe/QRCode",
+"HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"Auth":"Basic",
+"User":"admin",
+"Pwd":"amdin"
+}
+}
+Or
+{
+"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+71"Topics":["PassWord"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"PassWord":"/Subscribe/PassWord",
+"HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"Auth":"Basic",
+"User":"admin",
+"Pwd":"amdin"
+}
+}
+Or
+{
+"operator":"Subscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+"Topics":["Card"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Card":"/Subscribe/Card",
+"HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"Auth":"Basic",
+"User":"admin",
+"Pwd":"amdin"
+}
+}
+...
+3.12.3strangerssnapshotReport
+Parameterinformation:
+Key Type Values Description
+operatorchar SnapPushSnapshotandpushofstrangers
+72info jsonobject concretecontent
+DeviceIDint DeviceIDnumberofthedevice
+CreateTimechar YYYY-MM-DD
+Thh:mm:ssStrangerscapturethe
+time.e.g.,
+2018-03-25T21:50:05
+PictureTypeunsignedint0~4 Typesofcapturedface
+pictures
+0:Comparisonfailed
+1:Blacklistofsuccessful
+comparison
+2:Whitelistofsuccessful
+comparison
+3:IDcard+facecomparison
+failed
+4:IDcard+facematch
+successful
+Temperaturedouble 37.20 Realtimedetectionofface
+temperature.Whenthedoor
+openingmodeisequippedwith
+temperaturedetectionmode,
+thedetectiontemperatureis
+returned(temperature
+detectionmachineversion
+support)
+Temperature
+Alarmint 0~1 Realtimedetectionofwhether
+thefacetemperatureexceeds
+thethreshold,0:not
+exceeded; 1: over
+(temperature detection
+machineversionsupport)
+SnapChannelint 0~maximum
+channel
+numberChannelnumberofpersonnel
+capture(usedbyface
+multi-channelserver)
+Sendintimeint 0~1 Whethertopushinformationin
+time,0:notintime(pushtime
+is10secondslongerthan
+capturetime)1:timelypush
+73Directionint
+(optional)0~2 Entranceandexitdirection
+0:oneway
+1:Entrance
+2:Export
+SanpPic char Base64encodeddataofface
+imagescapturedbystrangers
+e.g.,Raw:
+--HEADERS--
+POST/Subscribe/SnapHTTP/1.1
+Accept:application/json
+Content-Type:application/json;charset=UTF-8
+Content-Length:77181
+Accept-Encoding:gzip,deflate
+User-Agent:FaceGate-HttpClient/0.0.1
+Host:192.168.2.10
+Connection:Keep-Alive
+--BODY--
+{
+"operator":"SnapPush",
+"info":{
+"DeviceID":1300001,
+"CreateTime":"2018-03-12T09:09:20",
+"PictureType":0,
+"Sendintime":1
+},
+"SanpPic":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEB……"
+}
+3.12.4reportingofcertificationresults
+Parameterinformation:
+Key Type Values Description
+operatorchar VerifyPushAuthenticationresultpush
+info jsonobject concretecontent
+74DeviceIDint DeviceIDnumberofthe
+device
+PersonIDint ThepersonnelIDnumber
+storedinthedevicecanbe
+modifiedthroughthisID
+whenthecustomeidand
+personuuidareinvalid
+CreateTimechar YYYY-MM-DDThh
+:mm:ssControltherecording
+time.e.g.,
+2018-03-25T21:50:05
+Similarity
+1float 0.0~100.0Similarityofblackand
+whitelistcomparison
+Similarity
+2float 0.0~100.0Identitycardcomparison
+similarity
+VerifyStat
+usint 0~3or22,24Certificationresults
+0:nothing
+1:allow
+2:refuse
+3:Notyetregistered
+22:Tobeverified(control
+recordofdooropeningmode
+is3:faceverification+
+remotedooropeningmode)
+24:Nopermission(special
+versionofcontrolrecordof
+nonpassagetime)
+VerfyTypeint 1:Or22~27~27
+~3or22~3;
+2:Special
+machines:
+Supportmask
+detectionor(|)
+operation,and
+0x100indicates
+passingwithmask
+detection;
+ItsupportsValidationtype.
+1:Whitelistverification
+2:IDcardverification
+3:Whitelist+IDcardverification
+21:RFcardverification(built-in
+swipecardmodel)
+22:RFcardverification+whitelist
+verification(built-inswipecard
+model)
+24:Wegenkaverification
+25:Wegenka+whitelistverification
+75temperature
+detectionor(|)
+operation,and
+0x200indicates
+thatithas
+temperature
+detection;
+Supportmask+
+bodytemperature
+detectionor(|)
+operation.0x300
+indicatesthatthe
+mask+body
+temperature
+detectionis
+available;
+Forexample:
+Mask access
+(0x100)
+Mask+whitelist
+verification
+(0x101)
+Temperaturepass
+(0x200)
+Bodytemperature
++ whitelist
+verification
+(0x201)
+Mask + body
+temperature
+(0x300)
+Mask + body
+temperature +
+Wiganswipecard
++ white list
+verification
+(0x319)27:HTTPremotedooropening
+PersonTypeint 0~1 Listtype
+0:Whitelist
+1:blacklist
+76Name char Name(maximumlength32
+bytes)
+Gender int 0~2 Gender
+0:male
+1:female
+2:other
+Nation int 1~57 nation
+1:"Han"
+SeeAppendix D.1
+Nationalities
+CardTypeint Documenttype
+0:ID
+IdCard char IDnumber,themaximum
+lengthis32characters
+(including ending
+character)
+Birthdaychar YYYY-MM-DDBirthday,e.g.,January1,
+2018
+Telnum char Phonenumber,upto32
+characterslong(including
+terminator)
+Native char Nativeplace,themaximum
+lengthis32characters
+(including ending
+character)
+Addresschar Address,withamaximum
+lengthof72characters
+(includingterminator)
+Notes char Note,themaximumlengthis
+64characters(including
+terminator)
+MjCardFromint 0~3 Thegeneratingmodeof
+wiegenkanumber
+0:Publiccardnumber
+1:Automaticgeneration
+772:Manualinput
+3:Donotuseaccesscard
+number
+WGFacility
+Codeint
+(optional)Facilitycode;when3.2door
+openingconditionsWhen
+Wiegand=4or5or6or7in,
+togetherwiththemjcardno
+field,theWiegandnumberis
+formed;whenWiegand=0or
+1,thisparameterhasno
+practical
+significance.See3.10.5
+Wiganaccesscardnumberand
+built-inswipeIDcard
+number
+MjCardNounsignedint Weiganaccesscardnumber
+(userid).When3.2 door
+openingconditionsWhen
+Wiegand=4or5or6or7in,
+itiscombinedwith
+wgfacilitycodefieldto
+formtheweigenkanumber;
+whenWiegand=0or1,it
+formstheweigenkanumber
+alone.See3.10.5 Wigan
+accesscardnumberand
+built-inswipeIDcard
+number
+RFIDCardChar
+(optional)IDcardnumber,themaximum
+lengthis18characters.For
+thebuilt-incardreader
+(includingtheend
+character),pleaserefer
+to3.10.5Wiganaccesscard
+numberandbuilt-inswipeID
+cardnumber
+Tempvalidint 0~1 Isitatemporarylist
+0:Permanenteffectivelist
+781:Provisionallist
+2:Provisionallist2
+3:Provisionallist3
+CustomizeI
+Dunsignedint TheIDnumberoftheusercan
+bemodifiedbytheuserID
+number.Note:youcan'tuse
+thesameIDtoaddpersonnel
+repeatedly,otherwiseit
+willcauseerrorsin
+modification,deletionand
+otheroperations
+PersonUUIDchar Theuser-definedpersonnel
+UUIDnumber(nomorethan48
+bytes)canbemodifiedand
+deletedthroughthisID
+numbertomanagethe
+correspondingpersonnel
+information.Note:youcan't
+usethesameUUIDrepeatedly
+toaddpersonnel,otherwise
+itwillcauseerrorsin
+modification,deletionand
+otheroperations
+ValidBeginchar YYYY-MM-DDThh
+:mm:ssIfitisaprovisionallist,
+thestarttimeofthe
+provisionallist'sentry
+intoforce,e.g.,
+2018-03-12t09:09:20
+ValidEndchar YYYY-MM-DDThh
+:mm:ssIfitisatemporarylist,
+theendtimeofthetemporary
+listtakingeffect,e.g.,
+2018-03-12t09:10:00
+AccessChan
+nelint 0~maximum
+channel
+numberChannelnumberofpersonnel
+access(usedbyface
+multi-channelserver)
+79Temperatur
+edouble 37.20 Realtimedetectionofface
+temperature,whenthedoor
+openmodewiththe
+temperaturedetectionmode,
+thedetectiontemperatureis
+returned(temperature
+detectionmachineversion
+support)
+Temperatur
+eAlarmint 0~1 Realtimedetectionof
+whetherthefacetemperature
+exceedsthethreshold,0:
+notexceeded;1:over
+(temperaturedetection
+machineversionsupport)
+Sendintimeint 0~1 Whethertopushinformation
+intime,0:notintime(push
+timeis10secondslonger
+thanauthenticationtime)1:
+timelypush
+Directionint
+(optional)0~2 Entranceandexitdirection
+0:oneway
+1:Entrance
+2:Export
+SanpPicchar Base64encodingdataof
+real-timecapturedface
+images
+Registered
+Picchar Matchthebase64encoded
+dataoffaceimages
+registeredinthelist
+database
+PushTypeint 0~2 Pushtype
+0:reserve
+1:reserve
+2:call3.32manualpush
+controlrecordDatareturn
+for
+80e.g.,Raw:
+--HEADERS--
+POST/Subscribe/VerifyHTTP/1.1
+Accept:application/json
+Content-Type:application/json;charset=UTF-8
+Content-Length:155265
+Accept-Encoding:gzip,deflate
+User-Agent:FaceGate-HttpClient/0.0.1
+Host:192.168.2.10
+Connection:Keep-Alive
+--BODY--
+{
+"operator":"VerifyPush",
+"info":{
+"DeviceID":1300001,
+"PersonID":1300001,
+"CreateTime":"2018-03-12T09:09:20",
+"Similarity1":90,
+"Similarity2":90,
+"VerifyStatus":0,
+"VerfyType":0,
+"PersonType":0,
+"Name":"hahaha",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1999-11-04",
+"Telnum":"19999999999",
+"Native":Mars,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+"WGFacilityCode":9A,
+81"MjCardNo":1923B,
+"RFIDCard":"9A01923B",
+"Tempvalid":0,
+"CustomizeID":123456,
+"PersonUUID":"4476c20c-23ce-4178-8672-b292d33a3cd8",
+"ValidBegin":"2018-03-12T09:09:20",
+"ValidEnd":"2018-03-12T09:09:20"，
+"Sendintime":0
+},
+"SanpPic":"data:image/jpeg;base64,.......",
+"RegisteredPic":"data:image/jpeg;base64,......."
+}
+or
+{
+"operator":"VerifyPush",
+"info":{
+"DeviceID":1300001,
+"PersonID":1300001,
+"CreateTime":"2018-03-12T09:09:20",
+"Similarity1":90,
+"Similarity2":90,
+"VerifyStatus":0,
+"VerfyType":0,
+"PersonType":0,
+"Name":"hahaha",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"430923199011044411",
+"Birthday":"1999-11-04",
+"Telnum":"19999999999",
+"Native":Mars,
+"Address":ShenzhenBao'an,
+"Notes":,
+"MjCardFrom":2,
+82"WGFacilityCode":9A,
+"MjCardNo":1923B,
+"RFIDCard":"9A01923B",
+"Tempvalid":0,
+"CustomizeID":123456,
+"PersonUUID":"4476c20c-23ce-4178-8672-b292d33a3cd8",
+"ValidBegin":"2018-03-12T09:09:20",
+"ValidEnd":"2018-03-12T09:09:20"，
+"Sendintime":1
+},
+"RegisteredPic":"data:image/jpeg;base64,......."
+}
+Or
+...
+3.12.5QRcodereporting
+Parameterinformation:
+Key Type Values Description
+operatorchar QRCodePushQRcodepush
+info jsonobject concretecontent
+DeviceIDint DeviceIDnumberofthedevice
+QRcodeInfochar QRcodecontent
+e.g.,Raw:
+{
+"operator":"QRCodePush",
+"info":{
+"DeviceID":1300001,
+"QRcodeInfo":"...."
+}
+}
+833.12.6reportingofIDcardinformation
+Parameterinformation:
+Key Type Values Description
+operatorchar IDCardInfoPus
+hIDcardinformationpush
+info jsonobject concretecontent
+DeviceIDint DeviceIDnumberofthedevice
+IDCard_Idnochar IDcardNo.
+IDCard_Name fullname
+IDCard_Gend
+erint Gender
+IDCard_Nati
+onint nation:Sameasinpersonnel
+information
+IDCard_Birt
+hdaychar birthday:Yearmonthday
+IDCard_Addr
+esschar address
+IDCard_Idis
+sueIssuingauthority
+IDCard_Idpe
+riodtermofvalidity:Mm/DD/yyyy
+-mm/DD/yyyy
+IDCard_phot
+oPhotoofIDcard
+e.g.,Raw:
+{
+"operator":"IDCardInfoPush",
+"info":{
+"DeviceID":1300001,
+"IDCard_Idno":"1234567890",
+"IDCard_Name":"ZhangSan",
+"IDCard_Gender":1,
+"IDCard_Nation":1,
+"IDCard_Birthday":"2016-05-06",
+84"IDCard_Address":"xxxxx",
+"IDCard_Idissue":"xxxxxx",
+"IDCard_Idperiod":"20190203-20190304"
+},
+"IDCard_photo":"data:image/jpeg;base64,....."
+}
+3.12.7reportofICcardnumbercertificationresults
+(accesscontrol)
+Parameterinformation:
+Key Type Values Description
+operatorchar CardVerify ICcardnumberauthentication
+resultpush
+info jsonobject concretecontent
+DeviceIDint DeviceIDnumberofthedevice
+CreateTimechar Certificationpassingtime
+CardNochar ICcardnumber(nomorethan24
+bytes)
+HasPicint 0~1 Whetherthereisaface
+picture,0:nofacepicture,
+1:facepicture
+SanpPicchar Base64encodingofcaptured
+images
+e.g.,Raw:
+{
+"operator":"CardVerify",
+"info":{
+"DeviceID":1300001,
+"CreateTime":"2018-01-01T00:00:00",
+"CardNo":"……",
+"HasPic":1,
+"SanpPic":"data:image/jpeg;base64,……"
+}
+85}
+3.12.8reportofpasswordauthenticationresults
+(accesscontrolmachine)
+Parameterinformation:
+Key Type Values Description
+operatorchar PwdVerify Pushpasswordauthentication
+results
+info jsonobject concretecontent
+DeviceIDint DeviceIDnumberofthedevice
+CreateTimechar Certificationpassingtime
+HasPicint 0~1 Whetherthereisaface
+picture,0:nofacepicture,
+1:facepicture
+SanpPicchar Base64encodingofcaptured
+images
+e.g.,Raw:
+{
+"operator":"PwdVerify",
+"info":{
+"DeviceID":1300001,
+"CreateTime":"2018-01-01T00:00:00",
+"HasPic":1,
+"SanpPic":"data:image/jpeg;base64,……"
+}
+}
+3.12.9querysubscribedinformation
+Operator:GetSubscribe
+URI:http://<serveripaddr>/action/GetSubscribe
+e.g.,
+86http://192.168.2.10/action/GetSubscribe
+Replytobody
+{
+"operator":"GetSubscribe",
+"info":{
+"Num":2,
+"Topics":["Snap","Verify"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Snap":"/Subscribe/Snap",
+"Verify":"/Subscribe/Verify","HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"BeginTime":"2019-11-05T11:44:29",
+"Auth":"none"
+}
+}
+or
+{
+"operator":"GetSubscribe",
+"info":{
+"Num":1,
+"Topics":["Verify"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Verify":"/Subscribe/Verify",
+"HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":1,
+"BeginTime":"2019-11-05T11:44:29",
+"Auth":"Basic",
+"User":"admin",
+"Pwd":"admin"
+}
+}
+or
+{
+"operator":"GetSubscribe",
+"info":{
+87"Num":1,
+"Topics":["QRCode"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"QRCode":"/Subscribe/QRCode","HeartBeat":"/Su
+bscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"BeginTime":"2019-11-05T11:44:29",
+"Auth":"Basic",
+"User":"admin",
+"Pwd":"admin"
+}
+}
+or
+{
+"operator":"GetSubscribe",
+"info":{
+"Num":0
+}
+}
+Or
+{
+"operator":"GetSubscribe",
+"info":{
+"Num":2,
+"Topics":["Card","PassWord"],
+"SubscribeAddr":"http://192.168.2.11:8080",
+"SubscribeUrl":{"Card":"/Subscribe/Card","PassWord
+":"/Subscribe/PassWord","HeartBeat":"/Subscribe/heartbeat"},
+"ResumefromBreakpoint":0,
+"BeginTime":"2019-11-05T11:44:29",
+"Auth":"none"
+}
+}
+or
+88……
+3.13unsubscribe
+Subscriptionandunsubscribedinformation,includingresultsof
+authentication
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar UnsubscribeUnsubscribe
+infojsonobject concretecontent
+DeviceIDint ThedeviceIDnumberofthe
+equipmenttobeoperatedcanbe
+accessedthrough3.9equipment
+informationacquisitionGet.
+Num int 1~2 Howmanytypesofinformation
+areunsubscribed
+Topicsjsonarray"Snap",
+"Verify",
+"VerifyWithSna
+p",
+"VerifyWithReg
+",
+"VerifyNoPic",
+"QRCode",
+"PassWord",
+"Card"Acollectionofsingleor
+multiplesubscriptionmessage
+types,suchas:
+["snap"]:unsubscribereal-time
+snapshotreporting
+or
+["verify":unsubscribeto
+submittheauthentication
+result
+or
+["verifywithsnap"]:
+unsubscribetosubmit
+authenticationresults
+or
+["verifywithreg"]:unsubscribe
+tosubmitauthentication
+results
+89or
+["verifynopic"):unsubscribe
+fromthereportof
+authenticationresults
+or
+["QRcode":cancelthereportof
+QRcoderesults
+or
+["snap","verify"]unsubscribe
+captureandauthentication
+resultreporting
+or
+"Snap"and["snapwith"]
+or
+["snap","verifywithreg"]
+unsubscribecaptureand
+authenticationresultreporting
+or
+["snap", "verifynopic"]
+unsubscribecaptureand
+authenticationresultreporting
+or
+["password", "card"]
+unsubscribethereportofIC
+cardnumberauthentication
+result and password
+authenticationresult(access
+controlmachine)
+Operator:Unsubscribe
+URI:http://<serveripaddr>/action/Unsubscribe
+e.g.,
+http://192.168.2.10/action/Unsubscribe
+90Issuebody
+{
+"operator":"Unsubscribe",
+"info":{
+"DeviceID":1300001,
+"Num":2,
+"Topics":["Snap","Verify"]
+}
+}
+Or
+{
+"operator":"Unsubscribe",
+"info":{
+"DeviceID":1300001,
+"Num":2,
+"Topics":["Snap","VerifyWithReg"]
+}
+}
+Or
+{
+"operator":"Unsubscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+"Topics":["QRCode"]
+}
+}
+Or
+{
+"operator":"Unsubscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+"Topics":["PassWord"]
+}
+91}
+Or
+{
+"operator":"Unsubscribe",
+"info":{
+"DeviceID":1300001,
+"Num":1,
+"Topics":["Card"]
+}
+}
+Or
+...
+3.14subscriptionheartbeat
+Thedeviceobtainstheaddress,portandURLoftheheartbeatofthe
+subscriptionfromthedatasubscriptioninformation.Thedevicesendsthe
+heartbeatinformationtothesubscriptionaddressduringthewhole
+subscriptionvalidityperiod.Thesubscriberneedstoreplytheheartbeat
+afterreceivingtheheartbeatofthedevicetomaintaintheeffective
+connectionbetweenthetwoparties.Oncetheheartbeathandshakefails,
+thedevicewillclosetheconnectionandtrytoconnecttothesubscription
+addressagain,Theheartbeatintervalissetat30seconds.Thereportof
+heartbeatneedstosubscribetoanyHTTPsubscription(authentication
+subscriptionorstrangersnapshotsubscription,etc.),andcannot
+subscribetoheartbeatseparately.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar HeartBeat Unsubscribe
+info jsonobject concretecontent
+DeviceIDint ThedeviceIDnumberofthe
+devicetobeoperatedon
+Time char YYYY-MM-DDThh:mDevice current
+92m:ss time.e.g.,2018-03-25T21:50:0
+5
+e.g.,Raw
+--HEADERS--
+POST/Subscribe/heartbeatHTTP/1.1
+Accept:application/json
+Content-Type:application/json;charset=UTF-8
+Content-Length:128
+Accept-Encoding:gzip,deflate
+User-Agent:FaceGate-HttpClient/0.0.1
+Host:192.168.2.10
+Connection:Keep-Alive
+--BODY--
+{
+"operator":"HeartBeat",
+"info":{
+"DeviceID":1300001,
+"Time":"2018-03-12T09:09:20"
+}
+}
+3.15accesscameraparameters
+Thisfunctionisaimedattheserverdeviceoffacecapturecomparison,
+whichisnotsupportedbythefacerecognitionall-in-onemachine.
+Getorsetthecameraparameters,andcheckthemaximumnumberofcameras
+thatcanbeconnectedaccordingtodifferentdevicemodels.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar GetEnterIPC
+or
+SetEnterIPCGetEnterIPC:Getaccess
+camera setting
+parameters
+SetEnterIPC:Setting
+access camera
+93parameters
+info jsonobject concretecontent
+TotalNumint
+(optional)Totalnumberofcameras
+tobesetorreturned
+IPC_Infojsonarray
+(optional)Setthecamera
+parameterlist,andthe
+arraymemberisJSON
+object
+IPC_Channelint Camera channel,
+requiredwhensetting
+cameraparameters
+IPC_Enableint
+(optional)Cameraenable
+IPC_URLchar
+(optional)IPaccesstocamera(no
+morethan64bytes)
+IPC_Portint
+(optional)Porttoaccesscamera
+IPC_Usernam
+echar
+(optional)Usernametoaccessthe
+camera(nomorethan32
+bytes)
+IPC_Passwor
+dchar
+(optional)Passwordtoaccess
+camera(nomorethan32
+bytes)
+IPC_Namechar
+(optional)Nameofaccesscamera
+(nomorethan32bytes)
+3.15.1accesscameraparameters
+Operator:GetEnterIPC
+URI:http://<serveripaddr>/action/GetEnterIPC
+e.g.,
+http://192.168.2.10/action/GetEnterIPC
+Replybody
+94{
+"operator":"GetEnterIPC",
+"info":{
+"TotalNum":1,
+"IPC_Info":[
+{
+"IPC_Channel":0,
+"IPC_Enable":1,
+"IPC_URL":"192.168.1.1",
+"IPC_Port":5000,
+"IPC_Username":"admin",
+"IPC_Password":"admin",
+"IPC_Name":"ipc1"
+},
+{
+"IPC_Channel":1,
+"IPC_Enable1":1,
+"IPC_URL1":"192.168.1.2",
+"IPC_Port1":5000,
+"IPC_Username1":"admin",
+"IPC_Password1":"admin",
+"IPC_Name1":"ipc2"
+},
+……
+]
+}
+}
+3.15.2settingaccesscameraparameters
+Operator:SetEnterIPC
+URI:http://<serveripaddr>/action/SetEnterIPC
+e.g.,
+http://192.168.2.10/action/SetEnterIPC
+95Issuedbody
+{
+"operator":"SetEnterIPC",
+"info":{
+"TotalNum":4,
+"IPC_Info":[
+{
+"IPC_Channel":0,
+"IPC_Enable":1,
+"IPC_URL":"192.168.1.1",
+"IPC_Port":5000,
+"IPC_Username":"admin",
+"IPC_Password":"admin",
+"IPC_Name":"ipc1"
+},
+{
+"IPC_Channel":1,
+"IPC_Enable":1,
+"IPC_URL":"192.168.1.1",
+"IPC_Port":5000,
+"IPC_Username":"admin",
+"IPC_Password":"admin",
+"IPC_Name":"ipc2"
+},
+……
+]
+}
+}
+3.16serverparametersoffacecapturecomparison
+Thisfunctionisaimedattheserverdeviceoffacecapturecomparison,
+whichisnotsupportedbythefacerecognitionall-in-onemachine.
+Getorsettheparametersofthefacecapturecomparisonserver.
+Parameterinformation(Note:optionalisoptional)
+96Key Type Values Description
+operatorchar GetServerBasicPara
+or
+SetServerBasicParaGetServerBasicPara:
+Getserverparameters
+SetServerBasicPara:
+Setserverparameters
+info jsonobject concretecontent
+InformationR
+eleasechar
+(optional)Informationrelease,
+upto128Chinese
+characters
+Channelselec
+tionint
+(optional)0,1,2,4,9 Themaximumnumberof
+pathsandadaptive
+selection, 0:
+adaptive;1,2,4,9
+correspondtothe
+maximum1,2,4,9paths
+respectively
+DisplaySnapV
+erifyint
+(optional)0~1 Timeclearsnapshot
+andcomparison,0:not
+empty,1:clear.
+3.16.1getserverparameters
+Operator:GetServerBasicPara
+URI:http://<serveripaddr>/action/GetServerBasicPara
+e.g.,
+http://192.168.2.10/action/GetServerBasicPara
+Replybody
+{
+"operator":"GetServerBasicPara",
+"info":{
+"Informationrelease":"informationrelease",
+"Channelselection":0,
+"DisplaySnapVerify":0
+97}
+}
+3.16.2settingserverparameters
+Operator:SetServerBasicPara
+URI:http://<serveripaddr>/action/SetServerBasicPara
+e.g.,
+http://192.168.2.10/action/SetServerBasicPara
+Issuedbody
+{
+"operator":"SetServerBasicPara",
+"info":{
+"Informationrelease":"informationrelease",
+"Channelselection":0,
+"DisplaySnapVerify":0
+}
+}
+3.17personneltypeparameters
+Thisfunctionisaimedattheserverdeviceoffacecapturecomparison,
+whichisnotsupportedbythefacerecognitionall-in-onemachine.
+Getsorsetsthepersonneltypeparameter,whichsupportsupto10
+personneltypes.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetWorktype
+orSetWorktypeGetWorktype:Get
+personneltype
+SetWorktype:Set
+personnel type
+parameters
+98info jsonobject concretecontent
+TotalNum int
+(optional)Totalnumberof
+personneltypestobe
+setorreturned
+WorkTypeInfo jsonarray Setthepersonneltype
+list,andthearray
+memberisJSONobject
+WorkTypeIndex int
+(optional)Howmanytypesof
+personnel are
+represented
+WorktypeEnableint
+(optional)Worktypeenable
+indicatesthatthe
+personneltypeis
+enabled
+Worktype char
+(optional)Nomorethan32byte
+personneltype
+Num int
+(optional)PersonneltypeNo
+3.17.1getpersonneltypeparameter
+Operator:GetWorktype
+URI:http://<serveripaddr>/action/GetWorktype
+e.g.,
+http://192.168.2.10/action/GetWorktype
+Replybody
+{
+"operator":"GetWorktype",
+"info":{
+"TotalNum":10,
+"WorkTypeInfo":[
+{
+"WorkTypeIndex":0,
+99"WorktypeEnable":1,
+"Worktype":manager,
+"Num":0
+},
+{
+"WorkTypeIndex":1,
+"WorktypeEnable":1,
+"Worktype":employee,
+"Num":1
+},
+……
+]
+}
+}
+3.17.2settingpersonneltypeparameters
+Operator:SetWorktype
+URI:http://<serveripaddr>/action/SetWorktype
+e.g.,
+http://192.168.2.10/action/SetWorktype
+Issuedbody
+{
+"operator":"SetWorktype",
+"info":{
+"TotalNum":10,
+"WorkTypeInfo":[
+{
+"WorkTypeIndex":0,
+"WorktypeEnable":1,
+"Worktype":manager,
+"Num":0
+},
+{
+100"WorkTypeIndex":1,
+"WorktypeEnable1":1,
+"Worktype1":employees,
+"Num1":0
+},
+……
+]
+}
+}
+3.18faceservicefunction
+Thisfunctionisaimedattheserverdeviceoffacecapturecomparison,
+whichisnotsupportedbythefacerecognitionall-in-onemachine.
+Thefunctionoffaceserviceincludes:extractingfeaturecodefromimage,
+comparingsimilarityoffeaturecode,obtainingfaceimage.
+3.18.1imageextractionfeaturecode
+Operator:HttpGetFaceSignature
+URI:http://<serveripaddr>/action/GetFaceSignature
+e.g.,
+http://192.168.2.10/action/GetFaceSignature
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator charGetFaceSignatureGetfaceimagefeature
+code
+picinfo char Base64encodeddataof
+faceimage(nomore
+than1m)
+{
+101"operator":"GetFaceSignature",
+"picinfo":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB......"
+}
+Replytothecorrectbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar GetFaceSignatureGetfaceimagefeature
+code
+info jsonobject concretecontent
+FeatureDatachar FacefeatureBase64
+encodeddata
+FeatureLenint FacefeatureBase64
+encodingdatalength
+Gender int Gender:0:male;1:
+uncertain;2:female
+Age int Age
+{
+"operator":"GetFaceSignature",
+"info":{
+"FeatureData":"4AAQSkZJRgABAQAAAQAB......",
+"FeatureLen":"6144",
+"Gender":0,
+"Age":21
+}
+}
+3.18.2featurecodecomparisonsimilarity
+Operator:GetSignatureSimilarity
+URI:http://<serveripaddr>/action/GetSignatureSimilarity
+e.g.,
+http://192.168.2.10/action/GetSignatureSimilarity
+102Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator charGetSignatureSimilarityComparison of
+similaritybetween
+featurecodes
+Signature1 char Signature code
+Base64encodingdata
+(nomorethan1m)
+Signature2 char Signature code
+Base64encodingdata
+(nomorethan1m)
+{
+"operator":"GetSignatureSimilarity",
+"Signature1":"d4AAQSkZJRgABAQAAAQAB......",
+"Signature2":"4AAQSkZJRgABAQAAAQAB......"
+}
+Replytothecorrectbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar GetSignatureSimilarityGetthefeaturecode
+comparisonsimilarity
+info jsonobject concretecontent
+Similarityfloat Feature code
+similarity
+{
+"operator":"GetSignatureSimilarity",
+"info":{
+"Similarity":80
+}
+}
+1033.18.3obtainingfaceimages
+Operator:GetImage
+URI:http://<serveripaddr>/action/GetImage
+e.G.,accordingtothereturnedfiletype,fileindex,filelocation,
+getthefaceimage
+http://192.168.2.10/action/GetImage
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetImage Searchlocalface
+databasebygraph
+info jsonobject concretecontent
+Filetype unsignedint0~2 0:realtimephotofile
+typeofIDcard
+Fileindex unsignedint Fileindexreference
+3.25.2tosearchlocal
+facedatabase
+Filepos unsignedint Referto3.25.2for
+filelocationto
+searchlocalface
+database
+{
+"operator":"GetImage",
+"info":{
+"Filetype":1,
+"Fileindex":0,
+"Filepos":0
+},
+"picinfo":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB......"
+}
+Replytothecorrectbody
+Facefeaturelength+facefeaturelength
+104Key Type Values Description
+operator char HttpGetImage HttpGetImage:Get
+faceimage
+info jsonobject concretecontent
+FeatureData1char Faceimagedata
+{
+"4AAQSkZJRgABAQAAAQAB......"
+}
+3.19listsearchquery
+Accordingtothecorrespondingsearchcriteriatoquerythelistofsearch
+criteria.
+Returnthebodyparameterinformationofthelist:
+Key Type Values Description
+operatorchar SearchPerson
+or
+SearchPersonListSearchPerson:Single
+listquery
+SearchPersonList:
+Multiplelistqueries
+info jsonobject concretecontent
+DeviceIDint ThedeviceIDnumberof
+theequipmenttobe
+operatedcanbe
+accessedthrough3.9
+equipmentinformation
+acquisitionGet.
+LibID int ListdatabaseID
+PersonTypeint 0~1 Listtype
+0:Whitelist
+1:blacklist
+Name char Name,maximumlength32
+characters(including
+105ending)
+Gender int 0~1 Gender
+0:male
+1:female
+Nation int 1~57 nation
+1:"Han"
+SeeAppendix D.1
+Nationalities
+CardTypeint Documenttype
+0:ID
+IdCard char IDnumber,themaximum
+lengthis32characters
+(includingending
+character)
+Birthdaychar YYYY-MM-DD Birthday,e.g.,January
+1,2018
+Telnum char Phonenumber,upto32
+characters long
+(includingterminator)
+Native char Nativeplace,the
+maximumlengthis32
+characters(including
+endingcharacter)
+Addresschar Address,withamaximum
+lengthof72characters
+(includingterminator)
+Notes char Note,themaximum
+lengthis64characters
+(includingterminator)
+MjCardFromint 0~3 Thegeneratingmodeof
+wiegenkanumber
+0:Publiccardnumber
+1:Automaticgeneration
+2:Manualinput
+3:Donotuseaccess
+106cardnumber
+WGFacility
+Codeint
+(optional)Facilitycode;when3.2
+dooropeningconditions
+WhenWiegand=4or5or
+6or7in,togetherwith
+themjcardnofield,the
+Wiegandnumberis
+formed;whenWiegand=0
+or1,thisparameterhas
+nopractical
+significance.See3.10.5
+Wiganaccesscard
+numberandbuilt-in
+swipeIDcardnumber
+MjCardNounsignedint Weiganaccesscard
+number
+(userid).When3.2door
+openingconditionsWhen
+Wiegand=4or5or6or
+7in,itiscombined
+withwgfacilitycode
+fieldtoformthe
+weigenkanumber;when
+Wiegand=0or1,it
+formstheweigenka
+numberalone.See3.10.5
+Wiganaccesscard
+numberandbuilt-in
+swipeIDcardnumber
+RFIDCardChar
+(optional)IDcardnumber,the
+maximumlengthis18
+characters.Forthe
+built-incardreader
+(includingtheend
+character),please
+referto3.10.5Wigan
+accesscardnumberand
+built-inswipeIDcard
+107number
+Tempvalidint 0~3 Isitatemporarylist
+0:Permanenteffective
+list
+1:Provisionallist
+2:Provisionallist2
+3:Provisionallist3
+CustomizeI
+Dunsignedint TheIDnumberofthe
+usercanbemodifiedby
+the user ID
+number.Note:youcan't
+usethesameIDtoadd
+personnelrepeatedly,
+otherwiseitwillcause
+errorsinmodification,
+deletionandother
+operations.
+PersonUUIDchar The user-defined
+personnelUUIDnumber
+(nomorethan48bytes)
+canbemodifiedand
+deletedthroughthisID
+numbertomanagethe
+corresponding
+personnel
+information.Note:the
+sameUUIDcannotbeused
+repeatedlytoadd
+personnel,otherwiseit
+willcauseerrorsin
+modification,deletion
+andotheroperations.
+EffectNumb
+erint Theeffectivetimesof
+personnelintemporary
+list3.Whenthelist
+108typeistemporarylist
+3,thevalidtimesare
+returned
+ValidBeginchar YYYY-MM-DDThh:mm:s
+sIfitisaprovisional
+list,thestarttimeof
+theprovisionallist's
+entryintoforce,e.g.,
+2018-03-12t09:09:20
+ValidEndchar YYYY-MM-DDThh:mm:s
+sIfitisatemporary
+list,theendtimeof
+thetemporarylist
+takingeffect,e.g.,
+2018-03-12t09:10:00
+picinfochar Base64encodingdataof
+faceimage
+3.19.1singlelistquery
+Operator:SearchPerson
+URI:http://<serveripaddr>/action/SearchPerson
+e.G.,querythelistbasedonthecustomizedID,UUID,ordatabaseID
+youarelookingfor
+http://192.168.2.10/action/SearchPerson
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char SearchPerson SearchPerson:List
+searchbasedon
+customeid,UUID,or
+databaseID
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+SearchTypeint 0~2 0:CustomizeID1:UUID
+109(optional) 2:IDdatabase
+SearchID char Searchid, UUID
+content,ordatabase
+ID
+Picture int 0~1 Includepictureinformation
+0:List without
+pictureinformation
+1:Listwithpicture
+information
+{
+"operator":"SearchPerson",
+"info":{
+"DeviceID":1300001,
+"SearchType":0，
+"SearchID":"1234",
+"Picture":1
+}
+}
+Or
+{
+"operator":"SearchPerson",
+"info":{
+"DeviceID":1300001,
+"SearchType":1,
+"SearchID":"5763a498-2fce-4d25-aa00-45b8278d9788"，
+"Picture":1
+}
+}
+Or
+{
+"operator":"SearchPerson",
+"info":{
+"DeviceID":1300001,
+"SearchType":2,
+110"SearchID":"1"，
+"Picture":1
+}
+}
+Replytothecorrectbody
+{
+"operator":"SearchPerson",
+"info":{
+"DeviceID":1300001,
+"LibID":1,
+"PersonType":0,
+"Name":"test",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"",
+"Birthday":"2000-01-01",
+"Telnum":"",
+"Native":"",
+"Address":"",
+"Notes":"",
+"MjCardFrom":2,
+"WGFacilityCode":9A,
+"MjCardNo":1923B,
+"RFIDCard":"9A01923B",
+"Tempvalid":0,
+"CustomizeID":-2,
+"PersonUUID":"",
+"ValidBegin":"1970-01-01T08:00:00",
+"ValidEnd":"1970-01-01T08:00:00"
+}
+},
+"picinfo":"data:image/jpeg;base64,......."
+111}
+Or
+....
+3.19.2totalnumberofquerylists
+Operator:SearchPersonNum
+URI:http://<serveripaddr>/action/SearchPersonNum
+e.G.returnsthetotalnumberofqualifiedlistsaccordingtothequery
+criteria
+SearchDescription:
+1、Searchbytime:Setthestarttimeandendtimeofsearch.Thename
+isempty
+2、SearchbynameorfuzzyName:Setthestarttimeandendtimeofsearch
+tobeempty,andthenameshouldnotbeempty
+http://192.168.2.10/action/SearchPersonNum
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar SearchPersonNumSearchPersonNum:
+Returnsthetotal
+numberofqualified
+listsaccordingtothe
+querycriteria
+info jsonobject concretecontent
+DeviceIDint TheIDofthedevice
+PersonTypeint
+(optional)0~2 Listtype0:Whitelist
+1:Blacklist2:All
+BeginTimechar
+(optional)Startingtimeof
+search
+EndTime char Theendtimeofthe
+112(optional) search
+Gender int
+(optional)Gender0:Male1:female
+Age char
+(optional)Agerange:Forexample,
+1-100
+MjCardNounsignedint
+(optional)Accesscontrolcard
+number0:Thecondition
+isinvalid
+Name char
+(optional)Name(nomorethan32
+bytes)
+{
+"operator":"SearchPersonNum",
+"info":{
+"DeviceID":1300196,
+"PersonType":0,
+"BeginTime":"2018-06-01T00:00:00",
+"EndTime":"2018-06-19T23:59:59",
+"Gender":2,
+"Age":"0-100",
+"MjCardNo":0,
+"Name":""
+}
+}
+Or
+{
+"operator":"SearchPersonNum",
+"info":{
+"DeviceID":1300196,
+"PersonType":0,
+"BeginTime":"",
+"EndTime":"",
+"Gender":2,
+"Age":"0-100",
+"MjCardNo":0,
+113"Name":"test"
+}
+}
+Or
+....
+Returnparameterinformation(Note:optionalisoptional)
+MaxListsNumunsignedint Themaximumtotal
+numberoflists
+supportedbythe
+device
+PersonNumunsignedint Numberoflists
+matching query
+criteria
+Replytothecorrectbody
+{
+"operator":"SearchPersonNum",
+"info":{
+"DeviceID":1300001,
+"MaxListsNum":24576,
+"PersonNum":8
+}
+}
+3.19.3multiplelistqueries
+Operator:SearchPersonList
+URI:http://<serveripaddr>/action/SearchPersonList
+e.G.querythelistaccordingtothequeryconditions,thestarting
+positiontobesearchedandthenumberofliststobequeried
+114SearchDescription:
+1、Searchbytime:Setthestarttimeandendtimeofsearch.Thename
+isempty
+2、SearchbynameorfuzzyName:Setthestarttimeandendtimeofsearch
+tobeempty,andthenameshouldnotbeempty
+http://192.168.2.10/action/SearchPersonList
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char SearchPersonListSearchPersonList:
+Returnsthelist
+basedonthestarting
+positionandthe
+numberofqueries
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+PersonTypeint
+(optional)0~2 Listtype0:Whitelist
+1:黑名单2:All
+BeginTimechar
+(optional)Startingtimeof
+search
+EndTime char
+(optional)Theendtimeofthe
+search
+Gender int
+(optional)0~2 Gender 0:Male
+1:Female2:All
+Age char
+(optional)Age range:For
+example,1-100
+MjCardNo unsignedint
+(optional)Accesscontrolcard
+number 0:The
+conditionisinvalid
+Name char
+(optional)fullname
+BeginNO int
+(optional)Querythestarting
+positionofthelist,
+thatis,fromwhomto
+start
+115RequestCountint
+(optional)Thetotalnumberof
+messagesreturned
+fromthequerylist
+canbeupto100,and
+only100messagescan
+bereturnedifthe
+settingismorethan
+100.
+Picture int 0~1 Includepictureinformation
+0:List without
+pictureinformation
+1:Listwithpicture
+information
+{
+"operator":"SearchPersonList",
+"info":{
+"DeviceID":1300001,
+"PersonType":0,
+"BeginTime":"2018-06-01T00:00:00",
+"EndTime":"2018-06-19T23:59:59",
+"Gender":2,
+"Age":"0-100",
+"MjCardNo":0,
+"Name":"",
+"BeginNO":0,
+"RequestCount":1,
+"Picture":1
+}
+}
+Or
+{
+"operator":"SearchPersonList",
+"info":{
+"DeviceID":1300001,
+116"PersonType":0,
+"BeginTime":"",
+"EndTime":"",
+"Gender":2,
+"Age":"0-100",
+"MjCardNo":0,
+"Name":"test",
+"BeginNO":0,
+"RequestCount":10,
+"Picture":1
+}
+}
+Bodyformatofreplytosearchpersonlist:
+{
+"operator":"SearchPersonList",
+"info":{
+"DeviceID":1300001,
+"Listnum":100,
+"List":[
+{
+PersonInfo
+},
+{
+PersonInfo
+},
+…
+]
+}
+}
+Replytothecorrectbody
+{
+"operator":"SearchPersonList",
+117"info":{
+"DeviceID":1300001,
+"Listnum":100,
+"List":[
+{
+"DeviceID":1300001,
+"LibID":1,
+"PersonType":0,
+"Name":"test",
+"Gender":0,
+"Nation":1,
+"CardType":0,
+"IdCard":"",
+"Birthday":"2000-01-01",
+"Telnum":"",
+"Native":"",
+"Address":"",
+"Notes":"",
+"MjCardFrom":2,
+"WGFacilityCode":9A,
+"MjCardNo":1923B,
+"RFIDCard":"9A01923B",
+"Tempvalid":0,
+"CustomizeID":-2,
+"PersonUUID":"",
+"ValidBegin":"1970-01-01T08:00:00",
+"ValidEnd":"1970-01-01T08:00:00"
+"Picinfo":"data:image/jpeg;base64,......."
+},
+{
+PersonInfo...
+},
+…
+]
+}
+118}
+3.20dooropeningcontrol
+Controlthedooropening.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar OpenDoor Openthedoordirectly.
+Isthespecificcontrol
+switchvalueorcanbe
+checkedbyweigen3.2
+door opening
+conditionsWeiganusesa
+publiccardnumber
+info jsonobject concretecontent
+DeviceIDint ThedeviceIDnumberof
+theequipmenttobe
+operatedcanbe
+accessedthrough3.9
+equipmentinformation
+acquisitionGet.
+Chn int 0~9 Thisparameteris
+invalidforface
+capturecomparison
+serverandface
+recognitionall-in-one
+machine
+status int Ifthevalueisgreater
+than0,thedoorcanbe
+openedonlywhenthe
+valueisgreaterthan0.
+Itdoesnotneedto
+119displaythecontent.
+Thisparametercanbe
+usedwithMSG.
+msg char Setthecurrentdisplay
+contentofthedevice,
+suchas:pleasepass,no
+access,etc.,andthe
+contentisinUTF-8
+format.Thisparameter
+isnotrequiredto
+displaythecontent.It
+isusedwithstatus.
+Operator:OpenDoor
+URI:http://<serveripaddr>/action/OpenDoor
+e.g.,
+http://<serveripaddr>/action/OpenDoor
+Issuebody
+{
+"operator":"OpenDoor",
+"info":{
+"DeviceID":"1300001",
+"Chn":0,
+"status":0,
+"MSG":"pleasepass"
+}
+}
+Or：
+{
+"operator":"OpenDoor",
+"info":{
+"DeviceID":"1300001",
+120"Chn":0,
+}
+}
+3.21passwordoperation
+Thisfunctionisforaccesscontrolequipment.
+3.21.1temporarypasswordacquisition
+Parameterinformation:
+Key Type Values Description
+operatorchar GetAccessTempPwdGetAccessTempPwd:
+Obtaintemporarydoor
+openingpassword
+info jsonobject concretecontent
+TempPwd char Temporarypassword(8
+bytes)
+ValidPeriodchar Theperiodof
+validityofthe
+temporarypassword
+Operator:SearchPerson
+URI:http://<serveripaddr>/action/GetAccessTempPwd
+e.g.,
+http://192.168.2.10/action/GetAccessTempPwd
+Replytobody
+{
+"operator":"GetTempPwd",
+"info":{
+"TempPwd":"195723",
+"ValidPeriod":"2018-11-1617:00:00~2018-11-1617:59:59"
+121}
+}
+3.21.2passwordaddition
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar AddAccessPwd AddAccessPwd:Adda
+newpassword
+info jsonobject concretecontent
+AccessPwdjsonarray Cryptoset
+Operator:SearchPerson
+URI:http://<serveripaddr>/action/AddAccessPwd
+e.g.,
+http://192.168.2.10/action/AddAccessPwd
+Issuebody
+{
+"operator":"AddAccessPwd",
+"info":{
+"AccessPwd":["123465","521423","565424","456826","95468"]
+}
+}
+3.21.3passworddeletion
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar DelAccessPwd DelAccessPwd:Delete
+addedpassword
+info jsonobject concretecontent
+AccessPwdjsonarray Oneormoresetsof
+passwords
+122Operator:SearchPerson
+URI:http://<serveripaddr>/action/DelAccessPwd
+e.g.,
+http://192.168.2.10/action/DelAccessPwd
+Issuebody
+{
+"operator":"DelAccessPwd",
+"info":{
+"AccessPwd":["123465","521423"]
+}
+}
+3.21.4allpasswordsarecleared
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar ClearAccessPwd ClearAccessPwd:
+Deleteaddedpassword
+info jsonobject concretecontent
+DeviceIDint TheIDofthedevice
+Operator:SearchPerson
+URI:http://<serveripaddr>/action/ClearAccessPwd
+e.g.,
+http://192.168.2.10/action/ClearAccessPwd
+Issuebody
+{
+"operator":"ClearAccessPwd",
+"info":{
+"DeviceID":1300000
+}
+123}
+3.22controlrecordquery
+Thecontrolrecordquerymainlyincludesthetotalnumberofcontrol
+recordsandtheinformationqueryofcontrolrecordpersonnel.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char SearchControlNum
+or
+SearchControlSearchControlNum:Con
+trolthetotalnumber
+ofrecordsby
+conditionquery
+SearchControl:Query
+controlrecords
+according to
+conditions
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+SearchTypeint
+(optional)0~1 Searchtype:0:
+searchbycriteria
+(name,time,etc.)1:
+searchbydatabaseID
++time.Ifthisfield
+isnotset,the
+defaultissearchby
+criteria
+IdType int 0~2 IftheSearchTypeis
+1,i.e.ID+time,
+thisitemis
+required.
+0:CustomizeID
+1:LibID
+2:PersonUUID
+CustomizeIDunsignedint UserdefinedID
+124(optional)
+LibID unsignedint
+(optional)ListdatabaseID(not
+control record
+databaseID,ifitis
+equalto0,thisdata
+isthecontrolrecord
+generatedbeforethe
+listisdeleted)
+PersonUUIDchar
+(optional)UUIDoflistdatabase
+(nomorethan48
+bytes)
+Name char
+(optional)Name (search
+accordingtothe
+name,defaultdoes
+notjudgethe
+conditions of
+conditionsearch);if
+youarelookingfor
+remotedooropening
+controlrecord,
+pleaseenter"remote
+dooropening"
+MjCardNo unsignedint
+(optional)Theaccesscard
+numberis0bydefault
+Gender int
+(optional)0~2 Gender 0:Male
+1:Female2:All,
+Ifthisfieldisnot
+set,thedefaultis
+all
+OpenDoor int
+(optional)0~2 0:All1:Openthe
+door2:Reject,donot
+setthisfieldtoall
+bydefault
+Channel int
+(optional)0~8 Analyzethechannel
+numberoftheserver.
+125Ifthefieldisnot
+set,thedefaultis
+all-in-onemachine
+BeginTimechar Searchstarttime,
+required
+EndTime char Searchendtime,
+required
+Ascendingint
+(optional)0~1(default0)Searchresultsin
+ascending or
+descendingorder
+0:ascending(results
+movebackwardfrom
+searchstarttime)
+1: Descending
+(resultsmoveforward
+fromsearchendtime)
+Age char
+(optional)Agerange,suchas
+1-100.Ifthisfield
+isnotset,the
+defaultvalueis
+0-200
+BeginNO int
+(optional)Returnthestarting
+sequencenumber.If
+itisnotset,itwill
+startfrom0by
+default
+RequestCountint
+(optional)0~100 Themaximumnumberof
+returnedrecordsis
+100.Ifitisnotset,
+themaximumnumberof
+returnedrecordsis
+20
+Picture int
+(optional)0~3 Includepictures
+0:Nopictures
+1:Include
+126registrationimage
+2:Includecaptured
+pictures
+3:Include
+registration +
+capturepictures
+RemoteOpenDo
+orint
+(optional)1 Ifitisacall3.20
+door opening
+controlOpendoor
+controlrecordof,
+return this
+identification.
+3.22.1totalnumberofcontrolrecordsquery
+Querythetotalnumberofcontrolrecordsaccordingtothetimecondition.
+Operator:SearchControlNum
+URI:http://<serveripaddr>/action/SearchControlNum
+http://192.168.2.10/action/SearchControlNum
+Issuedbody
+{
+"operator":"SearchControlNum",
+"info":{
+"DeviceID":1305433,
+"BeginTime":"2020-01-01T00:00:00",
+"EndTime":"2020-12-13T23:09:00"
+}
+}
+Parameterinformationreturned:
+127Key Type Values Description
+operator char SearchControlNumSearchControlNum:Con
+trolthetotalnumber
+ofrecordsby
+conditionquery
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+ControlNumint Returnsthetotal
+numberofcontrol
+recordsbytime
+condition
+Returnedbody:
+Thetotalnumberofcontrolrecordsreturnedbycondition
+{
+"operator":"SearchControlNum",
+"info":{
+"DeviceID":1305433,
+"ControlNum":23
+}
+}
+3.22.2controlrecordpersonnelinformationquery
+Queryandcontrolthepersonnelinformationaccordingtotheconditions.
+Operator:SearchControl
+URI:http://<serveripaddr>/action/SearchControl
+http://192.168.2.10/action/SearchControl
+Issuedbody
+128e.g.,
+http://<serveripaddr>/action/SearchControl
+Body:
+Searchbytime:
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300001,
+"BeginTime":"2018-11-13T00:00:00",
+"EndTime":"2018-11-13T23:59:59",
+"Picture":2
+}
+}
+Or
+Limitthenumberofreturnedlists:
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300001,
+"BeginTime":"2018-11-13T00:00:00",
+"EndTime":"2018-11-13T23:59:59",
+"RequestCount":10,
+"Picture":2
+}
+}
+Or
+Limitthenumberofreturnedlistsandwheretostart:
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300001,
+"BeginTime":"2018-11-13T00:00:00",
+"EndTime":"2018-11-13T23:59:59",
+"BeginNO":5,
+"RequestCount":10,
+129"Picture":2
+}
+}
+Or
+Accordingtothenamesearch,youcanfuzzysearch:
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300122,
+"Name":ZhangSan,
+"BeginTime":"2018-11-13T00:00:00",
+"EndTime":"2018-11-13T23:59:59",
+"Picture":3
+}
+}
+Or
+Searchbasedonthelistofuserid:1,customiid:0:
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300122,
+"SearchType":1,
+"IdType":1,
+"LibID":1,
+"BeginTime":"2018-11-13T00:00:00",
+"EndTime":"2018-11-13T23:59:59",
+"Picture":0
+}
+}
+Or
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300122,
+"SearchType":1,
+130"IdType":0,
+"CustomizeID":1234,
+"BeginTime":"2018-11-13T00:00:00",
+"EndTime":"2018-11-13T23:59:59",
+"Picture":0
+}
+}
+or
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300122,
+"SearchType":1,
+"IdType":2,
+"PersonUUID":".....",
+"BeginTime":"2018-11-13T00:00:00",
+"EndTime":"2018-11-13T23:59:59",
+"Picture":0
+}
+}
+Or
+Theserversearchesbychannel:
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300122,
+"BeginTime":"2018-11-13T00:00:00",
+"EndTime":"2018-11-13T23:59:59",
+"Channel":1,
+"Picture":0
+}
+}
+......
+131Parameterinformationreturned:
+Key Type Values Description
+operator char SearchControlSearchControl:Query
+controlrecords
+according to
+conditions
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+TotalNum int 0~100 Returnsthenumberof
+controlrecords.By
+default,themaximum
+numberofreturned
+recordsis100
+SearchInfo Returntosearch
+resultslist
+LibID int ThedatabaseIDofthe
+controlrecord
+VerfyTypeint 1:Or22~27~27~3or
+22~3;
+2:Specialmachines:
+Supportmaskdetection
+or(|)operation,and
+0x100indicatespassing
+withmaskdetection;
+Itsupportstemperature
+detectionor(|)
+operation,and0x200
+indicatesthatithas
+temperaturedetection;
+Supportmask+body
+temperaturedetectionor
+(|)operation.0x300
+indicatesthatthemask+
+bodytemperature
+detectionisavailable;
+Forexample:Mask+
+whitelist verification
+(0x101)Validationtype.
+1:Whitelistverification
+2:IDcardverification
+3:Whitelist+IDcard
+verification
+21:RFcardverification
+(built-inswipecardmodel)
+22:RFcardverification+
+whitelistverification
+(built-inswipecardmodel)
+24:Wegenkaverification
+25:Wegenka+whitelist
+verification
+27:HTTPremotedoor
+opening
+132Bodytemperature+
+whitelist verification
+(0x201)
+Mask + body
+temperature+Wigan
+swipecard+whitelist
+verification(0x319)
+Time char Certification
+passingtime
+VerifyStatuschar 0~2 Personnelaccess
+status
+0:None: 1Allow
+2:refuse
+Similarityfloat Similarity
+PersonTypeint Listtype0:White
+list:1blacklist
+Name char Name(nomorethan32
+bytes)
+WGFacilityCod
+eint
+(optional)Facilitycode;
+when3.2dooropening
+conditionsWhen
+Wiegand=4or5or6
+or7in,togetherwith
+themjcardnofield,
+theWiegandnumberis
+formed;whenWiegand
+=0or1,this
+parameterhasno
+practical
+significance.See3.10
+.5Wiganaccesscard
+numberandbuilt-in
+swipeIDcardnumber
+MjCardNo unsignedint Weiganaccesscard
+number
+(userid).When3.2
+door opening
+conditionsWhen
+133Wiegand=4or5or6
+or7in,itis
+combined with
+wgfacilitycodefield
+toformtheweigenka
+number;whenWiegand
+=0or1,itformsthe
+weigenkanumber
+alone.See3.10.5
+Wiganaccesscard
+numberandbuilt-in
+swipeIDcardnumber
+RFIDCard Char
+(optional)IDcardnumber,the
+maximumlengthis18
+characters,forthe
+built-incardreader
+(includingtheend
+character).See3.10.5
+Wiganaccesscard
+numberandbuilt-in
+swipeIDcardnumber
+Gender int 0~2 Gender 0:Male
+1:Female2:All
+Nation int nation
+IdCard char IDcardnumber
+Birthday char dateofbirth
+Telnum char phonenumber
+Native char Nativeplace
+Address char address
+CustomizeIDunsignedint UserdefinedID
+PersonUUIDchar UserdefinedUUID
+Temperaturedouble 37.20 Realtimedetection
+offacetemperature,
+when3.27temperature
+parametersOnlywhen
+facemasktptmode=
+1341,4,5modeis
+returned
+(temperature
+detectionmachine
+versionsupport)
+TemperatureAl
+armint 0~1 Realtimedetection
+ofwhethertheface
+temperatureexceeds
+thethreshold,0:not
+exceeded;1:over
+(temperature
+detectionmachine
+versionsupport)
+RegPicinfoChar Base64encodingof
+registeredimages
+SnapPicinfoChar Base64encodingof
+capturedimages
+Returnedbody:
+135Searchresultsaccordingtosearchcriteria:
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1300122,
+"TotalNum":1,
+"SearchInfo":[
+{
+"LibID":12,
+"Time":"2018-11-13T16:13:06",
+"VerifyStatus":1,
+"Similarity":96.6,
+"PersonType":0,
+"Name":"test",
+"MjCardFrom":2,
+"WGFacilityCode":9A,
+"MjCardNo":1923B,
+"RFIDCard":"9A01923B",
+"Gender":0,
+"Nation":1,
+"IdCard":"",
+"Birthday":"1973-11-13",
+"Telnum":"",
+"Native":"",
+"Address":"",
+"SnapPicinfo":"....",
+"RegPicinfo":"...."
+},
+{
+......
+},
+......
+]
+}
+}
+136Or
+SearchbasedontheIDofthelist:
+{
+"operator":"SearchControl",
+"info":{
+"DeviceID":1305969,
+"LibID":9,
+"VerifyStatus":1,
+"Similarity":88.3,
+"PersonType":0,
+"Name":"1537494887517",
+"MjCardFrom":2,
+"WGFacilityCode":9A,
+"MjCardNo":1923B,
+"RFIDCard":"9A01923B",
+"Gender":0,
+"Nation":1,
+"IdCard":"",
+"Birthday":"1985-11-16",
+"Telnum":"",
+"Native":"",
+"Address":"",
+"CustomizeID":0,
+"PersonUUID":"",
+"TotalNum":2,
+"SearchInfo":[
+{
+"Time":"2018-11-16T15:56:50",
+"SnapPicinfo":"....",
+"RegPicinfo":"...."
+},
+{
+"Time":"2018-11-16T15:56:43",
+"SnapPicinfo":"....",
+"RegPicinfo":"...."
+137}
+]
+}
+}
+1383.23commonconfigurationsettings
+Getorsetcommonparameterconfigurationinformation.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char SetGeneralParam
+or
+GetGeneralParamSetgeneralparam:
+setting common
+configuration
+parameters
+Getgeneral:getcommon
+parameters
+DeviceID int TheIDofthedevice
+info jsonobject concretecontent
+FaceThresholdint
+(optional)50~100 Blackandwhitelist
+comparisonthreshold
+IDCardThresho
+ldint
+(optional)50~100 ThresholdcomparisonID
+card
+ControlTypeint
+(optional)0~2 0:Switchvalue:1:
+Wiganinterface26;2:
+Wiganinterface34
+LiveThresholddouble
+(optional)0~1 Live detection
+threshold (not
+settable)
+LiveFrameNumint
+(optional)Numberofconsecutive
+framesinvivo
+detection (not
+settable)
+AutoRebootDayint
+(optional)0~8 Deviceautorestartset
+date
+0:Donotrestart;1:
+restarteveryday;
+2~8:
+Restartautoday1week
+AutoRebootHou
+rint
+(optional)0~23 Devicerestartontime
+139Direction int
+(optional)0~2 Entranceandexit
+direction
+0:oneway
+1:Entrance
+2:Export
+IPAddr char
+(optional)DeviceIPaddress(64
+bytes)
+Submask char
+(optional)Devicesubnetmask(32
+bytes)
+Gateway char
+(optional)Devicegateway(32
+bytes)
+DNS char
+(optional)DeviceDNS(32bytes)
+DHCP int
+(optional)0~2
+3.23.1obtainingcommonsettingparameters
+Operator:GetGeneralParam
+URI:http://<serveripaddr>/action/GetGeneralParam
+e.g.,
+http://172.168.2.10/action/GetGeneralParam
+Replytobody:
+{
+"operator":"GetGeneralParam",
+"DeviceID":1379743,
+"info":{
+"FaceThreshold":90,
+"IDCardThreshold":50,
+"ControlType":0,
+"AutoRebootDay":0,
+"AutoRebootHour":0,
+"Direction":0,
+"IPAddr":"172.168.2.93",
+"Submask":"255.255.255.0",
+"Gateway":"172.168.2.1",
+"DNS":"202.96.134.33"
+140}
+}
+3.23.2settingcommonparameters
+Operator:SetGeneralParam
+URI:http://<serveripaddr>/action/SetGeneralParam
+e.g.,
+http://172.168.2.10/action/SetGeneralParam
+Issuebody:
+{
+"operator":"SetGeneralParam",
+"DeviceID":1305269,
+"info":{
+"FaceThreshold":75,
+"IDCardThreshold":50,
+"ControlType":0,
+"Direction":0,
+"AutoRebootDay":0,
+"AutoRebootHour":0,
+"IPAddr":"172.168.2.130",
+"Submask":"255.255.255.0",
+"Gateway":"172.168.2.1",
+"DNS":"202.96.134.33"
+}
+}
+3.24restartthedevice
+Getorsetcommonparameterconfigurationinformation.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char RebootDeviceRebootDevice:reboot
+device
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+IsRebootDevic
+eint
+(optional)0~1 0:Donotrestartthe
+device
+1411:rebootdevice
+Operator:RebootDevice
+URI:http://<serveripaddr>/action/RebootDevice
+e.g.,
+http://172.168.2.10/action/RebootDevice
+body：
+{
+"operator":"RebootDevice",
+"info":{
+"DeviceID":1305269,
+"IsRebootDevice":1
+}
+}
+3.25imageservicefunction
+Imageservicefunctionsinclude:imagesimilaritycomparison,localface
+databasesearch,facedetectionandpanoramicimageacquisition.
+3.25.1picturecomparisonsimilarity
+Operator:GetPictureSimilarity
+URI:http://<serveripaddr>/action/GetPictureSimilarity
+e.g.,
+http://192.168.2.10/action/GetPictureSimilarity
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator charGetPictureSimilarityGetthesimilarityof
+personnelpictures
+picinfo1 char Base64encodeddataof
+faceimage(nomorethan
+1m)
+picinfo2 char Base64encodeddataof
+faceimage(nomorethan
+1421m)
+{
+"operator":"GetPictureSimilarity",
+"picinfo1":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB......",
+"picinfo2":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB......"
+}
+Replytothecorrectbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operatorchar GetPictureSimilarityGetthesimilarityof
+personnelpictures
+info jsonobject concretecontent
+Similarityfloat Faceimagesimilarity
+{
+"operator":"GetPictureSimilarity",
+"info":{
+"Similarity":80
+}
+}
+3.25.2searchlocalfacedatabasebygraph
+Operator:GetPictureSearch
+URI:http://<serveripaddr>/action/GetPictureSearch
+e.g.,
+http://192.168.2.10/action/GetPictureSearch
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetPictureSearchSearchlocalface
+databasebygraph
+143info jsonobject concretecontent
+MaxSimilarityfloat Similaritythreshold
+MaxNum int Maximumnumber
+picinfo char Base64encodeddataof
+faceimage(nomore
+than1m)
+{
+"operator":"GetPictureSearch",
+"info":{
+"MaxSimilarity":80,
+"MaxNum":5
+},
+"picinfo":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB......"
+}
+Replytothecorrectbody
+Parameterinformation:personnelinformation+personnelinformation+
+personnelinformation+personnelinformation
+(thedetaileddescriptionofthefieldcanbereferredto3.10addition,
+editingandmodificationofthelist）
+Key Type Values Description
+operatorchar GetPictureSearchGettheinformation
+andpicturesthat
+meet the
+requirementsofface
+images
+info jsonobject concretecontent
+TotalNumint Thetotalnumberof
+listsreturnedby
+searchresults
+SearchInfo Listofreturned
+lists
+Uid unsignedint IDdatabase
+Type int 0~1 Listtype0:White
+list:1blacklist
+144Name char Name(nomorethan64
+bytes)
+Cardtypeint Entercardnumber
+type
+MjCardNounsignedint Accesscardnumber
+Sex int Gender
+Nation int nation
+Certype int Documenttype
+Cernumberchar IDcardnumber(no
+morethan32bytes)
+Birth char dateofbirth
+Phone char phonenumber
+Place char Nativeplace(nomore
+than32bytes)
+Addr char Address(nomorethan
+72bytes)
+Notes char Remarks(nomorethan
+64bytes)
+Filetypeint filetype
+Fileindexunsignedint DocumentNo
+Filepos unsignedint position
+CustomizeIDunsignedint TheIDnumberofthe
+usercanbemodified
+bytheuserID
+number.Note:you
+can'tusethesameID
+toaddpersonnel
+repeatedly,
+otherwiseitwill
+causeerrorsin
+modification,
+deletionandother
+operations.
+PersonUUIDchar Theuser-defined
+personnel UUID
+145number(nomorethan
+48bytes)canbe
+modifiedanddeleted
+throughthisID
+numbertomanagethe
+corresponding
+personnel
+information.Note:
+thesameUUIDcannot
+beusedrepeatedlyto
+add personnel,
+otherwiseitwill
+causeerrorsin
+modification,
+deletionandother
+operations.
+Time char Creationtime
+{
+"operator":"GetPictureSearch",
+"info":{
+"TotalNum":1,
+"SearchInfo":[
+{
+"Uid":0,
+"Type":0,
+"Name":"test",
+"Cardtype":0,
+"MjCardNo":0,
+"Sex":0,
+"Nation":0,
+"Certype":0,
+"Cernumber":"421128188905061144",
+"Phone":"13691111112",
+"Place":ShenzhenBao'an,
+146"Addr":ShenzhenBao'an,
+"Notes":"notes",
+"Filetype":0,
+"Fileindex":0,
+"Filepos":0,
+"Time":"2018-03-12/09:09:20"
+}
+]
+}
+}
+3.25.3facedetection
+Operator:DetectFaceFromPic
+URI:http://<serveripaddr>/action/DetectFaceFromPic
+e.g.,
+http://192.168.2.10/action/DetectFaceFromPic
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char DetectFaceFromPicFacedetection
+info jsonobject concretecontent
+picinfo char Base64encodeddataof
+faceimage(nomore
+than1m)
+{
+"operator":"DetectFaceFromPic",
+"info":{
+},
+"picinfo":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB......"
+}
+Replytothecorrectbody
+147Parameterinformation:whetherfaceisdetected
+Key Type Values Description
+operatorchar DetectFaceFromPicFacedetection
+info jsonobject concretecontent
+DetectFaceint 0~1 Face detection
+results:
+0:nofacewas
+detected
+1:Facedetected
+{
+"operator":"DetectFaceFromPic",
+"info":{
+"DetectFace":1,
+}
+}
+3.25.4manualcapture
+Themanualcaptureinterfaceisonlysupportedinspecialversion(the
+beginningversionofV14).Thisinterfacesupportstheacquisitionof
+panoramicimagesofdevicesorthereturnoffaceimages.
+Operator:FrontalFaceSnap
+URI:http://<serveripaddr>/action/FrontalFaceSnap
+e.g.,
+http://192.168.2.10/action/FrontalFaceSnap
+Issuedbody
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char FrontalFaceSnapCapturepanorama
+info jsonobject concretecontent
+DeviceID int DeviceID
+Overall int 0~1 Picturetype
+0:getfaceimage
+148(returnfortimeoutif
+failed)
+1:Capturepanorama
+{
+"operator":"FrontalFaceSnap",
+"info":{
+"DeviceID":1300001,
+"Overall":1
+}
+}
+Replytothecorrectbody
+Parameterinformation:
+Key Type Values Description
+operatorchar FrontalFaceSnapManualcapture
+FacePic char Base64encodingdata
+oftheimage(nomore
+than1.5m),return
+data
+{
+"operator":"FrontalFaceSnap",
+"info":{
+"FacePic":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQAB......"
+}
+}
+3.26capturerecordquery
+Thesnapshotrecordqueryisaboutthestrangersnapshotrecordquery,
+ifitisthepersonnelinformationofthepasscomparison,itisnotstored
+inthecapturerecord;thesnapshotrecordquerymainlyincludesthetotal
+numberofsnapshotrecordsqueryandthesnapshotrecordinformation
+149query.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char SearchCaptureNum
+or
+SearchCaptureSearchCaptureNum:Que
+rythetotalnumberof
+snapshotrecords
+accordingtothe
+conditions
+SearchCapture:Query
+snapshotrecords
+according to
+conditions
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+BeginTimechar Searchstarttime,
+required
+EndTime char Searchendtime,
+required
+Ascendingint
+(optional)0~1(default0)Searchresultsin
+ascending or
+descendingorder
+0:ascending(results
+movebackwardfrom
+searchstarttime)
+1: Descending
+(resultsmoveforward
+fromsearchendtime)
+BeginNO int
+(optional)Returnthestarting
+sequencenumber.If
+itisnotset,itwill
+startfrom0by
+default
+RequestCountint
+(optional)0~100 Themaximumnumberof
+returnedrecordsis
+150100.Ifitisnotset,
+themaximumnumberof
+returnedrecordsis
+15
+3.26.1queryoftotalnumberofsnapshotrecords
+Querythetotalnumberofsnapshotrecordsaccordingtothetime
+condition.
+Operator:SearchCaptureNum
+URI:http://<serveripaddr>/action/SearchCaptureNum
+http://192.168.2.10/action/SearchCaptureNum
+Issuedbody
+{
+"operator":"SearchCaptureNum",
+"info":{
+"DeviceID":1305433,
+"BeginTime":"2020-01-01T00:00:00",
+"EndTime":"2020-12-13T23:09:00"
+}
+}
+Parameterinformationreturned:
+Key Type Values Description
+operator char SearchCaptureNumSearchCaptureNum:Que
+rythetotalnumberof
+snapshotrecords
+accordingtothe
+151conditions
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+CaptureNumint Returnsthetotal
+numberofsnapshot
+recordsbytime
+condition
+Returnedbody:
+Thetotalnumberofsnapshotrecordsreturnedaccordingtothecondition
+{
+"operator":"SearchCaptureNum",
+"info":{
+"DeviceID":1305433,
+"CaptureNum":485
+}
+}
+3.26.2personnelinformationqueryofcapturerecord
+Queryandquerythepersonnelinformationofsnapshotrecordaccording
+totheconditions.
+Key Type Values Description
+operator char SearchCaptureSearchCapture:Query
+snapshotrecords
+according to
+conditions
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+CaptureNumint Returnsthetotal
+numberofsnapshot
+recordsbytime
+152condition
+Listnum int
+(optional)Thenumberof
+personnel
+information of
+snapshotrecords
+returnedbycondition
+query
+LibSnapIDint
+(optional)Thesnapshotlibrary
+IDofthereturned
+snapshotrecord
+information
+CreateTimeChar YYYY-MM-DDThh:mm:
+ssCapturetime
+Temperaturedouble 37.20 Realtimedetection
+offacetemperature,
+when3.27temperature
+parametersOnlywhen
+facemasktptmode=
+1,4,5modeis
+returned
+(temperature
+detectionmachine
+versionsupport)
+TemperatureA
+larmint 0~1 Realtimedetection
+ofwhethertheface
+temperatureexceeds
+thethreshold,0:not
+exceeded;1:over
+(temperature
+detectionmachine
+versionsupport)
+SnapPicinfoChar Base64encodingof
+capturedimages
+Operator:SearchCapture
+URI:http://<serveripaddr>/action/SearchCapture
+153http://192.168.2.10/action/SearchCapture
+Issuedbody
+154e.g.,
+http://<serveripaddr>/action/SearchCapture
+Body:
+Searchbytime:
+{
+"operator":"SearchCapture",
+"info":{
+"DeviceID":1305433,
+"BeginTime":"2020-01-13T00:00:00",
+"EndTime":"2020-01-13T23:59:59"
+}
+}
+Or
+Limitthenumberofsnapshotrecordsreturned:
+{
+"operator":"SearchCapture",
+"info":{
+"DeviceID":1305433,
+"BeginTime":"2020-01-01T00:00:00",
+"EndTime":"2020-01-13T23:59:59",
+"RequestCount":10
+}
+}
+Or
+Limitthenumberofsnapshotrecordsreturnedandthestartingposition:
+{
+"operator":"SearchCapture",
+"info":{
+"DeviceID":1305433,
+"BeginTime":"2020-01-01T00:00:00",
+"EndTime":"2020-01-13T23:59:59",
+"BeginNO":5,
+"RequestCount":10
+}
+155}
+Returnedbody:
+Accordingtothetimeconditions,returnthecapturerecordpersonnelinformationresults:
+{
+"operator":"SearchCapture",
+"info":{
+"DeviceID":1305433,
+"Listnum":15,
+"List":[
+{
+"LibSnapID":3303,
+"CreateTime":"2020-01-13T20:02:43",
+"SnapPicinfo":"data:image/jpeg;base64,Qk3m5......
+},
+{
+"LibSnapID":3302,
+"CreateTime":"2020-01-13T19:36:06",
+"SnapPicinfo":"data:image/jpeg;base64,Qk225QA......
+},
+{
+"LibSnapID":3301,
+"CreateTime":"2020-01-13T18:34:15",
+"SnapPicinfo":"data:image/jpeg;base64,Qk225......
+},
+......
+{
+"LibSnapID":3289,
+"CreateTime":"2020-01-13T16:31:26",
+"SnapPicinfo":"data:image/jpeg;base64,Qk22......
+}
+]
+}
+156}
+Or
+Thenumberofsnapshotrecordsreturnedislimitedto10
+{
+"operator":"SearchCapture",
+"info":{
+"DeviceID":1305433,
+"Listnum":10,
+"List":[
+{
+"LibSnapID":3303,
+"CreateTime":"2020-01-13T20:02:43",
+"SnapPicinfo":"data:image/jpeg;base64,Qk3m5......
+},
+{
+"LibSnapID":3302,
+"CreateTime":"2020-01-13T19:36:06",
+"SnapPicinfo":"data:image/jpeg;base64,Qk225QA......
+},
+{
+"LibSnapID":3301,
+"CreateTime":"2020-01-13T18:34:15",
+"SnapPicinfo":"data:image/jpeg;base64,Qk225......
+},
+......
+{
+"LibSnapID":3294,
+"CreateTime":"2020-01-13T16:31:38",
+"SnapPicinfo":"data:image/jpeg;base64,Qk22......
+}
+]
+}
+}
+157Or
+Limitthenumberofreturnedsnapshotrecordsto10andstartposition:
+{
+"operator":"SearchCapture",
+"info":{
+"DeviceID":1305433,
+"Listnum":10,
+"List":[
+{
+"LibSnapID":3298,
+"CreateTime":"2020-01-13T14:32:38",
+"SnapPicinfo":"data:image/jpeg;base64,Qk3m5......
+},
+{
+"LibSnapID":3397,
+"CreateTime":"2020-01-13T14:32:36",
+"SnapPicinfo":"data:image/jpeg;base64,Qk225QA......
+},
+{
+"LibSnapID":3396,
+"CreateTime":"2020-01-13T14:32:34",
+"SnapPicinfo":"data:image/jpeg;base64,Qk225......
+},
+......
+{
+"LibSnapID":3289,
+"CreateTime":"2020-01-13T16:31:26",
+"SnapPicinfo":"data:image/jpeg;base64,Qk22......
+}
+]
+}
+}
+1583.27temperatureparameters
+Thetemperatureparameterismainlyrelatedtothetemperatureoperationparametersofthe
+facerecognitionall-in-onemachinewhichsupportsthetemperaturedetection.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetTemperature
+or
+SetTemperatureGetTemperature:Get
+temperatureparameters
+SetTemperature:Setting
+temperatureparameters
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+TemperatureM
+odeint
+(optional)0~1 Temperaturedisplaymode
+0: centigrade
+temperature
+1:fahrenheit
+ShowAbnormal
+Tempint
+(optional)0~1 Display abnormal
+temperature
+Donotdisplay0:
+1:display
+TemperatureC
+heckdouble
+(optional)0.0 Temperaturecalibration
+TemperatureL
+owdouble
+(optional)34.00(default
+forclauseC);
+28.00(default
+exceptfor
+clauseC)Low temperature
+threshold
+TemperatureH
+ighdouble 37.3 Temperature alarm
+threshold(default:
+37.3)
+EnvTemperatu
+redouble
+(optional)Ambienttemperature
+(reserved)
+EnvTemperatu
+reCheckdouble
+(optional)Ambienttemperature
+calibration value
+159(reserved)
+OpenLaser int
+(optional)0~1 Switchon(laserreserved
+ornot)
+TempFaceMinW int
+(optional)100~500 Theminimumface
+recognitionpixelwidth
+oftemperature
+measurement;thelower
+thetemperature
+measurementdistance,
+thefartherthe
+temperaturemeasurement
+recognitiondistanceis
+(default350)
+TempFaceMinH int
+(optional)50~1000 Thelargertheheight,
+thesmallerthe
+recognitionarea
+3.27.1obtainingtemperatureparameters
+Operator:GetTemperature
+URI:http://<serveripaddr>/action/GetTemperature
+e.g.,
+http://192.168.2.10/action/GetTemperature
+Replytobody
+{
+"operator":"GetTemperature",
+"info":{
+"TemperatureMode":0,
+"ShowAbnormalTemp":0,
+"TemperatureCheck":0.00,
+160"TemperatureLow":28.00,
+"TemperatureHigh":37.30,
+"EnvTemperature":0.00,
+"EnvTemperatureCheck":0.00,
+"OpenLaser":0,
+"TempFaceMinW":350,
+"TempFaceMinH":560
+}
+}
+3.27.2settingtemperatureparameters
+Operator:SetTemperature
+URI:http://<serveripaddr>/action/SetTemperature
+e.g.,
+http://192.168.2.10/action/SetTemperature
+Issuebody
+{
+"operator":"SetTemperature",
+"info":{
+"DeviceID":1305433,
+"TemperatureMode":0,
+"ShowAbnormalTemp":0,
+"TemperatureCheck":0.00,
+"TemperatureLow":28.00,
+"TemperatureHigh":37.30,
+"EnvTemperature":0.00,
+"EnvTemperatureCheck":0.00,
+"OpenLaser":0,
+"TempFaceMinW":350,
+"TempFaceMinH":560
+161}
+}
+3.28handshakeprotocoldata
+Handshakeprotocoldataismainlyrelatedtotheclientdockingplatform,whichcanwrite
+somedatacontenttothefacerecognitionall-in-onemachineforsaving.Generally,itisthe
+third-partyencrypteddatacontentorthethird-partyauthenticationdata,andthesizeofthe
+datacontentcannotexceed4Kbytes.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetHandSharkData
+or
+SetHandSharkDataGetHandSharkData:Get
+handshakeprotocol
+data
+SetHandSharkData:Set
+handshakeprotocol
+data
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+HandSharkInf
+ochar Datacontent,nomore
+than4Kbytes
+1623.28.1obtaininghandshakeprotocoldata
+Operator:GetHandSharkData
+URI:http://<serveripaddr>/action/GetHandSharkData
+e.g.,
+http://192.168.2.10/action/GetHandSharkData
+Replybody
+{
+"operator":"GetHandSharkData",
+"info":{
+"HandSharkInfo":"xxxx"
+}
+}
+3.28.2settinghandshakeprotocoldata
+Operator:SetHandSharkData
+URI:http://<serveripaddr>/action/SetHandSharkData
+e.g.,
+http://192.168.2.10/action/SetHandSharkData
+Issuedbody
+{
+"operator":"SetHandSharkData",
+"info":{
+"DeviceID":"1310001",
+"HandSharkInfo":"xxxx"
+}
+}
+163Version3.29upgrade
+stay3.9equipmentinformationThesoftwareversionofthecurrentall-in-oneface
+recognitionmachinecanbeobtained.Checkthattheversiontobeupgradedandthecurrent
+softwareversionoftheall-in-onefacerecognitionmachineareinlinewiththecorresponding
+version.Aftertheupgradeversionissuccessful,theall-in-onefacerecognitionmachinewill
+restartautomatically.
+3.29.1versionupgradeinterface1
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char Upgrade Upgrade:Version
+upgrade
+info jsonobject concretecontent
+DeviceID int TheIDofthedevice
+Name char Versionname
+Path char Forexample:
+https://hq.oss-cn
+-shenzhen.aliyunc
+s.com/face/xxx.sw
+xThedownloadpath(HTTP
+orHTTPS)ofthe
+versionupgradefile
+mustbe".SWX"
+Operator:Upgrade
+URI:http://<serveripaddr>/action/Upgrade
+e.g.,
+http://192.168.2.10/action/Upgrade
+Issuedbody
+{
+"operator":"Upgrade",
+"info":
+{
+"DeviceID":1300001,
+"Name":latestversion,
+164"Path":"https://hq.oss-cn-shenzhen.aliyuncs.com/face/xxx.swx"
+}
+}
+3.30systemparameters
+Thesystemparametersaremainlyrelatedtotheoperationparametersofthefacerecognition
+all-in-onemachine.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator GetSysCfg/
+SetSysCfgGetSysCfg:Getsystem
+parameters
+SetSysCfg:Settingsystem
+parameters
+info concretecontent
+Language int
+(optional)0~5 Devicelanguage,0:English
+1:SimplifiedChinese2:
+Chinesetraditional3:
+Portuguese4:Korean5:
+Russian(specialversion
+support),6:Italian,7:
+French,8:Spanish,9:
+Japanese;ifthedevice
+languageischanged,the
+machinewillrestart
+DataBaseEnable int
+(optional)0~1 Recordsnapshot+recordID
+card+recordauthentication
+(0No,1yes);default:1,if
+itisnotenabled,snapshot,
+IDcardandauthentication
+imagedatawillnotbesaved
+IDcardType int
+(optional)0~3 IDcardreadertype,
+0:Centralcontrol(idm30),
+Tengyan,Huashi(cvr-100b),
+Boya;
+1:Idr210wasusedasthe
+control;
+2:Centralcontrol(idm30,
+idm10);
+3:Huashi(cvr-100uc)
+165CardReaderType int
+(optional)reserve ICcardreadertype
+CardOpenDoorWayint
+(optional)reserve Cardopeningmode
+0:face+card1:faceorcard
+FaceDisplay int
+(optional)0~1,the
+defaultis1Whethertodisplayface
+frame
+0:No1:yes
+LiveDetectType int
+(optional)0~2,default
+1Invivodetectionmode0:
+Livedetectionisalwayson,
+1:turnitoff,2:turniton
+accordingtothetimeperiod
+LiveDetectTimeB
+egString
+(optional)e.g.,07:00:00Starttimepointoflive
+detectioneveryday
+Requiredwhen
+livedetecttype=2
+LiveDetectTimeE
+ndString
+(optional)e.g.,19:00:00Theendtimeoflivingbody
+testeveryday
+Requiredwhen
+livedetecttype=2
+LiveThresholdDouble
+(optional)e.g.,90.00000
+0Livedetectionthreshold
+(notsettable)
+LiveFrameNum int
+(optional)Thenumberofconsecutive
+framesinvivodetection,
+thelargerthenumberof
+frames,thelongerthe
+recognitiontime(cannotbe
+set)
+LedLightType int
+(optional)0~5 Enablewhitelighttype0:
+never1:timecontrol2:
+photosensitivecontrol3:
+facesensing4:faceortime
+5faceorlightperception
+LedBrightness int
+(optional)Usewhenwhitelightis
+enabled
+LedTimeBeg String
+(optional)e.g.,19:00:00Starttimeofwhitelight
+activationeveryday(white
+lightactivationtime),
+whichisrequiredwhen
+ledlighttype=1,4
+LedTimeEnd String
+(optional)e.g.,07:00:00Theendtimeofwhitelight
+activation(turnoffwhite
+lighttime)isrequiredwhen
+1663.30.1obtainingsystemparameters
+Operator:GetSysCfg
+URI:http://<serveripaddr>/action/GetSysCfg
+e.g.,
+http://192.168.2.10/action/GetSysCfg
+Replytobody
+{
+"operator":"GetSysCfg",
+"info":{
+"Language":1,
+"DataBaseEnable":1,
+"IDcardType":0,
+"CardReaderType":1,
+"CardOpenDoorWay":0,
+"FaceDisplay":1,
+"LiveDetectType":0,
+"LiveDetectTimeBeg":"07:00:00",
+"LiveDetectTimeEnd":"19:00:00",ledlighttype=1,4
+LedDisableAfter
+Secint
+(optional)Turnoffthewhitelight
+(facesensing)afterafew
+seconds.Requiredwhen
+ledlighttype=3,4,5
+LcdBLDisable int
+(optional)Doyouwanttoturnoffthe
+screenwhenthereisnoone
+Never,1:turnoffthe
+backlightwhennofaceis
+detected
+LcdBLDisableAft
+erSecint
+(optional)Whenlcdbldisable=1,itis
+requiredtoclosethescreen
+inseconds
+ScreenBrightnes
+sint
+(optional)Default:50 Screenbrightness
+(reserved)
+WebTimeOut int
+(optional)2~10default:
+5Webpagelogintimeout
+(minutes)
+167"LiveThreshold":"90.000000",
+"LiveFrameNum":2,
+"LedLightType":4,
+"LedTimeBeg":"19:00:00",
+"LedTimeEnd":"07:00:00",
+"LedBrightness":50,
+"LedDisableAfterSec":30,
+"LcdBLDisable":1,
+"LcdBLDisableAfterSec":60,
+"ScreenBrightness":50,
+"WebTimeOut":10
+}
+}
+3.30.2settingsystemparameters
+Operator:SetSysCfg
+URI:http://<serveripaddr>/action/SetSysCfg
+e.g.,
+http://192.168.2.10/action/SetSysCfg
+Issuebody
+{
+"operator":"SetSysCfg",
+"info":{
+"LedLightType":4,
+"LedTimeBeg":"19:00:00",
+"LedTimeEnd":"06:00:00",
+"ScreenBrightness":50,
+"WebTimeOut":10
+}
+}
+1683.31mqttparameters
+Themqttparametersaremainlyrelatedtothemqttservicerunningparametersoftheface
+recognitionall-in-onemachine.Settingtheimportantparametersofthisinterfacewillmakethe
+facerecognitionall-in-onemachineandthemqttserverreconnected.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator GetMQTTParam/
+SetMQTTParamGetMQTTParam:Getmqtt
+parameters
+SetMQTTParam:Settingmqtt
+parameters
+info concretecontent
+MQEnable int
+(optional)0~1 Turnmqttserviceon/off
+0:close
+1:Open
+MQCloudID String
+(optional)MqttgatecloudIDnumber
+RecommendednativeID
+(1300001)
+MQAddr String
+(optional)Mqttcloudaddress
+MQPort int
+(optional)Mqttcloudport
+MQUser String
+(optional)Mqttcloudusername
+MQPwd String
+(optional)Mqttcloudpassword
+MQTopic String
+(optional)Mqttcloudtopic
+StrangerUploadT
+ypeint
+(optional)0~1 Uploadthesnapshot
+informationofstrangers
+(default:0)
+0:Upload
+1:Donotupload
+RecordUploadTyp
+eint
+(optional)0~2 Defaultinformationupload
+(1)
+0:Donotupload
+1:Identificationrecord
+uploadwithcaptured
+pictures
+2:Uploadimagewithout
+identification
+Direction int 0~2 Importandexportdirection
+169(optional) ofallinonemachine
+0:Imported
+1:exit
+2:Nodirection
+QRCode int
+(optional)0~1 Default:QRcodescanning
+result
+0:donotupload
+1:Upload
+ResumefromBreak
+pointint
+(optional)0~1 Whetherthebreakpoint
+continuoustransmissionof
+mqttstrangersnapshot
+informationand
+identificationrecordis
+enabled(inthemodeof
+strangersnapshotuploador
+identificationrecord
+upload),0:notenabled,1:
+enabled.Itdoesnotenable
+thebreakpointcontinuous
+transmissionfunction,only
+ensuresthepushdata,and
+doesnotneedtheplatform
+(cloudserver)to
+return.7.7.Forthedetails,
+pleaserefertothemqtt
+authenticationfunction,
+After10seconds,ifthe
+all-in-onemachinedoesnot
+receivethecorrectdata
+packetfromtheserver,it
+willcontinuetopushthis
+message.
+BeginTime String
+(optional)YYYY-MM-DDThh
+:mm:ssThedefaultstarttimeof
+mqttbreakpoint
+continuationcanbeleft
+blank.Thedefaulttimeisto
+setthetimeforstranger
+snapshotuploador
+identificationrecord
+uploadandenablebreakpoint
+continuoustransmission
+function.Whenthestranger
+snapshotandauthentication
+recordinformationpush
+1703.31.1gettingmqttparameters
+Operator:GetMQTTParam
+URI:http://<serveripaddr>/action/GetMQTTParam
+e.g.,
+http://192.168.2.10/action/GetMQTTParam
+Replytobody
+{
+"operator":"GetMQTTParam",
+"info":{
+"MQEnable":1,
+"MQAddr":"172.168.2.89",
+"MQPort":61613,
+"MQUser":"admin",
+"MQPwd":"password",
+"MQTopic":"mqtt/face/1306612",
+"MQCloudID":"1306612",
+"StrangerUploadType":1,
+"RecordUploadType":0,
+"Direction":0,
+"QRCode":0,
+"ResumefromBreakpoint":0,
+"BeginTime":"2020-05-20T16:34:28"
+}
+}
+3.31.2settingmqttparameters
+Operator:SetMQTTParambeforethebreakpointis
+completed,thistimewill
+becomethetimetocomplete
+thebreakpointcontinuous
+transmissionandpush.e.g.,
+2020-05-25T09:10:00
+171URI:http://<serveripaddr>/action/SetMQTTParam
+e.g.,
+http://192.168.2.10/action/SetMQTTParam
+Issuebody
+{
+"operator":"SetMQTTParam",
+"info":{
+"StrangerUploadType":0,
+"RecordUploadType":1
+}
+}
+3.32manualpushcontrolrecord
+ManualpushcontrolrecordinterfaceismainlytosolvetheproblemofHTTPserver3.12.4
+reportingofcertificationresultsIfthecontrolrecordreportedbytheinterfaceislost,the
+all-in-onemachinewilluploadtheauthenticationresultswithinthetimeperiodtotheserverby
+manualsettingagain.Thisinterfacerequires3.12datasubscriptionPartofthesubscriptionaddress
+andportsettingsarecorrect,andauthenticationresultreportingsubscriptionisenabled.This
+interfaceisacontrolrecordthatisforcedtobepushedandsearched.Nomatterwhetherornot
+thenetworkinterruptionandcontinuoustransmissionmodeisadopted,thecontrolrecord
+uploadedbythisinterfacedoesnotneedtheserver'sreply.Atthesametime,itshouldbenoted
+thatthedatareportedbythisinterfacemaybesavedformultipletimesbecausethesamerecord
+hasbeenreportedtotheserverbefore.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator ManualPushRec
+ordsManualPushRecords:Manual
+pushcontrolrecord
+info concretecontent
+DeviceID int DeviceID
+TimeS stringYYYY-MM-DDThh
+:mm:ssStarttimeofcontrolrecord
+tobepushed.e.g.,
+2020-07-29T21:50:05
+TimeE stringYYYY-MM-DDThh
+:mm:ssTheendtimeofthecontrol
+recordtobepushed.e.g.,
+1723.32.1settingmanualpushcontrolrecord
+Operator:ManualPushRecords
+URI:http://<serveripaddr>/action/ManualPushRecords
+e.g.,
+http://192.168.2.10/action/ManualPushRecords
+Issuebody
+{
+"operator":"ManualPushRecords",
+"info":{
+"DeviceID":1326491,
+"TimeS":"2020-07-28T9:00:00"，
+"TimeE":"2020-08-07T9:00:00"
+}
+}
+Replytobody
+{
+"operator":"ManualPushRecords",
+"code":200,
+"info":{
+"Result":"Ok",
+"RecordNum":"8",
+"ConfirmconnectiontoHTTPserverisOk?Find8rec2020-07-29T21:50:05
+Name string
+(optional)Controlrecordmatching
+exactname(reserved)
+RecordNum int
+(optional)Totalnumberofcontrol
+recordsmatched(return
+value),0:nomatchingdata
+wasfound
+173ords,trytopushnow"
+}
+}
+3.33WiFiparameters
+WiFiparametersmainlyinvolvetheWiFiparametersettingofthedevice,
+whichneedstobecoordinated3.4networkparametersThedefaultroutein
+isused.OnlythedevicemodelandversionthatsupportsWiFimodelshave
+thisparameter.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetNetWiFi
+or
+SetNetWiFiGetNetWiFi:GetWiFi
+parameters
+SetNetWiFi:Setting
+WiFiparameters
+info jsonobject concretecontent
+Enable int
+(optional)WiFienabled
+0:notenabled
+1:Enable
+WorkMode int Default:0 Workingmode
+0:Stamode
+SecurityModeint 0~2 safemode
+0:noencryption
+1：WPA-PSK/WPA2-PSK
+2：WPA/WPA2
+SSID String SSID(upto32bytes)
+PassWord String Password(upto128
+bytes)
+DHCP int 0~1 DHCPenabled
+0:notenabled
+1:Enable
+IPAddr char
+(optional)DeviceIPaddress
+(maximum16bytes),
+174requiredwhenDHCP=0
+NetMask char
+(optional)DeviceIPsubnetmask
+(maximum16bytes),
+requiredwhenDHCP=0
+GateWay char
+(optional)DeviceIPgateway
+(maximum16bytes),
+requiredwhenDHCP=0
+DNS1 char
+(optional)DNS1
+DNS2 char
+(optional)DNS2
+3.33.1gettingWiFiparameters
+Operator:GetNetWiFi
+URI:http://<serveripaddr>/action/GetNetWiFi
+e.g.,
+http://192.168.2.10/action/GetNetWiFi
+Replybody
+{
+"operator":"GetNetWiFi",
+"info":{
+"Enable":1,
+"WorkMode":0,
+"DHCP":1,
+"SecurityMode":1,
+"SSID":"TP-LINK_4755",
+"PassWord":"testpassword",
+"IPAddr":"192.168.1.104",
+"NetMask":"255.255.255.0",
+"GateWay":"0.0.0.0",
+"DNS1":"202.96.134.33",
+"DNS2":"202.96.134.33"
+175}
+}
+3.33.2settingWiFiparameters
+Operator:SetNetWiFi
+URI:http://<serveripaddr>/action/SetNetWiFi
+e.g.,
+http://192.168.2.10/action/SetNetWiFi
+Issuedbody
+{
+"operator":"SetNetWiFi",
+"info":{
+"Enable":1,
+"WorkMode":0,
+"DHCP":1,
+"SecurityMode":1,
+"SSID":"TP-LINK_4755",
+"PassWord":"testpassword",
+"IPAddr":"192.168.1.119",
+"NetMask":"255.255.255.0",
+"GateWay":"192.168.1.0",
+"DNS1":"202.96.134.33",
+"DNS2":"202.96.134.33"
+}
+}
+3.34facerecognitionparameters
+Facerecognitionparametersaremainlyrelatedtotherecognitionparametersofface
+recognitionall-in-onemachine.Therecognitiondistance(correspondingtotheminimumface
+pixel)canbemodifiedthroughtheinterface.TheXandYvaluesofthefacedetectionarea
+representthestartingpositionofthevideopicturedetectionarea,andthewidthandheightof
+thefacedetectionarearepresentthewidthandheightofthevideopicturedetectedbasedonX
+176andy.ThewidthandheightoffacedetectionneedtomatchtheXandYvaluesoftheface
+detectionarea.Whenx>0,thefacedetectionwidthshouldbelessthan(maximumface
+detectionwidth-x).Generally,onlytherecognitiondistance(correspondingtotheminimumpixel
+offace)needstobechanged,andotherparametersdonotneedtobechangedagain.
+Parameterinformation(Note:optionalisoptional)
+Key Type Values Description
+operator char GetFaceParam
+or
+SetFaceParamGetFaceParam:Getface
+recognitionparameters
+SetFaceParam:Setting
+face recognition
+parameters
+recDistance Int 30~200(unit:cm)Recognitiondistance(CM)
+faceMinPixel Int 0~960 Faceminimumpixel(obsolete,
+userecognitiondistance
+instead)
+detectArea_x Int 0~960(default0)Startpointoffacedetection
+areaX(evennumber)
+detectArea_y Int 0~1280(default0)Ystartpointoffacedetection
+area(evennumber)
+detectArea_w Int 0~960(default960)Facedetectionareawidth
+(even)
+detectArea_h Int 0~1280(default
+1280)Facedetectionareaheight
+(evennumber)
+3.34.1obtainingfacerecognitionparameters
+Operator:GetFaceParam
+URI:http://<serveripaddr>/action/GetFaceParam
+e.g.,
+http://192.168.2.10/action/GetFaceParam
+Replybody
+{
+"operator":"GetFaceParam",
+"info":{
+"recDistance":"200",
+"faceMinPixel":"122",
+"detectArea_x":0,
+177"detectArea_y":0,
+"detectArea_w":960,
+"detectArea_h":"1280"
+}
+}
+3.34.2settingfacerecognitionparameters
+Operator:SetFaceParam
+URI:http://<serveripaddr>/action/SetFaceParam
+e.g.,
+http://192.168.2.10/action/SetFaceParam
+Issuedbody
+{
+"operator":"SetFaceParam",
+"info":{
+"recDistance":"100",
+"detectArea_x":0,
+"detectArea_y":0,
+"detectArea_w":960,
+"detectArea_h":"1280"
+}
+}
+178AppendixA:Revisionhistory
+dateauthorVersion
+numberChangerecord
+2018-03-25LiangSY1.0Draftscheme
+2018-04-03LiangSY1.11.Fixsomeerrorsinthedocument.
+2.Amendment3.3settingusernameand
+passwordKey.
+2.Modification3.2.1obtainthesetting
+parametersofdooropeningconditionsThe
+contentofthereply.
+3.Modification3.2.2settingdoor
+openingconditionparameters。
+4.Modification3.6NTPparametersTime
+zoneparameterin.
+5.Increase3.9.2settingdevice
+informationItem.
+6.Amendment3.2.Dooropening
+conditionsParameter.
+7.Amendment3.3settingusernameand
+password，3.7centralconnection，3.9
+equipmentinformation，3.10addition,
+editingandmodificationofthelist，
+3.12datasubscription,thecharacter
+lengthsettingin.
+8.Amendment3.10addition,editingand
+modificationofthelistand3.12.4
+reportingofcertificationresultsThe
+definitionofthegeneratingmodeofthe
+Wegenercardnumberin.
+2018-04-12LiangSY1.21.Fixsomeerrorsinthedocument.
+2.IncreaseAppendixB:Authentication
+failureormessagereplyofsetting
+interface。
+3.Modification3.12.3realtimecapture
+andreportand3.12.4reportingof
+certificationresultsForexample.
+4.Thekeyininfoshouldbecapitalized
+uniformly.
+5.Modification3.14subscription
+heartbeatExamplesin
+1792018-05-04LiangSY1.31.Modification3.12.4reportingof
+certificationresultsAddthereportof
+personid.
+2018-05-13XuLS1.3Addtherelevantinterfaceofface
+capturecomparisonserver.
+3.15.Accesscameraparameters
+3.16.Facecapturecomparisonserver
+parameters
+3.Personneltypeparameters
+3.18.Faceservicefunction
+2018-06-21WangXY1.3Addlistsearchqueryinterface
+3.19.Listsearchquery
+2018-06-26LiangSY1.41.Modifysomeparametersofrelevant
+interfaceoffacecapturecomparison
+server
+2.Modifysomeparametersofthelist
+searchqueryinterface
+3.Increase3.12.5querysubscribed
+information
+43.20dooropeningcontrol
+2018-07-05XuLS1.51.Modification3.2dooropening
+conditions,adddooropeningmode
+2.Modification3.10.2listeditingand
+modification、3.11.Deletionoflist、
+3.19.1singlelistquery、3.19.3multiple
+listqueriesToincreasetheoperation
+modeoflibidofequipmentdatabase
+2018-07-05ChenCH1.51.IncreaseAppendixC:Specific
+functionsofpacketcaptureinterface
+2018-07-09XuLS1.61.Modify3.1soundsettings
+2018-07-11WangXY1.71.Modification3.19.1singlelistquery、
+3.19.3multiplelistqueriesTheUUID
+fieldisaddedtothereplymessage
+2.modify3.10.1singlelistaddition、
+3.10.2listeditingandmodification、
+3.11.DeletionoflistTheUUIDfieldis
+addedbysendinginformation
+3.modify3.12datasubscription,addthe
+valuetypeoftopicstocontrolthe
+pictureinformationtransmissionof
+subscription
+1802018-07-16WangXY1.71.modify3.12datasubscription,addQR
+codesubscriptionfunction
+2.increase3.12.5QRcodereporting
+3.modify3.13unsubscribe,addQRcode
+unsubscribefunction
+4.modify3.12.6querysubscribed
+messages,addthevaluetypeoftopics,
+controlthepictureinformation
+transmissionandQRcodesubscription
+query
+2018-07-31XuLS1.71.modify3.2dooropeningconditions,
+addtheopendoormodefield:opendoorway
+tocontrolthedooropeningmode
+2.modify3.10addition,editingand
+modificationofthelist,addthechannel
+AuthorityxfieldofXchannel(face
+multi-channelserver)
+3.modify3.12.4reportingof
+certificationresults,addthepersonnel
+channelnumberaccesschannelfield(for
+facemulti-channelserver)
+4.modify3.12.3realtimecaptureand
+report,addthepicturetypefieldofthe
+capturedfaceimagetype
+2018-11-16LiangSY1.81.Addrelevantparametersofpersonnel
+listforaccesscontrolmachine
+2.Increaseaccesscontrol3.21password
+operation
+2018-11-19WangXY1.91.modify3.15accesscameraparameters,
+usingtheformofJSONarrayinsteadof
+theoriginalsubscriptrepresentation
+2.modify3.17personneltypeparameters,
+usingtheformofJSONarrayinsteadof
+theoriginalsubscriptrepresentation
+3.increase3.22controlrecordquery
+1812019-01-21WangXY1.101.Modification3.12.1pushinformation
+doesnotrequireauthentication、3.12.2
+usernameandpasswordshallbeprovided
+duringsubscription,andauthentication
+isrequiredforsubmissionAddthe
+subscriptionofswipingcard
+authenticationandpassword
+authenticationforaccesscontrol
+machine
+2.3.12.6querythesubscribed
+informationandmodifyitto3.12.7query
+subscribedinformationAndaddtheaccess
+controlcardauthenticationandpassword
+cancelauthenticationsubscription
+3.Increase3.12.6reportofICcard
+numbercertificationresults(access
+control)and3.12.7reportofpassword
+authenticationresults(accesscontrol
+machine)
+2019-03-8LaiWS1.111.Useoptionaltoindicatewhichfields
+areoptional.Ifoptionalisnot
+indicatedinthedistribution
+information,itisrequired
+2.Thetypeofinfofieldischangedfrom
+chartoJSONobject,andother
+non-standardtypesarecorrected.The
+lengthofsomestringtypesisexplained
+below
+3.increase3.23.1obtainingcommon
+settingparametersand3.23.2setting
+commonparameters
+4.modify3.15accesscamera
+parametersChangetheconinfofieldofthe
+bodyissuedinandreplytotheIPCfield
+inthebody_Infoisconsistent,3.17types
+ofpersonnelTheconinfofieldofthe
+issuedbodyischangedtobeconsistent
+withthefieldworktypeinfointhereply
+body
+2019-04-03LaiWS1.121.Increase3.10.2additionofmultiple
+lists
+2019-09-10LaiWS1.131.Increase3.24restartthedevice
+1822019-09-26CaiFF1.141.Modify3.12.3realtimesnapshotpush
+to3.12.3strangerssnapshotReport
+2.Modify3.18.2picturecomparison
+similarity
+by3.25.1picturecomparisonsimilarity
+3.Modify3.18.4tosearchlocalface
+databaseas3.25.2searchlocalface
+databasebygraph
+4.Modify3.18.3featurecodecomparison
+similarityto3.18.2featurecode
+comparisonsimilarity
+5.Modify3.18.5toobtainfaceimage
+as3.18.3obtainingfaceimages
+6.Increase3.25.3facedetection
+2019-10-22CaiFF1.151、3.10.1singlelistaddition3.2add
+morethan10listsAddimageverification
+field
+2、3.10.1singlelistaddition3.10.3list
+editingandmodificationReturnmessageto
+promptmodification
+3、3.19listsearchqueryAddfield
+descriptionofeffectivetimesof
+temporarylist3
+2019-11-05LaiWS1.161、3.12.6reportingofIDcard
+informationAddIDcard
+2019-11-05CaiFF1.161、3.12datasubscriptionAddbreakpoint
+continuoustransmissionfunction
+2、3.12.1pushinformationdoesnot
+requireauthentication3.12.2username
+andpasswordshallbeprovidedduring
+subscription,andauthenticationis
+requiredforsubmissionAddbreakpoint
+resumekeyword
+3、3.12.3strangerssnapshotReport
+3.12.4reportingofcertification
+resultsAddsendintimetopushkeywordsin
+time
+4、3.12.9querysubscribed
+informationAddbreakpointresumeand
+breakpointresumetimekeywordreturn
+2019-11-19LiangSY1.171.3.12datasubscriptionIncreasethe
+heartbeatintervalsettingforthe
+subscription
+1832019-11-29CaiFF1.181.3.10addition,editingand
+modificationofthelistThedistribution
+listimagesupportsURIandiscompatible
+withBase64encoding
+,andaddingaURItogetanimageexample
+2019-12-04Chench1.191、2.4identityauthenticationAddpostman
+authenticationscreenshot.
+2.3.20dooropeningcontrolStatus
+controlswhethertoopenthedoorornot;
+addsMSGfieldtopromptinformation;
+(compatiblewithpreviousdooropening
+methods)
+3.ModificationandupdateAppendix
+C:Specificfunctionsofpacketcapture
+interfaceScreenshot.
+2019-12-13CaiFF1.201.Modify3.11anddeletethelistas
+3.11.1deletionofsingleormultiple
+lists
+2.increase3.11.2deletionofall
+personnellist
+2019-12-25CaiFF1.211.Modification3.1soundsettings,add
+field
+2.Modification3.2dooropening
+conditions,addfield
+3.Modification3.11.2allpersonnellist
+deletioninterface
+4.Modification3.12datasubscription,
+addfield
+5.3.10addition,editingand
+modificationofthelist,adddifferent
+cardnumberprocessingmethods,and
+modifytheexample
+2019-12-28CaiFF1.211.Increase3.10.5Wiganaccesscard
+numberandbuilt-inswipeIDcardnumber
+2020-01-03CaiFF1.211.Modification2.4identity
+authenticationexplain
+2020-01-13CaiFF1.221.Increase3.22.1totalnumberofcontrol
+recordsquery
+2.Increase3.26capturerecordquery
+2020-01-16CaiFF1.221.3.22controlrecordqueryAddhhtp
+remotedooropeningcontrolrecordquery
+return
+1842020-02-18CaiFF1.221.3.22.2controlrecordpersonnel
+informationqueryand3.12.4reportingof
+certificationresultsAddvalidationtype
+2.modify3.11.1deletionofsingleor
+multiplelistsDescriptionoftotalnum
+field
+2020-02-29CaiFF1.221.3.12.3strangerssnapshotReportAdd
+fieldssuchastemperaturereport
+2.3.12.4reportingofcertification
+resultsAddfieldssuchastemperature
+report
+3.Increase3.27temperatureparameters
+2020-03-03CaiFF1.231.Modification3.27temperature
+parametersMasktemperaturedetection
+mode
+2020-03-07CaiFF1.241.Increase3.27temperature
+parametersDistancefield
+2.3.22.2controlrecordpersonnel
+informationqueryAddfieldssuchas
+temperature
+3.3.26.2personnelinformationqueryof
+capturerecordAddfieldssuchas
+temperature
+1852020-03-21CaiFF1.251.3.22.2controlrecordpersonnel
+informationqueryModifyvalidationtype
+description
+2.3.12.4reportingofcertification
+resultsModifyvalidationtypedescription
+3.3.2dooropeningconditionsModify
+verificationtypedescription43.27
+temperatureparametersCancelfacemask
+tptmodesetting
+5.IncreaseC.12.4.1replythedatapacket
+withtheserverofnetworkinterruptionand
+continuoustransmission
+2020-05-07CaiFF1.261.Increase3.28handshakeprotocoldata
+2020-05-08CaiFF1.271.increaseVersion3.29upgrade
+2.3.22controlrecordqueryand3.26capture
+recordqueryIncreaseascending/
+descendingresultsreturn
+2020-05-14CaiFF1.271.modify3.10.5Wiganaccesscardnumber
+andbuilt-inswipeIDcardnumber
+2.increase3.30systemparameters
+AddRFIDcardmodetocard3
+2020-05-25CaiFF1.271.Increase3.31mqttparameters
+2020-05-28CaiFF1.281.Increase3.2.3introductionofdoor
+openingmode
+2020-06-09CaiFF1.281.IncreaseC.10.1.1adderrorcodeto
+singlelist
+2020-07-27CaiFF1.291.modify3.1soundsettings,addthe
+comparisonsuccessdisplayfield
+2.modify3.2dooropeningconditionsTo
+increasetheverificationresettime
+3.modify3.27temperatureparameters
+4.modify3.23commonconfiguration
+settings,increasethedirectionof
+entranceandexit
+5.modify3.4networkparametersAddDHCP
+2020-07-29CaiFF1.301.Increase3.32manualpushcontrolrecord
+2020-09-26CaiFF1.311.Modification3.19.2totalnumberofquery
+lists,increasethemaximumnumberoflists
+supportedbythedevice
+2020-10-21CaiFF1.311.Modification3.4networkparameters
+2.AddappendixDD.1nationAndmodifythe
+definitionofnationalityinthedocument
+3.Modification3.12.4reportingof
+certificationresults,addpushtype
+1862020-11-05CaiFF1.321.Modification3.1soundsettings,add
+field
+2.Modification3.2dooropening
+conditions,addfield
+3.IncreaseFacerecognitionparameters
+2020-11-25CaiFF1.331.Increase3.25.4capturepanorama
+2020-12-05CaiFF1.331.Modification3.25.4capture
+panoramaby3.25.4manualcapture
+187AppendixB:Authenticationfailureor
+messagereplyofsettinginterface
+B.1authenticationfailed
+{
+"operator":"authentication",
+"info":{
+"Result":"Fail",
+"Detail":"Unsupportauthenticationprotocoltype"
+}
+}
+Or
+{
+"operator":"authentication",
+"info":{
+"Result":"Fail",
+"Detail":"Unknownuserorpassword"
+}
+}
+B.2setmessagereply
+Setsuccessfully:
+{
+"operator":"<Operator>",
+"code":200,
+"info":{
+"Result":"Ok"
+188}
+}
+Settingfailed:
+{
+"operator":"<Operator>",
+"info":{
+"Result":"Fail",
+"Detail":"<detial>"
+}
+}
+189AppendixC:Specificfunctionsofpacket
+captureinterface
+C.1soundsettings
+C.1.1getaudiosettingparameters
+
+190C.1.2settingaudioparameters
+
+191C.1.3getthenumberandfilenameofplayingfiles
+
+192C.1.4playspecifiedfilesound
+
+193C.2dooropeningconditions
+C.2.1settingofdooropeningconditions
+Or
+194
+
+195C.2.2settingdooropeningconditionparameters
+
+196C.3.Setusernameandpassword
+
+197C.4networkparameters
+C.Obtainingnetworkparameters
+
+198C.4.2settingnetworkparameters
+
+199C.5timeparameters
+C.5.1obtainingsystemtime
+
+200C.5.2settingsystemtime
+
+201C.6NTPparameters
+C.6.1obtainingNTPparameters
+
+202C.6.2settingNTPparameters
+
+203C.7centerconnection
+C.7.1obtainingcentralconnectionparameters
+
+204C.7.2settingcentralconnectionparameters
+
+205C.8restorefactory
+
+206C.9settinginformation
+C.9.1obtainingequipmentinformation
+
+207C.9.2settingdeviceinformation
+
+208C.10addition,editingandmodificationofthelist
+C.10.1singlelistaddition
+……
+
+209C.10.1.1adderrorcodetosinglelist
+errcod
+eTypeValues Description
+461intUnknown operation
+instructionUnknowoperator
+462intInfo(missingparameter)Parametererror
+463intDeviceidmismatch UnkonwDeviceID
+464intNopicinfoorpicuriwas
+passedinUnkonwpicinfoandgetpicURI
+error
+465int Other
+466intCustomizeidorUUID
+alreadyexistsCustomizeIDorUUIDhadexisted
+467int reserve
+468int reserve
+469intThewegenkaalreadyexistsWG_CardNoalreadyexist
+470intID(rfcard)cardnumber
+alreadyexists;(for
+built-inswipecardmodel)ID_CardNoalreadyexist
+471intPersonnellistalready
+existsPersonalreadyexist
+472int reserve
+473intNofacedetected FaceUndetected
+474intFailedtodecodeBase64
+imagepicinfoBase64decodeerror
+475intErrorresolvingURIserver
+addressGetURIserveriperror
+476intFailedtoconnecttoserver
+IPwhenaddingimageasURL
+modeGetpicinfoandconnectURIIP
+error
+477intGettingURLimagedatais
+tooshortGetURIpicdatatooshort
+478intErrorgettingwgfacility
+codeGetWGFacilityCodeerror
+479intErrorgettingmjcardnoGetMjCardNoerror
+210C.10.2multiplelistsadded
+……
+
+211C.10.3listeditingandmodification
+……
+
+212C.10.4gettingtheoldandnewdatabaseversions
+
+213C.11listdeleted
+
+214C.12datasubscription
+C.12.1pushmessagesdonotrequireauthentication
+
+215C.12.2usernameandpasswordshallbeprovidedduring
+subscription,andauthenticationisrequiredfor
+submission
+
+216C.3.12reporttostrangers
+……
+
+217C.12.4reportingofcertificationresults
+……
+
+218C.12.4.1replythedatapacketwiththeserverof
+networkinterruptionandcontinuoustransmission
+NotethattheHTTPheadercontainscontentlength,whichiscasesensitive.
+
+219C.12.5reportingofIDcardinformation
+C.12.6querysubscribedmessages
+
+220C.13unsubscribe
+
+221C.14subscriptionheartbeat
+
+222C.19searchlist
+C.19.1singlelistquery
+
+223C.19.2totalnumberofquerylists
+
+224C.19.3multiplelistqueries
+……
+225
+
+226C.20dooropeningcontrol
+C.20.1dooropeningcontrol
+C.22controlrecordquery
+Conditionsearchmethod:
+227
+IDnumbersearchmethod:
+228
+
+229C.23commonsettingparametersetting
+C.23.1obtainingcommonsettingparameters
+
+230C.23.2settingcommonparameters
+
+231C.24restartdevice
+C.24.1restartingthedevice
+
+232C.25pictureservicefunction
+C.25.1picturecomparisonsimilarity
+……
+……
+233
+C.25.2searchlocalfacedatabasebygraph
+……
+234
+C.25.3facedetectioninpictures
+……
+
+235AppendixDothers
+D.1nation
+Nationalnumericalcode
+(int)nation
+1 Chinese
+2 Mongolia
+3 return
+4 hide
+5 Uygur
+6 seedling
+7 YiNationality
+8 strong
+9 Bouyei
+10 NorthKorea
+11 full
+12 Dong
+13 Yao
+14 white
+15 Tujia
+16 Hani
+17 Kazakh
+18 Dainationality
+19 Li
+20 Lisu
+21 Wa
+22 She
+23 mountain
+24 Lahu
+25 water
+26 Dongxiang
+27 Naxi
+28 Jingpo
+29 Kirgiz
+30 Soil
+31 daur
+32 Mulao
+33 QiangNationality
+34 Brown
+23635 Sarah
+36 Maonan
+37 gelao
+38 Xibe
+39 Achang
+40 Pumi
+41 Tajikistan
+42 anger
+43 Uzbek
+44 Russia
+45 Ewenki
+46 Deang
+47 securitystaff
+48 Guyu
+49 Beijing
+50 Tatar
+51 Derung
+52 Oroqen
+53 Hezhen
+54 Menba
+55 loba
+56 Gino
+57 other

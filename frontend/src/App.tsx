@@ -8,6 +8,7 @@ import Asistencias from './pages/Asistencias';
 import Usuarios from './pages/Usuarios';
 import CursosHorarios from './pages/CursosHorarios';
 import InstitucionesTab from './pages/CursosHorarios/InstitucionesTab';
+import AuditLog from './pages/AuditLog';
 import Login from './pages/Login';
 import './App.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -133,6 +134,14 @@ const AppContent: React.FC = () => {
             element={
               <AdminRoute>
                 <Usuarios />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/audit-log"
+            element={
+              <AdminRoute>
+                <AuditLog />
               </AdminRoute>
             }
           />

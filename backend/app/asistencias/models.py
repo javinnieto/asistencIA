@@ -8,6 +8,7 @@ class Institucion(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     activa = models.BooleanField(default=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.nombre
@@ -19,6 +20,7 @@ class TipoPersona(models.Model):
     nombre = models.CharField(max_length=50)
     institucion = models.ForeignKey(Institucion, on_delete=models.CASCADE, related_name='tipos_persona')
     activo = models.BooleanField(default=True)
+    history = HistoricalRecords()
     
     class Meta:
         unique_together = ['nombre', 'institucion']
@@ -72,6 +74,7 @@ class Horario(models.Model):
     materia = models.CharField(max_length=100, null=True, blank=True)
     activo = models.BooleanField(default=True)
     semana = models.CharField(max_length=5, choices=SEMANAS, default='Todas')
+    history = HistoricalRecords()
 
     def __str__(self):
         semana_str = f' [{self.semana}]' if self.semana != 'Todas' else ''
@@ -139,6 +142,7 @@ class PersonaInstitucion(models.Model):
     curso = models.ForeignKey(Curso, null=True, blank=True, on_delete=models.SET_NULL)
     activo = models.BooleanField(default=True)
     fecha_ingreso = models.DateField(auto_now_add=True)
+    history = HistoricalRecords()
     
     class Meta:
         unique_together = ['persona', 'institucion', 'tipo', 'curso']
@@ -152,6 +156,7 @@ class EstadoAsistencia(models.Model):
     idEstadoAsistencia = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50)
     descripcion = models.TextField(max_length=200, null=True, blank=True)
+    history = HistoricalRecords()
     
     def __str__(self):
         return self.nombre
@@ -186,6 +191,7 @@ class ConflictoIdentidad(models.Model):
     fechaHora = models.DateTimeField(auto_now_add=True)
     foto_recibida = models.TextField(null=True, blank=True)
     resuelto = models.BooleanField(default=False)
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"Conflicto {self.idConflicto}: ID {self.persona_db.idPersona} (DB: {self.persona_db.nombre} vs Recibido: {self.nombre_recibido})"
@@ -198,6 +204,7 @@ class DiaNoLaborable(models.Model):
     motivo = models.CharField(max_length=200)
     institucion = models.ForeignKey(Institucion, on_delete=models.CASCADE)
     aplica_a_todos = models.BooleanField(default=True, help_text="Si es verdadero, aplica a toda la institución")
+    history = HistoricalRecords()
     
     # Relaciones para cuando aplica_a_todos es False
     cursos_afectados = models.ManyToManyField(Curso, blank=True)
@@ -216,6 +223,7 @@ class ConfiguracionSemana(models.Model):
     fecha_referencia_semana_a = models.DateField(
         help_text="Una fecha conocida que cae en Semana A. El sistema calcula automáticamente si la semana actual es A o B."
     )
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = 'Configuración de Semana'
@@ -243,3 +251,18 @@ class ConfiguracionSemana(models.Model):
             return 'A' if diff_weeks % 2 == 0 else 'B'
         except Exception:
             return 'A'
+
+class SincronizacionDispositivo(models.Model):
+    """Registro de sincronizaciones manuales o automáticas de personas desde el lector facial vía MQTT"""
+    idSincronizacion = models.AutoField(primary_key=True)
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
+    personas_encontradas = models.IntegerField(default=0)
+    personas_nuevas = models.IntegerField(default=0)
+    fecha_ejecucion = models.DateTimeField(auto_now_add=True)
+    completada = models.BooleanField(default=False)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        estado = "Completada" if self.completada else "Pendiente/Fallida"
+        return f"Sincronización {estado} ({self.fecha_inicio.date()} al {self.fecha_fin.date()})"

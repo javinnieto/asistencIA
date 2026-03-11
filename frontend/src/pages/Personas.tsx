@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import PersonasTable from '../components/PersonasTable';
 import PersonaForm from '../components/PersonaForm';
 import PersonaDetails from '../components/PersonaDetails';
-import { apiRequest } from '../config/api';
+import ConflictoModal from '../components/ConflictoModal';
+import { apiRequest, getConflictos } from '../config/api';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import './Personas.css';
@@ -32,62 +33,96 @@ const Personas: React.FC = () => {
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Conflicts State
+  const [conflictos, setConflictos] = useState<any[]>([]);
+  const [resolvingConflict, setResolvingConflict] = useState<any | null>(null);
 
+
+
+  const loadPersonas = async () => {
+    setIsLoading(true);
+    try {
+      // Parallel fetch for Personas and open Conflicts
+      const [response, confRes] = await Promise.all([
+        apiRequest('/personas/'),
+        getConflictos()
+      ]);
+
+      if (confRes.ok) {
+        const confData = await confRes.json();
+        setConflictos(confData.results || confData || []);
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        const personasData = data.results || data || [];
+        const personasTransformadas = personasData.map((persona: any) => {
+          const nombreCompleto = persona.nombre || 'Sin Nombre';
+          const nombreParts = nombreCompleto.split(' ');
+          const primerNombre = nombreParts[0] || '';
+          const apellido = nombreParts.slice(1).join(' ') || '-';
+
+          const roles = persona.roles || [];
+          let primaryRole = 'Sin asignar';
+
+          if (roles.length > 0) {
+            const mainRole = roles.find((r: any) => r.tipo.nombre !== 'No Docente') || roles[0];
+            primaryRole = mainRole.tipo.nombre;
+          }
+
+          return {
+            id: persona.idPersona?.toString() || '0',
+            nombre: primerNombre,
+            apellido: apellido,
+            email: persona.email || '',
+            telefono: persona.telefono || '',
+            departamento: primaryRole,
+            cargo: primaryRole,
+            fechaIngreso: persona.fechaRegistro || '',
+            estado: (persona.activo !== false ? 'activo' : 'inactivo'),
+            foto: persona.foto,
+            roles: roles,
+            requiere_salida: persona.requiere_salida || false
+          };
+        });
+        setPersonas(personasTransformadas);
+      } else {
+        console.error('Error al cargar personas:', response.status);
+        setPersonas([]);
+      }
+    } catch (error) {
+      console.error('Error cargando personas:', error);
+      setPersonas([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Cargar datos reales del backend
-    const loadPersonas = async () => {
-      setIsLoading(true);
-      try {
-        const response = await apiRequest('/personas/');
-        if (response.ok) {
-          const data = await response.json();
-          // Transformar datos del backend al formato esperado por el frontend
-          const personasData = data.results || data || [];
-          const personasTransformadas = personasData.map((persona: any) => {
-            const nombreCompleto = persona.nombre || 'Sin Nombre';
-            const nombreParts = nombreCompleto.split(' ');
-            const primerNombre = nombreParts[0] || '';
-            const apellido = nombreParts.slice(1).join(' ') || '-';
-
-            const roles = persona.roles || [];
-            let primaryRole = 'Sin asignar';
-
-            if (roles.length > 0) {
-              const mainRole = roles.find((r: any) => r.tipo.nombre !== 'No Docente') || roles[0];
-              primaryRole = mainRole.tipo.nombre;
-            }
-
-            return {
-              id: persona.idPersona?.toString() || '0',
-              nombre: primerNombre,
-              apellido: apellido,
-              email: persona.email || '',
-              telefono: persona.telefono || '',
-              departamento: primaryRole,
-              cargo: primaryRole,
-              fechaIngreso: persona.fechaRegistro || '',
-              estado: (persona.activo !== false ? 'activo' : 'inactivo'),
-              foto: persona.foto,
-              roles: roles,
-              requiere_salida: persona.requiere_salida || false
-            };
-          });
-          setPersonas(personasTransformadas);
-        } else {
-          console.error('Error al cargar personas:', response.status);
-          setPersonas([]);
-        }
-      } catch (error) {
-        console.error('Error cargando personas:', error);
-        setPersonas([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadPersonas();
   }, []);
+
+  const handleSyncDevice = async () => {
+    try {
+      showToast('Enviando solicitud de sincronización al dispositivo...', 'info');
+      
+      const response = await apiRequest('/personas/sync-device/', {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        showToast(`Sincronización completada. ${data.message || ''}`, 'success');
+        await loadPersonas();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        showToast('Error al solicitar la sincronización: ' + (errorData.error || response.statusText), 'error');
+      }
+    } catch (error) {
+      console.error('Error in sync_device:', error);
+      showToast('Error de red al intentar sincronizar el dispositivo', 'error');
+    }
+  };
 
   // ELIMINADO: handleAddPerson ya que la creación es vía dispositivo
   /* 
@@ -99,6 +134,32 @@ const Personas: React.FC = () => {
     console.log('isFormOpen set to true');
   };
   */
+
+  const handleDeleteBatch = async (ids: string[]) => {
+    try {
+      // Create a copy of the array since we might be alerting
+      const total = ids.length;
+      let successCount = 0;
+      
+      for (const id of ids) {
+        const res = await apiRequest(`/personas/${id}/`, { method: 'DELETE' });
+        if (res.ok) {
+          successCount++;
+        }
+      }
+      
+      if (successCount === total) {
+        showToast(`Se eliminaron ${total} personas correctamente.`, 'success');
+      } else {
+        showToast(`Se eliminaron ${successCount} de ${total} personas. Algunas fallaron.`, 'warning');
+      }
+      
+      loadPersonas();
+    } catch (e) {
+      console.error(e);
+      showToast('Error de red al eliminar el lote.', 'error');
+    }
+  };
 
   const handleEditPerson = (person: Person) => {
     setFormMode('edit');
@@ -236,8 +297,26 @@ const Personas: React.FC = () => {
         personas={personas}
         onEdit={handleEditPerson}
         onDelete={handleDeletePerson}
+        onDeleteBatch={handleDeleteBatch}
         onView={handleViewPerson}
+        onSyncDevice={handleSyncDevice}
+        conflictos={conflictos}
+        onResolveConflict={(person, conflictoId) => {
+          const conf = conflictos.find(c => c.idConflicto === conflictoId);
+          if (conf) setResolvingConflict(conf);
+        }}
       />
+
+      {resolvingConflict && (
+        <ConflictoModal 
+          conflict={resolvingConflict} 
+          onClose={() => setResolvingConflict(null)} 
+          onResolved={() => {
+            setResolvingConflict(null);
+            loadPersonas();
+          }} 
+        />
+      )}
 
       <PersonaForm
         person={selectedPerson || undefined}
