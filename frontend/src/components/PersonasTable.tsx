@@ -3,6 +3,8 @@ import './PersonasTable.css';
 import { normalizeString } from '../utils/normalize';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from './ConfirmModal';
+import TablePagination from './TablePagination';
+import { useTableSelection } from '../hooks/useTableSelection';
 
 
 interface Person {
@@ -24,13 +26,21 @@ interface PersonasTableProps {
   onEdit: (person: Person) => void;
   onDelete: (id: string) => void;
   onView: (person: Person) => void;
+  onSyncDevice?: () => void;
+  conflictos?: any[];
+  onResolveConflict?: (person: Person, conflictoId: number) => void;
+  onDeleteBatch?: (ids: string[]) => void;
 }
 
 const PersonasTable: React.FC<PersonasTableProps> = ({
   personas,
   onEdit,
   onDelete,
-  onView
+  onView,
+  onSyncDevice,
+  conflictos = [],
+  onResolveConflict,
+  onDeleteBatch
 }) => {
   const { isAdmin, rol } = useAuth();
 
@@ -38,11 +48,17 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   const [filterCategoria, setFilterCategoria] = useState('');
   const [filterCurso, setFilterCurso] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Modo selección (toggle)
+  const [selectionMode, setSelectionMode] = useState(false);
 
   // Modal states
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  
+  // Batch Delete state
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
 
   // Categorías disponibles (deben coincidir con los TipoPersona reales)
   const categorias = useMemo(() => {
@@ -69,11 +85,14 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   // Filtrar datos
   const filteredData = useMemo(() => {
     return personas.filter(person => {
-      const fullName = `${person.nombre} ${person.apellido}`.trim();
-      const normalizedSearch = normalizeString(searchTerm);
+      const fullName = `${person?.nombre || ''} ${person?.apellido || ''}`.trim();
+      const normalizedSearch = normalizeString(searchTerm || '');
+      // Make sure we handle number/undefined IDs safely
+      const safeId = person?.id ? String(person.id) : '';
+      
       const matchesSearch = !searchTerm ||
         normalizeString(fullName).includes(normalizedSearch) ||
-        person.id.includes(searchTerm);
+        safeId.includes(searchTerm.trim());
 
       const matchesCategoria = !filterCategoria || (
         person.departamento === filterCategoria ||
@@ -88,10 +107,38 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
     });
   }, [personas, searchTerm, filterCategoria, filterCurso]);
 
+  // Reset page to 1 whenever filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategoria, filterCurso]);
+
   // Paginación
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
+  // Ensure currentPage is valid for the current filteredData length
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
   const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+  // Initialise the multi-select hook passing only the data visible on this page
+  const {
+    selectedIds,
+    isAllSelected,
+    isIndeterminate,
+    toggleSelection,
+    toggleSelectAll,
+    clearSelection,
+    selectedCount
+  } = useTableSelection(currentData);
+
+  // Fast lookup for conflicts mapped by Person ID
+  const conflictosMap = useMemo(() => {
+    const map = new Map<string, number>();
+    conflictos.forEach(c => {
+      map.set(String(c.persona_db.idPersona), c.idConflicto);
+    });
+    return map;
+  }, [conflictos]);
 
   const handlePageChange = (page: number) => setCurrentPage(page);
 
@@ -108,6 +155,13 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
       setConfirmOpen(false);
       setItemToDelete(null);
     }
+  };
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) {
+      clearSelection();
+    }
+    setSelectionMode(prev => !prev);
   };
 
   if (personas.length === 0) {
@@ -175,10 +229,46 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           </select>
         </div>
 
-        {/* Results Count on right */}
-        <span className="results-count" style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-          {filteredData.length} registros
-        </span>
+        {/* Right-side buttons & count */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {/* Batch delete button — solo visible en modo selección con algo seleccionado */}
+          {selectionMode && selectedCount > 0 && isAdmin && (
+            <button
+              onClick={() => setBatchConfirmOpen(true)}
+              className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2 fade-in"
+              title="Eliminar filas seleccionadas"
+            >
+              <i className="bi bi-trash-fill"></i>
+              Eliminar ({selectedCount})
+            </button>
+          )}
+
+          {/* Toggle selección — solo admins */}
+          {isAdmin && (
+            <button
+              onClick={handleToggleSelectionMode}
+              className={`btn btn-sm d-flex align-items-center gap-2 ${selectionMode ? 'btn-outline-secondary' : 'btn-outline-light'}`}
+              title={selectionMode ? 'Cancelar selección' : 'Activar selección múltiple'}
+            >
+              <i className={`bi ${selectionMode ? 'bi-x-circle' : 'bi-check2-square'}`}></i>
+              {selectionMode ? 'Cancelar' : 'Seleccionar'}
+            </button>
+          )}
+
+          {isAdmin && onSyncDevice && (
+            <button 
+              onClick={onSyncDevice}
+              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2"
+              title="Obtener personas nuevas desde el lector MQTT"
+            >
+              <i className="bi bi-arrow-repeat"></i>
+              Sincronizar Lector
+            </button>
+          )}
+          <span className="results-count" style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+            {filteredData.length} registros
+          </span>
+        </div>
       </div>
 
       {/* Tabla */}
@@ -186,6 +276,21 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         <table className="personas-table">
           <thead>
             <tr>
+              {isAdmin && selectionMode && (
+                <th style={{ width: '40px', padding: '12px 10px', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={isAllSelected}
+                    ref={input => {
+                      if (input) input.indeterminate = isIndeterminate;
+                    }}
+                    onChange={toggleSelectAll}
+                    style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
+                  />
+                </th>
+              )}
+              <th style={{ width: '8%', whiteSpace: 'nowrap' }}>ID LECTOR</th>
               <th style={{ width: '60px' }}>FOTO</th>
               <th style={{ width: '20%' }}>NOMBRE</th>
               <th style={{ width: '20%' }}>APELLIDO</th>
@@ -198,13 +303,34 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
             {currentData.map((person) => {
               const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
               const cursosText = cursos.length > 0 ? cursos.join(', ') : '-';
+              
+              const conflictoId = person.id ? conflictosMap.get(String(person.id)) : null;
+              const hasConflict = !!conflictoId;
 
               return (
                 <tr
                   key={person.id}
                   onClick={() => onView(person)}
-                  style={{ cursor: 'pointer' }}
+                  style={{ 
+                    cursor: 'pointer',
+                    backgroundColor: selectedIds.has(person.id) ? 'rgba(59, 130, 246, 0.08)' : (hasConflict ? 'rgba(239, 68, 68, 0.05)' : undefined),
+                    borderLeft: hasConflict ? '4px solid #ef4444' : undefined,
+                  }}
                 >
+                  {isAdmin && selectionMode && (
+                    <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={selectedIds.has(person.id)}
+                        onChange={() => toggleSelection(person.id)}
+                        style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
+                      />
+                    </td>
+                  )}
+                  <td data-label="ID LECTOR" style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '500' }}>
+                    #{person.id}
+                  </td>
                   <td data-label="Foto">
                     {person.foto ? (
                       <img
@@ -229,7 +355,14 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       </div>
                     )}
                   </td>
-                  <td data-label="Nombre"><strong>{person.nombre}</strong></td>
+                  <td data-label="Nombre">
+                    <strong>{person.nombre}</strong>
+                    {hasConflict && (
+                      <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
+                        ¡Duplicado!
+                      </span>
+                    )}
+                  </td>
                   <td data-label="Apellido">{person.apellido}</td>
                   <td data-label="Categoría">
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
@@ -254,6 +387,19 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                   <td data-label="Cursos" style={{ fontSize: '0.85rem', color: '#64748b' }}>{cursosText}</td>
                   <td data-label="Acciones">
                     <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      {hasConflict && onResolveConflict && (
+                        <button
+                          className="btn-icon action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onResolveConflict(person, conflictoId!);
+                          }}
+                          title="Resolver Conflicto"
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#ef4444' }}
+                        >
+                          <i className="bi bi-exclamation-triangle-fill"></i>
+                        </button>
+                      )}
                       <button
                         className="btn-icon btn-view action-btn"
                         onClick={(e) => {
@@ -301,35 +447,16 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
       </div>
 
       {/* Paginación */}
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="btn-page"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            ← Anterior
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-            <button
-              key={page}
-              className={`btn-page ${page === currentPage ? 'active' : ''}`}
-              onClick={() => handlePageChange(page)}
-            >
-              {page}
-            </button>
-          ))}
-          <button
-            className="btn-page"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Siguiente →
-          </button>
-        </div>
-      )}
+      <TablePagination
+        currentPage={safeCurrentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={filteredData.length}
+      />
 
-      {/* Confirm Modal */}
+      {/* Confirm Modal for single entity */}
       <ConfirmModal
         isOpen={confirmOpen}
         onClose={() => setConfirmOpen(false)}
@@ -337,6 +464,23 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         title="¿Eliminar Persona?"
         message="¿Estás seguro que deseas eliminar a esta persona del sistema? Se perderá todo su historial."
         confirmText="Sí, Eliminar"
+      />
+
+      {/* Confirm Modal for batch selection */}
+      <ConfirmModal
+        isOpen={batchConfirmOpen}
+        onClose={() => setBatchConfirmOpen(false)}
+        onConfirm={() => {
+          if (onDeleteBatch) {
+            onDeleteBatch(Array.from(selectedIds).map(String));
+          }
+          setBatchConfirmOpen(false);
+          clearSelection();
+          setSelectionMode(false);
+        }}
+        title="¿Eliminar Personas Seleccionadas?"
+        message={`¿Estás seguro que deseas eliminar a las ${selectedCount} personas seleccionadas de la página actual?`}
+        confirmText="Eliminar Lote"
       />
     </div>
   );

@@ -35,6 +35,9 @@ MQTT_TOPICS = {
 # Configuración del terminal biométrico
 LECTOR_CONFIG = {
     'DEVICE_ID': '1379241',
+    'DEVICE_IP': '192.168.210.101',
+    'API_USER': 'admin',
+    'API_PASSWORD': 'admin1234',
     'PERSON_TYPE_ESTUDIANTE': '0',
     'PERSON_TYPE_PERSONAL': '1',
     'VERIFY_STATUS_SUCCESS': '1',

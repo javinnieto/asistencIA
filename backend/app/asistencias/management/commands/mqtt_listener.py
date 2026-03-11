@@ -3,6 +3,7 @@ import paho.mqtt.client as mqtt
 import json
 import logging
 import time
+import threading
 import ntplib
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -18,9 +19,8 @@ logger = logging.getLogger('mqtt_listener')
 # Configuración MQTT - USANDO SETTINGS DE DJANGO
 BROKER = settings.MQTT_BROKER
 PORT = settings.MQTT_PORT
-DEVICE_ID = '1379241'
-TOPIC_DEVICE = f'mqtt/face/{DEVICE_ID}/#'
-TOPIC_OFFLINE = 'mqtt/face/basic'
+DEVICE_ID = LECTOR_CONFIG['DEVICE_ID']
+TOPIC_BROAD = 'mqtt/#'
 KEEPALIVE = 60
 
 
@@ -85,11 +85,10 @@ class Command(BaseCommand):
     def on_connect(self, client, userdata, flags, rc):
         """Callback cuando se conecta al broker"""
         if rc == 0:
-            self.stdout.write(self.style.SUCCESS(f'✅ Conectado al broker MQTT (ID: {DEVICE_ID})'))
-            # Suscribirse solo a lo necesario
-            client.subscribe(TOPIC_DEVICE, qos=1)
-            client.subscribe(TOPIC_OFFLINE, qos=1)
-            self.stdout.write(self.style.SUCCESS(f'📡 Suscripto a eventos y offline para {DEVICE_ID}'))
+            self.stdout.write(self.style.SUCCESS('✅ Conectado al broker MQTT'))
+            # Suscribirse a todo bajo mqtt/
+            client.subscribe(TOPIC_BROAD, qos=1)
+            self.stdout.write(self.style.SUCCESS(f'📡 Suscripto a {TOPIC_BROAD}'))
         else:
             error_msg = f'❌ Error de conexión MQTT: {rc}'
             self.stdout.write(self.style.ERROR(error_msg))
@@ -113,7 +112,7 @@ class Command(BaseCommand):
         try:
             # Decodificar mensaje
             payload = msg.payload.decode('utf-8')
-            self.stdout.write(f'📨 Mensaje recibido: {payload[:100]}...')
+            self.stdout.write(f'📨 Msg en [{msg.topic}]: {payload[:200]}...')
             # Parsear JSON
             data = json.loads(payload)
             operator = data.get('operator')
@@ -127,8 +126,15 @@ class Command(BaseCommand):
             
             # 1. Filtrar por ID de dispositivo (facesluiceId en Heartbeat/Offline/Online)
             device_msg_id = info.get('facesluiceId')
+            message_id = data.get('messageId', '')
+            
+            # Ignorar comandos que nosotros mismos publicamos (el broker los rebota de vuelta)
+            if isinstance(message_id, str) and (message_id.startswith('auto-sync-') or message_id.startswith('manual-sync-') or message_id.startswith('django_')):
+                return
             
             # 2. Validar operador
+            self.stdout.write(f'  → operator="{operator}" device_id="{device_msg_id}"')
+            
             if operator == 'RecPush':
                 # El evento de asistencia viene en el tópico específico del dispositivo
                 if DEVICE_ID in msg.topic:
@@ -160,7 +166,7 @@ class Command(BaseCommand):
                 return
             
             else:
-                # Otros mensajes (como Register)
+                # Otros mensajes (como Register, HeartBeat, etc.)
                 if DEVICE_ID in msg.topic or device_msg_id == DEVICE_ID:
                     self.stdout.write(f'ℹ️ Mensaje de {DEVICE_ID}: {operator}')
                 return
@@ -173,8 +179,6 @@ class Command(BaseCommand):
             error_msg = f'❌ Error procesando mensaje: {e}'
             self.stdout.write(self.style.ERROR(error_msg))
             logger.error(f'{error_msg} - Payload: {msg.payload}')
-
-
 
     def procesar_asistencia(self, info, client=None, topic=None):
         """Procesa una asistencia recibida por MQTT con lógica flexible"""

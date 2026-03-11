@@ -251,3 +251,18 @@ class ConfiguracionSemana(models.Model):
             return 'A' if diff_weeks % 2 == 0 else 'B'
         except Exception:
             return 'A'
+
+class SincronizacionDispositivo(models.Model):
+    """Registro de sincronizaciones manuales o automáticas de personas desde el lector facial vía MQTT"""
+    idSincronizacion = models.AutoField(primary_key=True)
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
+    personas_encontradas = models.IntegerField(default=0)
+    personas_nuevas = models.IntegerField(default=0)
+    fecha_ejecucion = models.DateTimeField(auto_now_add=True)
+    completada = models.BooleanField(default=False)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        estado = "Completada" if self.completada else "Pendiente/Fallida"
+        return f"Sincronización {estado} ({self.fecha_inicio.date()} al {self.fecha_fin.date()})"

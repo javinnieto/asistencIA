@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import jwt_decode from 'jwt-decode';
 import { useAuth } from '../context/AuthContext';
-import { getConflictos, ignorarConflicto, aceptarConflicto } from '../config/api';
+import { getConflictos } from '../config/api';
 import { useToast } from '../components/Toast';
+import ConflictoModal from './ConflictoModal';
 import './Navbar.css';
 
 interface Conflicto {
@@ -42,6 +43,7 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
   // Conflicts state
   const [conflictos, setConflictos] = useState<Conflicto[]>([]);
   const [conflictosOpen, setConflictosOpen] = useState(false);
+  const [resolvingConflict, setResolvingConflict] = useState<Conflicto | null>(null);
   const conflictosRef = useRef<HTMLDivElement>(null);
 
   const fetchConflictos = async () => {
@@ -74,7 +76,7 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
         setConflictosOpen(false);
       }
     }
-    if (dropdownOpen) {
+    if (dropdownOpen || conflictosOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     } else {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -83,22 +85,6 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [dropdownOpen, conflictosOpen]);
-
-  const handleResolverConflicto = async (id: number, action: 'ignorar' | 'aceptar') => {
-    try {
-      if (action === 'ignorar') {
-        const res = await ignorarConflicto(id);
-        if (res.ok) showToast('Conflicto ignorado y borrado', 'success');
-      } else {
-        const res = await aceptarConflicto(id);
-        if (res.ok) showToast('¡Persona actualizada exitosamente con los nuevos datos!', 'success');
-      }
-      fetchConflictos();
-    } catch (e) {
-      console.error('Error resolviendo conflicto', e);
-      showToast('Ocurrió un error al resolver el conflicto', 'error');
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -150,16 +136,23 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
                     ) : (
                       <div className="d-flex flex-column gap-3" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                         {conflictos.map(c => (
-                          <div key={c.idConflicto} className="card border-danger border-1">
-                            <div className="card-body p-2">
-                              <small className="text-muted d-block mb-1">{new Date(c.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ID: {c.persona_db.idPersona}</small>
-                              <div className="mb-2" style={{ fontSize: '0.9rem' }}>
-                                Lector: <strong>{c.nombre_recibido}</strong><br/>
-                                BD: <strong>{c.persona_db.nombre}</strong>
+                          <div 
+                            key={c.idConflicto} 
+                            className="card border-danger border-1 shadow-sm"
+                            style={{ cursor: 'pointer', transition: 'all 0.2s', backgroundColor: '#fff5f5' }}
+                            onClick={() => {
+                              setConflictosOpen(false);
+                              setResolvingConflict(c);
+                            }}
+                          >
+                            <div className="card-body p-3">
+                              <small className="text-muted d-block mb-2">{new Date(c.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ID LECTOR: {c.persona_db.idPersona}</small>
+                              <div className="mb-2" style={{ fontSize: '0.9rem', color: '#334155' }}>
+                                Un rostro coincidente intentó ingresar usando el nombre <strong className="text-danger">{c.nombre_recibido}</strong>.<br/>
+                                Registrado en BD como: <strong>{c.persona_db.nombre}</strong>
                               </div>
-                              <div className="d-flex gap-2">
-                                <button className="btn btn-sm btn-outline-secondary w-50" onClick={() => handleResolverConflicto(c.idConflicto, 'ignorar')}>IGNORAR</button>
-                                <button className="btn btn-sm btn-outline-danger w-50" onClick={() => handleResolverConflicto(c.idConflicto, 'aceptar')}>ES {c.nombre_recibido.toUpperCase()}</button>
+                              <div className="text-primary fw-bold text-end" style={{ fontSize: '0.8rem', marginTop: '10px' }}>
+                                Clic para resolver <i className="bi bi-arrow-right"></i>
                               </div>
                             </div>
                           </div>
@@ -206,6 +199,19 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
                   </div>
                 )}
               </div>
+
+              {resolvingConflict && (
+                <ConflictoModal
+                  conflict={resolvingConflict}
+                  onClose={() => setResolvingConflict(null)}
+                  onResolved={() => {
+                    setResolvingConflict(null);
+                    fetchConflictos();
+                    // Dispatch custom event to tell sibling Personas grid to refresh
+                    window.dispatchEvent(new Event('conflictosUpdated'));
+                  }}
+                />
+              )}
             </>
           ) : (
             <Link to="/login" className="btn btn-outline-light">

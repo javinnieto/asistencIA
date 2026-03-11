@@ -4,7 +4,8 @@ from django.contrib.admin.models import LogEntry, ADDITION, CHANGE, DELETION
 from django.contrib.contenttypes.models import ContentType
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS
+from rest_framework import status
+from rest_framework.permissions import BasePermission, IsAuthenticated, IsAdminUser, SAFE_METHODS
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
@@ -22,6 +23,12 @@ from .serializers import (
     ConfiguracionSemanaSerializer
 )
 
+from django.conf import settings
+import json
+import time
+import paho.mqtt.client as mqtt
+from datetime import datetime
+from .constants import LECTOR_CONFIG
 
 class EsAdminOGuardiaParaEscritura(BasePermission):
     """
@@ -218,8 +225,248 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         if not request.user.is_superuser:
             return Response({'error': 'No tienes permisos para eliminar personas. Debes ser Administrador.'}, status=403)
         instance = self.get_object()
+        person_id = instance.idPersona
+        
+        # Eliminar también del dispositivo Lector
+        try:
+            from asistencias.constants import LECTOR_CONFIG
+            import requests
+            from requests.auth import HTTPBasicAuth
+            
+            ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
+            user = LECTOR_CONFIG.get('API_USER', 'admin')
+            password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
+            device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
+            
+            # Intentar borrar como CustomizeID (IdType: 0)
+            payload_cust = {
+                "operator": "DeletePerson",
+                "info": {
+                    "DeviceID": device_id,
+                    "TotalNum": 1,
+                    "IdType": 0,
+                    "CustomizeID": [person_id]
+                }
+            }
+            requests.post(
+                f"http://{ip}/action/DeletePerson",
+                json=payload_cust,
+                auth=HTTPBasicAuth(user, password),
+                timeout=5
+            )
+            
+            # Intentar borrar como LibID (IdType: 1) para mayor seguridad
+            payload_lib = {
+                "operator": "DeletePerson",
+                "info": {
+                    "DeviceID": device_id,
+                    "TotalNum": 1,
+                    "IdType": 1,
+                    "LibID": [person_id]
+                }
+            }
+            requests.post(
+                f"http://{ip}/action/DeletePerson",
+                json=payload_lib,
+                auth=HTTPBasicAuth(user, password),
+                timeout=5
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Fallo eliminando del dispositivo: {e}")
+
         self.perform_destroy(instance)
         return Response(status=204)
+
+    @action(detail=False, methods=['post'], url_path='sync-device', permission_classes=[IsAdminUser])
+    def sync_device(self, request):
+        res = sync_device_background(full_sync=True)
+        from rest_framework.response import Response
+        status_code = res.pop("status", 500)
+        return Response(res, status=status_code)
+
+def sync_device_background(full_sync=False):
+    """
+    Función agnóstica para solicitar al dispositivo la lista de personas 
+    (Sincronización manual o automática vía API HTTP del lector).
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        from asistencias.models import SincronizacionDispositivo, Persona, ConflictoIdentidad
+        from asistencias.constants import LECTOR_CONFIG
+        from django.utils import timezone
+        from django.db import transaction
+        import requests
+        from requests.auth import HTTPBasicAuth
+        
+        # 1. Rango de fechas
+        ultima_sync = SincronizacionDispositivo.objects.filter(completada=True).order_by('idSincronizacion').last()
+        if not full_sync and ultima_sync:
+            fecha_inicio = ultima_sync.fecha_fin
+        else:
+            fecha_inicio = timezone.make_aware(datetime(2020, 1, 1))
+            
+        fecha_fin = timezone.now()
+        
+        sincronizacion = SincronizacionDispositivo.objects.create(
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            completada=False
+        )
+        
+        fmt = "%Y-%m-%dT%H:%M:%S"
+        ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
+        user = LECTOR_CONFIG.get('API_USER', 'admin')
+        password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
+        device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
+        
+        nuevas_db = 0
+        encontradas = 0
+        begin_no = 0
+        has_more = True
+        
+        while has_more:
+            payload = {
+                "operator": "SearchPersonList",
+                "info": {
+                    "DeviceID": device_id,
+                    "PersonType": 2, 
+                    "BeginTime": fecha_inicio.strftime(fmt),
+                    "EndTime": fecha_fin.strftime(fmt),
+                    "Gender": 2,
+                    "BeginNO": begin_no,
+                    "RequestCount": 100,
+                    "Picture": 1
+                }
+            }
+            
+            logger.info(f"➜ Solicitando lote HTTP: {begin_no} a {begin_no + 100}...")
+            resp = requests.post(
+                f"http://{ip}/action/SearchPersonList",
+                json=payload,
+                auth=HTTPBasicAuth(user, password),
+                timeout=15
+            )
+            
+            if resp.status_code != 200:
+                raise Exception(f"Device HTTP Error {resp.status_code}: {resp.text}")
+                
+            data = resp.json()
+            info = data.get('info', {})
+            
+            if info.get('Result') == 'Fail':
+                if info.get('Detail') == "can't find person":
+                    # No hay más personas para recuperar
+                    has_more = False
+                    break
+                raise Exception(f"API Error: {info.get('Detail')}")
+            
+            personas_list = info.get('List', [])
+            list_num = info.get('Listnum', len(personas_list))
+            total_num = info.get('Totalnum', 0)
+            logger.info(f"✓ Recibidas {list_num} personas (Total Device: {total_num})")
+            
+            if not personas_list:
+                has_more = False
+                break
+                
+            with transaction.atomic():
+                for p_data in personas_list:
+                    person_id = None
+                    # Use strictly the automatic internal ID assigned by the lector hardware
+                    if p_data.get('LibID'):
+                        person_id = int(p_data['LibID'])
+                    else:
+                        continue
+                        
+                    nombre = p_data.get('Name', f'Usuario Sync {person_id}')
+                    person_type = str(p_data.get('PersonType', 1))
+                    # p_data.get('Gender') returns 0/1/2
+                    foto_b64 = p_data.get('Picinfo', None)
+                    
+                    must_mark_exit = person_type != LECTOR_CONFIG.get('PERSON_TYPE_ESTUDIANTE', '0')
+                    
+                    # --- DETECCION DE DUPLICADOS ---
+                    duplicados_foto = None
+                    if foto_b64:
+                        duplicados_foto = Persona.objects.filter(foto=foto_b64).exclude(idPersona=person_id)
+                    
+                    duplicados_nombre = Persona.objects.filter(nombre__iexact=nombre).exclude(idPersona=person_id)
+                    
+                    if duplicados_foto and duplicados_foto.exists():
+                        vieja = duplicados_foto.first()
+                        logger.warning(f"DUPLICADO FOTO: Ingresó nuevo {nombre} ({person_id}) pero es idéntico a {vieja.idPersona}. Generando alerta para intervención manual.")
+                        
+                        ConflictoIdentidad.objects.create(
+                            persona_db=vieja,
+                            nombre_recibido=f"Posible duplicado foto: {nombre} (ID {person_id})",
+                            foto_recibida=foto_b64
+                        )
+                        
+                        continue # Omitimos agregarlo a la BD porque es idéntico a uno viejo
+
+                    elif duplicados_nombre.exists():
+                        vieja = duplicados_nombre.first()
+                        ConflictoIdentidad.objects.create(
+                            persona_db=vieja,
+                            nombre_recibido=f"Posible Duplicado de Nombre: {nombre} (Nuevo ID: {person_id})",
+                            foto_recibida=foto_b64
+                        )
+                    # -------------------------------
+
+                    persona_obj, created = Persona.objects.get_or_create(
+                        idPersona=person_id,
+                        defaults={
+                            'nombre': nombre,
+                            'activo': True,
+                            'requiere_salida': must_mark_exit,
+                            'foto': foto_b64
+                        }
+                    )
+                    
+                    if created:
+                        nuevas_db += 1
+                    else:
+                        # Update existing persons
+                        updated = False
+                        if persona_obj.nombre.startswith('Persona ') or persona_obj.nombre == f'Usuario Sync {person_id}':
+                            persona_obj.nombre = nombre
+                            updated = True
+                        if str(foto_b64) != str(persona_obj.foto) and foto_b64:
+                            persona_obj.foto = foto_b64
+                            updated = True
+                        
+                        if updated:
+                            persona_obj.save(update_fields=['nombre', 'foto'])
+            
+            encontradas += list_num
+            if list_num < 100 or encontradas >= total_num:
+                has_more = False
+            else:
+                begin_no += list_num
+
+        # Finalizar registro de sync
+        sincronizacion.personas_encontradas = encontradas
+        sincronizacion.personas_nuevas = nuevas_db
+        sincronizacion.completada = True
+        sincronizacion.save()
+        
+        logger.info(f"✨ Sincronización Finalizada: {nuevas_db} importados / {encontradas} procesados.")
+        
+        return {
+            "message": f"Sincronización completada. Se importaron {nuevas_db} personas nuevas ({encontradas} en total).",
+            "rango": f"{fecha_inicio.strftime(fmt)} hasta {fecha_fin.strftime(fmt)}",
+            "id_sincronizacion": sincronizacion.pk,
+            "status": 200
+        }
+    except Exception as e:
+        logger.error(f"Error HTTP Sync: {str(e)}")
+        # Eliminar la sincronizacion si falló a la mitad
+        if 'sincronizacion' in locals() and not sincronizacion.completada:
+            sincronizacion.delete()
+        return {"error": str(e), "status": 500}
 
 
 class PersonaInstitucionViewSet(AuditLogMixin, viewsets.ModelViewSet):
