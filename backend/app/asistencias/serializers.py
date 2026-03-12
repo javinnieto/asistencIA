@@ -13,8 +13,6 @@ class InstitucionSerializer(serializers.ModelSerializer):
 
 
 class TipoPersonaSerializer(serializers.ModelSerializer):
-    institucion = InstitucionSerializer(read_only=True)
-    
     class Meta:
         model = TipoPersona
         fields = '__all__'

@@ -92,7 +92,7 @@ class TipoPersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = TipoPersona.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['institucion', 'activo']
+    filterset_fields = ['activo']
     search_fields = ['nombre']
 
     def get_serializer_class(self):
@@ -148,6 +148,104 @@ class HorarioViewSet(AuditLogMixin, viewsets.ModelViewSet):
     # Propagate logic removed: Schedules are now strictly linked to Cursos.
 
 
+def sync_editar_persona_lector(persona):
+    """
+    Sincroniza los cambios de nombre (y foto si la hay) de una persona hacia el dispositivo Lector.
+    Usa el endpoint /action/EditPerson del lector.
+    """
+    try:
+        from asistencias.constants import LECTOR_CONFIG
+        import requests
+        from requests.auth import HTTPBasicAuth
+        import logging
+        
+        ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
+        user = LECTOR_CONFIG.get('API_USER', 'admin')
+        password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
+        device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
+        
+        payload_lib = {
+            "operator": "EditPerson",
+            "info": {
+                "DeviceID": device_id,
+                "IdType": 1,         # 1 = usar LibID (el ID interno asignado por el lector)
+                "LibID": persona.idPersona,
+                "Name": persona.nombre,
+            }
+        }
+        
+        # Opcional: si la API del lector espera foto, y el backend la tiene actualizada
+        if persona.foto:
+            payload_lib["picinfo"] = persona.foto
+            
+        requests.post(
+            f"http://{ip}/action/EditPerson",
+            json=payload_lib,
+            auth=HTTPBasicAuth(user, password),
+            timeout=5
+        )
+        logging.getLogger(__name__).info(f"Nombre de {persona.idPersona} sincronizado al Lector.")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Fallo editando persona {persona.idPersona} en dispositivo Lector: {e}")
+
+def sync_eliminar_persona_lector(persona_id):
+    """
+    Elimina una persona del dispositivo Lector.
+    Usa el endpoint /action/DeletePerson del lector.
+    """
+    try:
+        from asistencias.constants import LECTOR_CONFIG
+        import requests
+        from requests.auth import HTTPBasicAuth
+        import logging
+        
+        ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
+        user = LECTOR_CONFIG.get('API_USER', 'admin')
+        password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
+        device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
+        
+        # Eliminar usando LibID (IdType: 1)
+        payload_lib = {
+            "operator": "DeletePerson",
+            "info": {
+                "DeviceID": device_id,
+                "TotalNum": 1,
+                "IdType": 1,
+                "LibID": [persona_id]  # <- IMPORTANTE: debe ser una lista
+            }
+        }
+        
+        requests.post(
+            f"http://{ip}/action/DeletePerson",
+            json=payload_lib,
+            auth=HTTPBasicAuth(user, password),
+            timeout=5
+        )
+        
+        # Opcional: intentar por CustomizeID (IdType: 0) por compatibilidad
+        payload_cust = {
+            "operator": "DeletePerson",
+            "info": {
+                "DeviceID": device_id,
+                "TotalNum": 1,
+                "IdType": 0,
+                "CustomizeID": [persona_id]
+            }
+        }
+        requests.post(
+            f"http://{ip}/action/DeletePerson",
+            json=payload_cust,
+            auth=HTTPBasicAuth(user, password),
+            timeout=5
+        )
+        
+        logging.getLogger(__name__).info(f"Persona {persona_id} eliminada del Lector.")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Fallo eliminando persona {persona_id} del dispositivo Lector: {e}")
+
+
 
 class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Persona.objects.all()
@@ -163,6 +261,56 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return PersonaCreateSerializer
         return PersonaSerializer
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        # Clonar datos para poder modificarlos
+        data = request.data.copy() if hasattr(request.data, 'copy') else request.data
+        
+        # Extraer roles del payload
+        roles_data = data.pop('roles', None)
+        
+        # Si no se proporciona idPersona, generar uno
+        if 'idPersona' not in data or not data['idPersona']:
+            from django.db.models import Max
+            max_id = Persona.objects.aggregate(Max('idPersona'))['idPersona__max']
+            data['idPersona'] = (max_id + 1) if max_id is not None else 100000
+            
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        instance = serializer.instance
+        
+        # Sincronizar roles
+        if roles_data:
+            for role in roles_data:
+                inst_id = role.get('institucion', {}).get('idInstitucion') if isinstance(role.get('institucion'), dict) else role.get('institucion')
+                tipo_id = role.get('tipo', {}).get('idTipoPersona') if isinstance(role.get('tipo'), dict) else role.get('tipo')
+                curso_id = role.get('curso', {}).get('idCurso') if isinstance(role.get('curso'), dict) else role.get('curso')
+
+                if inst_id and tipo_id:
+                    pi = PersonaInstitucion.objects.create(
+                        persona=instance,
+                        institucion_id=inst_id,
+                        tipo_id=tipo_id,
+                        curso_id=curso_id if curso_id else None
+                    )
+                    
+                    horarios_personales = role.get('horarios_personalizados', [])
+                    for h_data in horarios_personales:
+                        Horario.objects.create(
+                            persona_institucion=pi,
+                            dia=h_data.get('dia'),
+                            hora_inicio=h_data.get('hora_inicio'),
+                            hora_fin=h_data.get('hora_fin'),
+                            materia=h_data.get('materia', 'Personalizado'),
+                            activo=h_data.get('activo', True)
+                        )
+                        
+        headers = self.get_success_headers(serializer.data)
+        # Retornar el objeto serializado completamente
+        from rest_framework import status
+        return Response(PersonaSerializer(instance).data, status=status.HTTP_201_CREATED, headers=headers)
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
@@ -213,11 +361,17 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         return Response(PersonaSerializer(instance).data)
 
     def perform_update(self, serializer):
-        instance = serializer.save(_history_user=self.request.user)
+        instance = serializer.save()
+        instance._history_user = self.request.user
+        instance.save()
         self._log_action(instance, CHANGE)
+        # Sincronizar el nombre al lector
+        sync_editar_persona_lector(instance)
 
     def perform_create(self, serializer):
-        instance = serializer.save(_history_user=self.request.user)
+        instance = serializer.save()
+        instance._history_user = self.request.user
+        instance.save()
         self._log_action(instance, ADDITION)
 
     @transaction.atomic
@@ -277,6 +431,93 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
 
         self.perform_destroy(instance)
         return Response(status=204)
+
+    @action(detail=False, methods=['post'], url_path='bulk-delete', permission_classes=[IsAdminUser])
+    @transaction.atomic
+    def bulk_delete(self, request):
+        """Elimina múltiples personas en un solo request.
+        
+        Body: { "ids": [1, 2, 3] }
+        - Primero hace UN solo request al lector con todos los IDs (TotalNum=N, array completo).
+        - Luego borra cada persona de la BD.
+        Responde con cuántas se eliminaron y cuántas fallaron.
+        """
+        if not request.user.is_superuser:
+            return Response({'error': 'Solo el Administrador puede eliminar personas.'}, status=403)
+
+        ids = request.data.get('ids', [])
+        if not ids or not isinstance(ids, list):
+            return Response({'error': 'Debes enviar una lista de IDs en el campo "ids".'}, status=400)
+
+        import requests as http_requests
+        from requests.auth import HTTPBasicAuth
+        import logging
+        logger = logging.getLogger(__name__)
+
+        ip       = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
+        api_user = LECTOR_CONFIG.get('API_USER', 'admin')
+        password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
+        device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
+
+        # Convertir todos los IDs a int
+        int_ids = []
+        for raw_id in ids:
+            try:
+                int_ids.append(int(raw_id))
+            except (ValueError, TypeError):
+                pass
+
+        total_num = len(int_ids)
+
+        # --- Un solo request al lector con TODOS los IDs en el array ---
+        # La API del dispositivo acepta TotalNum=N y CustomizeID=[id1, id2, ...]
+        # según la documentación (sección 3.11.1).
+        if int_ids:
+            try:
+                # Por CustomizeID (IdType: 0)
+                http_requests.post(
+                    f"http://{ip}/action/DeletePerson",
+                    json={"operator": "DeletePerson", "info": {
+                        "DeviceID": device_id,
+                        "TotalNum": total_num,
+                        "IdType": 0,
+                        "CustomizeID": int_ids
+                    }},
+                    auth=HTTPBasicAuth(api_user, password), timeout=15
+                )
+                # Por LibID (IdType: 1) — por seguridad, también
+                http_requests.post(
+                    f"http://{ip}/action/DeletePerson",
+                    json={"operator": "DeletePerson", "info": {
+                        "DeviceID": device_id,
+                        "TotalNum": total_num,
+                        "IdType": 1,
+                        "LibID": int_ids
+                    }},
+                    auth=HTTPBasicAuth(api_user, password), timeout=15
+                )
+            except Exception as e:
+                logger.warning(f"bulk-delete: fallo HTTP lector para IDs {int_ids}: {e}")
+
+        # --- Borrar de la BD ---
+        deleted = 0
+        failed  = []
+
+        for person_id in int_ids:
+            try:
+                instance = Persona.objects.get(idPersona=person_id)
+                self.perform_destroy(instance)
+                deleted += 1
+            except Persona.DoesNotExist:
+                failed.append({'id': person_id, 'error': 'No encontrada'})
+            except Exception as e:
+                failed.append({'id': person_id, 'error': str(e)})
+
+        return Response({
+            'deleted': deleted,
+            'failed': len(failed),
+            'errors': failed
+        }, status=200)
 
     @action(detail=False, methods=['post'], url_path='sync-device', permission_classes=[IsAdminUser])
     def sync_device(self, request):
@@ -373,7 +614,13 @@ def sync_device_background(full_sync=False):
                 break
                 
             with transaction.atomic():
-                for p_data in personas_list:
+                # Ordenar por LibID ascendente: menor ID = más antiguo = debe procesarse primero
+                # Así cuando llega un duplicado, la persona ya-en-BD siempre será la de menor ID
+                personas_list_ordenadas = sorted(
+                    [p for p in personas_list if p.get('LibID')],
+                    key=lambda p: int(p['LibID'])
+                )
+                for p_data in personas_list_ordenadas:
                     person_id = None
                     # Use strictly the automatic internal ID assigned by the lector hardware
                     if p_data.get('LibID'):
@@ -388,34 +635,25 @@ def sync_device_background(full_sync=False):
                     
                     must_mark_exit = person_type != LECTOR_CONFIG.get('PERSON_TYPE_ESTUDIANTE', '0')
                     
-                    # --- DETECCION DE DUPLICADOS ---
+                    # --- DETECCION DE DUPLICADOS (marcadores) ---
+                    conflicto_pendiente = None
                     duplicados_foto = None
                     if foto_b64:
                         duplicados_foto = Persona.objects.filter(foto=foto_b64).exclude(idPersona=person_id)
-                    
                     duplicados_nombre = Persona.objects.filter(nombre__iexact=nombre).exclude(idPersona=person_id)
-                    
+
                     if duplicados_foto and duplicados_foto.exists():
                         vieja = duplicados_foto.first()
-                        logger.warning(f"DUPLICADO FOTO: Ingresó nuevo {nombre} ({person_id}) pero es idéntico a {vieja.idPersona}. Generando alerta para intervención manual.")
-                        
-                        ConflictoIdentidad.objects.create(
-                            persona_db=vieja,
-                            nombre_recibido=f"Posible duplicado foto: {nombre} (ID {person_id})",
-                            foto_recibida=foto_b64
-                        )
-                        
-                        continue # Omitimos agregarlo a la BD porque es idéntico a uno viejo
+                        logger.warning(f"DUPLICADO FOTO: ID {person_id} ({nombre}) tiene foto idéntica a {vieja.idPersona} ({vieja.nombre}).")
+                        conflicto_pendiente = {'vieja': vieja, 'tipo': 'foto'}
 
                     elif duplicados_nombre.exists():
                         vieja = duplicados_nombre.first()
-                        ConflictoIdentidad.objects.create(
-                            persona_db=vieja,
-                            nombre_recibido=f"Posible Duplicado de Nombre: {nombre} (Nuevo ID: {person_id})",
-                            foto_recibida=foto_b64
-                        )
-                    # -------------------------------
+                        logger.warning(f"DUPLICADO NOMBRE: ID {person_id} ({nombre}) comparte nombre con {vieja.idPersona}.")
+                        conflicto_pendiente = {'vieja': vieja, 'tipo': 'nombre'}
+                    # --------------------------------------------------
 
+                    # Crear/obtener la persona nueva (la que viene desde el lector)
                     persona_obj, created = Persona.objects.get_or_create(
                         idPersona=person_id,
                         defaults={
@@ -425,11 +663,11 @@ def sync_device_background(full_sync=False):
                             'foto': foto_b64
                         }
                     )
-                    
+
                     if created:
                         nuevas_db += 1
                     else:
-                        # Update existing persons
+                        # Actualizar a quien ya existe si tiene nombre genérico o foto distinta
                         updated = False
                         if persona_obj.nombre.startswith('Persona ') or persona_obj.nombre == f'Usuario Sync {person_id}':
                             persona_obj.nombre = nombre
@@ -437,9 +675,35 @@ def sync_device_background(full_sync=False):
                         if str(foto_b64) != str(persona_obj.foto) and foto_b64:
                             persona_obj.foto = foto_b64
                             updated = True
-                        
                         if updated:
                             persona_obj.save(update_fields=['nombre', 'foto'])
+
+                    # Registrar conflicto si se detectó duplicado
+                    if conflicto_pendiente:
+                        vieja = conflicto_pendiente['vieja']
+
+                        # Determinar quién es el original y quién el nuevo
+                        if vieja.idPersona < persona_obj.idPersona:
+                            persona_original = vieja
+                            persona_nueva_id = persona_obj.idPersona
+                        else:
+                            persona_original = persona_obj
+                            persona_nueva_id = vieja.idPersona
+
+                        # Evitar duplicar el registro de conflicto
+                        ya_existe = ConflictoIdentidad.objects.filter(
+                            persona_db=persona_original,
+                            id_persona_nueva=persona_nueva_id,
+                            resuelto=False
+                        ).exists()
+
+                        if not ya_existe:
+                            ConflictoIdentidad.objects.create(
+                                persona_db=persona_original,
+                                nombre_recibido=nombre,
+                                foto_recibida=foto_b64,
+                                id_persona_nueva=persona_nueva_id
+                            )
             
             encontradas += list_num
             if list_num < 100 or encontradas >= total_num:
@@ -754,7 +1018,7 @@ class AsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
 
         return Response(result)
 
-class ConflictoIdentidadViewSet(viewsets.ModelViewSet):
+class ConflictoIdentidadViewSet(AuditLogMixin, viewsets.ModelViewSet):
     """
     API endpoint para ver y resolver conflictos de identidad
     (Ej: la cámara detectó un nombre distinto al de la BD para el mismo ID)
@@ -778,31 +1042,106 @@ class ConflictoIdentidadViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def aceptar_cambio(self, request, pk=None):
         """Acepta el nuevo nombre y lo actualiza en la Base de Datos"""
-        conflicto = self.get_object()
-        persona = conflicto.persona_db
-        
-        # Guardar historial si se desea (opcional)
-        # Actualizar persona
-        persona.nombre = conflicto.nombre_recibido
-        
-        # Si vino foto nueva, actualizarla tmb
-        if conflicto.foto_recibida:
-            persona.foto = conflicto.foto_recibida
+        try:
+            conflicto = self.get_object()
+            persona = conflicto.persona_db
+
+            persona.nombre = conflicto.nombre_recibido
+
+            if conflicto.foto_recibida:
+                persona.foto = conflicto.foto_recibida
+
+            persona._history_user = request.user
+            persona.save()
+            self._log_action(persona, CHANGE, message="Nombre actualizado por conflicto vía API")
             
-        persona._history_user = request.user
-        persona.save()
-        self._log_action(persona, CHANGE, message="Nombre actualizado por conflicto vía API")
-        
-        # Marcar conflicto como resuelto
-        conflicto.resuelto = True
-        conflicto._history_user = request.user
-        conflicto.save()
-        self._log_action(conflicto, CHANGE, message="Conflicto resuelto aceptando cambio vía API")
-        
-        # Opcional: Resolver todos los conflictos pendientes de esta persona
-        ConflictoIdentidad.objects.filter(persona_db=persona, resuelto=False).update(resuelto=True)
-        
-        return Response({'status': 'nombre actualizado y conflicto resuelto'})
+            # Sincronizar cambio al lector
+            sync_editar_persona_lector(persona)
+
+            conflicto.resuelto = True
+            conflicto._history_user = request.user
+            conflicto.save()
+            self._log_action(conflicto, CHANGE, message="Conflicto resuelto aceptando cambio vía API")
+
+            ConflictoIdentidad.objects.filter(persona_db=persona, resuelto=False).update(resuelto=True)
+
+            return Response({'status': 'nombre actualizado y conflicto resuelto'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def actualizar_nombre(self, request, pk=None):
+        """
+        Permite actualizar el nombre de la persona en la BD al resolver el conflicto.
+        Body: { "nombre": "nuevo nombre" }
+        """
+        try:
+            conflicto = self.get_object()
+            persona = conflicto.persona_db
+
+            if 'nombre' in request.data:
+                persona.nombre = request.data['nombre']
+            if 'apellido' in request.data:
+                persona.apellido = request.data['apellido']
+
+            persona._history_user = request.user
+            persona.save()
+            self._log_action(persona, CHANGE, message="Nombre/apellido actualizado al resolver conflicto vía API")
+
+            # Sincronizar cambio al lector
+            sync_editar_persona_lector(persona)
+
+            conflicto.resuelto = True
+            conflicto._history_user = request.user
+            conflicto.save()
+            self._log_action(conflicto, CHANGE, message="Conflicto resuelto actualizando nombre vía API")
+
+            ConflictoIdentidad.objects.filter(persona_db=persona, resuelto=False).update(resuelto=True)
+
+            return Response({'status': 'nombre actualizado y conflicto resuelto'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def eliminar_duplicado(self, request, pk=None):
+        """
+        Elimina la persona más reciente (la detectada por el lector, que generó el conflicto)
+        y resuelve el conflicto. La persona en BD queda intacta.
+        Recibe: { "id_persona_nueva": <int> } — el ID de la persona nueva a borrar.
+        """
+        try:
+            conflicto = self.get_object()
+            id_nuevo = request.data.get('id_persona_nueva')
+
+            if id_nuevo:
+                # Eliminar todas las asistencias de esa persona antes de borrarla
+                from .models import Asistencia, PersonaInstitucion
+                try:
+                    persona_nueva = Persona.objects.get(idPersona=id_nuevo)
+                    Asistencia.objects.filter(persona=persona_nueva).delete()
+                    PersonaInstitucion.objects.filter(persona=persona_nueva).delete()
+                    # Resolver todos los conflictos donde esta persona sea la de BD
+                    ConflictoIdentidad.objects.filter(persona_db=persona_nueva).update(resuelto=True)
+                    # Sincronizar borrado al lector ANTES de borrar de BD
+                    sync_eliminar_persona_lector(id_nuevo)
+                    
+                    persona_nueva.delete()
+                    self._log_action(conflicto, CHANGE, message=f"Duplicado ID {id_nuevo} eliminado al resolver conflicto")
+                except Persona.DoesNotExist:
+                    pass  # Si ya no existe, no hay problema
+
+            # Marcar este conflicto como resuelto
+            conflicto.resuelto = True
+            conflicto._history_user = request.user
+            conflicto.save()
+            self._log_action(conflicto, CHANGE, message="Conflicto resuelto eliminando duplicado más reciente")
+
+            # Marcar todos los conflictos pendientes de la persona en BD como resueltos
+            ConflictoIdentidad.objects.filter(persona_db=conflicto.persona_db, resuelto=False).update(resuelto=True)
+
+            return Response({'status': 'duplicado eliminado y conflicto resuelto'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class DiaNoLaborableViewSet(AuditLogMixin, viewsets.ModelViewSet):
     """

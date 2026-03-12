@@ -12,13 +12,33 @@
 }
 
 /* Header profesional */
+.table-global-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px 0 32px;
+  background: rgba(30, 41, 59, 0.4);
+}
+
+.table-global-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.table-global-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 24px 32px;
   background: rgba(30, 41, 59, 0.5);
-  /* Semi-transparent */
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -128,19 +148,48 @@
   letter-spacing: 0.5px;
 }
 
-.filter-select {
-  padding: 10px 32px 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  background-color: var(--bg-app);
-  color: var(--text-primary);
-  min-width: 140px;
-}
-
 .filter-select:focus {
   outline: none;
   border-color: var(--primary);
+}
+
+/* Custom Select para Dark Mode (Glassmorphism) */
+.custom-dark-select {
+  padding: 10px 36px 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  background-color: rgba(15, 23, 42, 0.7);
+  color: var(--text-primary);
+  min-width: 140px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.custom-dark-select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(15, 23, 42, 0.9);
+}
+
+.custom-dark-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Estilo para las opciones del select en webkit/blink - lo maximo personalizable por CSS nativo */
+.custom-dark-select option {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  padding: 12px;
 }
 
 /* Tabla */
@@ -166,12 +215,19 @@
   letter-spacing: 0.5px;
 }
 
-.personas-table th.sortable {
+.personas-table th.sortable,
+.personas-table th.sortable-header {
   cursor: pointer;
+  user-select: none;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
-.personas-table th.sortable:hover {
+.personas-table th.sortable:hover,
+.personas-table th.sortable-header:hover {
   color: var(--primary);
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .personas-table td {
@@ -314,137 +370,263 @@
   margin-bottom: 16px;
   opacity: 0.5;
 }
+
+.results-count-badge {
+  display: inline-block;
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  white-space: nowrap;
+}
+
 /* =========================================
    Responsive Mobile Design
    ========================================= */
+.mobile-cell {
+  display: none !important;
+}
 @media (max-width: 768px) {
-    .table-wrapper {
-        overflow-x: visible;
-    }
+  .desktop-cell {
+    display: none !important;
+  }
+  
+  .mobile-cell {
+    display: flex !important;
+  }
 
-    /* Hide table headers */
-    .personas-table thead {
-        display: none;
-    }
+  .table-wrapper {
+    overflow-x: visible;
+  }
 
-    /* Convert table elements to block */
-    .personas-table,
-    .personas-table tbody,
-    .personas-table tr,
-    .personas-table td {
-        display: block;
-        width: 100%;
-    }
+  .personas-table thead {
+    display: none;
+  }
 
-    /* Style rows as cards */
-    .personas-table tr {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 12px;
-        margin-bottom: 16px;
-        padding: 16px;
-    }
+  .personas-table,
+  .personas-table tbody,
+  .personas-table tr,
+  .personas-table td {
+    display: block;
+    width: 100%;
+  }
 
-    /* Style cells */
-    .personas-table td {
-        border: none;
-        padding: 8px 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        text-align: left !important;
-    }
+  .personas-table tr {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    margin-bottom: 16px;
+    padding: 20px;
+    position: relative;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 120px;
+  }
 
-    /* Add labels before content */
-    .personas-table td:before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: #94a3b8;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        min-width: 100px;
-        flex-shrink: 0;
-    }
+  .personas-table td {
+    border: none;
+    padding: 0 !important;
+    text-align: left !important;
+    display: flex;
+    align-items: center;
+  }
 
-    /* Last cell (actions) */
-    .personas-table td:last-child {
-        justify-content: flex-end;
-        padding-top: 12px;
-        margin-top: 8px;
-        border-top: 1px solid #334155;
-    }
+  .personas-table td:before {
+    display: none;
+  }
 
-    .personas-table td:last-child:before {
-        content: none;
-    }
+  /* Avatar Absoluto */
+  .personas-table td[data-label="Foto"] {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 50px;
+    height: 50px;
+  }
 
-    /* Action buttons */
-    .action-buttons {
-        width: 100%;
-    }
+  .personas-table td[data-label="Foto"] .person-avatar,
+  .personas-table td[data-label="Foto"] .avatar-placeholder {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 1.8rem;
+  }
 
-    /* Filters responsive */
-    .table-top-bar {
-        flex-direction: column;
-        align-items: stretch !important;
-        gap: 12px !important;
-        padding: 16px !important;
-    }
+  /* ID Lector Absoluto */
+  .personas-table td[data-label="ID LECTOR"] {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #94a3b8 !important;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 4px 10px !important;
+    border-radius: 12px;
+    width: auto;
+    justify-content: flex-end;
+  }
 
-    .search-box {
-        min-width: unset;
-        width: 100%;
-    }
+  /* Nombre Combinado */
+  .personas-table td[data-label="Persona"] {
+    padding-left: 66px !important; /* Espacio de la foto + gap */
+    padding-right: 60px !important; /* Espacio del ID */
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+    min-height: 28px;
+    align-items: flex-start;
+  }
 
-    .filter-select {
-        width: 100%;
-    }
+  /* Categoría (Badges) */
+  .personas-table td[data-label="Categoría"] {
+    padding-left: 66px !important;
+    margin-top: 2px;
+  }
 
-    .results-count {
-        text-align: center;
-    }
+  .personas-table td[data-label="Categoría"] .department-badge {
+    padding: 2px 6px !important;
+    font-size: 0.6rem !important;
+    border-radius: 8px !important;
+  }
 
-    /* Header stacking */
-    .table-header {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 16px;
-        gap: 12px;
-    }
+  /* Cursos */
+  .personas-table td[data-label="Cursos"] {
+    padding-left: 66px !important;
+    font-size: 0.85rem !important;
+    color: #94a3b8 !important;
+    margin-top: 2px;
+  }
 
-    .header-left h2 {
-        font-size: 1.2rem;
-    }
+  /* Ocultar etiquetas predeterminadas si estaban visibles por grid o algo */
+  .personas-table td[data-label="Categoría"]:before,
+  .personas-table td[data-label="Cursos"]:before {
+    display: none;
+  }
 
-    .header-right {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
+  /* Acciones */
+  .personas-table td[data-label="Acciones"] {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: auto;
+    justify-content: flex-end;
+  }
 
-    .header-right .btn {
-        flex: 1;
-        min-width: 100px;
-        justify-content: center;
-    }
+  /* Ocultar botón editar en móvil */
+  .personas-table td[data-label="Acciones"] .btn-edit {
+    display: none !important;
+  }
+  
+  /* Botón eliminar dinámico y más pequeño */
+  .personas-table td[data-label="Acciones"] .btn-delete {
+    padding: 6px !important;
+    font-size: 1rem !important;
+    background: rgba(248, 113, 113, 0.1) !important;
+    border-radius: 8px;
+    min-width: unset;
+    min-height: unset;
+    width: 32px;
+    height: 32px;
+  }
 
-    /* Action buttons touch targets */
-    .btn-icon {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        min-height: 44px;
-    }
+  /* Checkbox de selección si está activada la selección masiva */
+  td.select-checkbox-cell {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    background: var(--bg-surface);
+    border-radius: 50%;
+    padding: 4px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    z-index: 10;
+  }
 
-    /* Pagination wrapping */
-    .pagination {
-        flex-wrap: wrap;
-        padding: 16px;
-        gap: 4px;
-    }
 
-    .personas-table-container .btn-page {
-        padding: 6px 10px;
-        font-size: 0.8rem;
-    }
+  /* Filters responsive */
+  .table-top-bar {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 16px !important;
+    padding: 16px !important;
+  }
+
+  .search-box {
+    min-width: unset;
+    width: 100%;
+    flex: none !important;
+  }
+
+  .search-box input {
+    width: 100%;
+  }
+
+  .custom-dark-select {
+    width: 100%;
+  }
+
+  .results-count {
+    text-align: center;
+  }
+
+  /* Header stacking GLOBAL ACTIONS */
+  .table-global-actions {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 16px;
+    padding: 24px 16px 0 16px !important;
+  }
+
+  .table-global-actions-left {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .results-count-badge {
+    display: inline-block;
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    white-space: nowrap; /* Evitar que el badge se rompa en varias líneas */
+  }
+
+  .table-global-title {
+    font-size: 1.25rem;
+  }
+
+  .table-global-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Action buttons touch targets */
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Pagination wrapping */
+  .pagination {
+    flex-wrap: wrap;
+    padding: 16px;
+    gap: 4px;
+  }
+
+  .personas-table-container .btn-page {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
 }

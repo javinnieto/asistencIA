@@ -49,4 +49,22 @@ export const aceptarConflicto = async (id: number) => {
   return apiRequest(`/conflictos/${id}/aceptar_cambio/`, { method: 'POST' });
 };
 
+export const actualizarNombreConflicto = async (id: number, data: { nombre?: string; apellido?: string }) => {
+  return apiRequest(`/conflictos/${id}/actualizar_nombre/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const eliminarPersona = async (id: number | string) => {
+  return apiRequest(`/personas/${id}/`, { method: 'DELETE' });
+};
+
+export const eliminarDuplicado = async (idConflicto: number, idPersonaNueva: number) => {
+  return apiRequest(`/conflictos/${idConflicto}/eliminar_duplicado/`, {
+    method: 'POST',
+    body: JSON.stringify({ id_persona_nueva: idPersonaNueva }),
+  });
+};
+
 export { API_BASE_URL };

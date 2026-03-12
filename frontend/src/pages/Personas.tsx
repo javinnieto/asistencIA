@@ -39,13 +39,15 @@ const Personas: React.FC = () => {
 
 
 
-  const loadPersonas = async () => {
-    setIsLoading(true);
+  const loadPersonas = async (showLoader = true) => {
+    if (showLoader) setIsLoading(true);
     try {
       // Parallel fetch for Personas and open Conflicts
+      // Parallel fetch for Personas and open Conflicts with cache busting
+      const cacheBuster = `?t=${Date.now()}`;
       const [response, confRes] = await Promise.all([
-        apiRequest('/personas/'),
-        getConflictos()
+        apiRequest(`/personas/${cacheBuster}`),
+        apiRequest(`/conflictos/${cacheBuster}&resuelto=false`)
       ]);
 
       if (confRes.ok) {
@@ -60,14 +62,11 @@ const Personas: React.FC = () => {
           const nombreCompleto = persona.nombre || 'Sin Nombre';
           const nombreParts = nombreCompleto.split(' ');
           const primerNombre = nombreParts[0] || '';
-          const apellido = nombreParts.slice(1).join(' ') || '-';
+          const apellido = nombreParts.slice(1).join(' ') || '';
 
-          const roles = persona.roles || [];
           let primaryRole = 'Sin asignar';
-
-          if (roles.length > 0) {
-            const mainRole = roles.find((r: any) => r.tipo.nombre !== 'No Docente') || roles[0];
-            primaryRole = mainRole.tipo.nombre;
+          if (persona.roles && persona.roles.length > 0) {
+            primaryRole = persona.roles[0]?.tipo?.nombre || 'Sin asignar';
           }
 
           return {
@@ -81,7 +80,7 @@ const Personas: React.FC = () => {
             fechaIngreso: persona.fechaRegistro || '',
             estado: (persona.activo !== false ? 'activo' : 'inactivo'),
             foto: persona.foto,
-            roles: roles,
+            roles: persona.roles || [],
             requiere_salida: persona.requiere_salida || false
           };
         });
@@ -94,12 +93,23 @@ const Personas: React.FC = () => {
       console.error('Error cargando personas:', error);
       setPersonas([]);
     } finally {
-      setIsLoading(false);
+      if (showLoader) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     loadPersonas();
+    
+    // Escuchar el evento que dispara el Navbar al resolver un conflicto
+    const handleConflictosUpdated = () => {
+      loadPersonas(false);
+    };
+    
+    window.addEventListener('conflictosUpdated', handleConflictosUpdated);
+    
+    return () => {
+      window.removeEventListener('conflictosUpdated', handleConflictosUpdated);
+    };
   }, []);
 
   const handleSyncDevice = async () => {
@@ -137,24 +147,28 @@ const Personas: React.FC = () => {
 
   const handleDeleteBatch = async (ids: string[]) => {
     try {
-      // Create a copy of the array since we might be alerting
       const total = ids.length;
-      let successCount = 0;
-      
-      for (const id of ids) {
-        const res = await apiRequest(`/personas/${id}/`, { method: 'DELETE' });
-        if (res.ok) {
-          successCount++;
+
+      const response = await apiRequest('/personas/bulk-delete/', {
+        method: 'POST',
+        body: JSON.stringify({ ids: ids.map(Number) })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const deleted = data.deleted ?? 0;
+        const failed  = data.failed  ?? 0;
+
+        if (failed === 0) {
+          showToast(`Se eliminaron ${deleted} personas correctamente.`, 'success');
+        } else {
+          showToast(`Se eliminaron ${deleted} de ${total} personas. ${failed} fallaron.`, 'warning');
         }
-      }
-      
-      if (successCount === total) {
-        showToast(`Se eliminaron ${total} personas correctamente.`, 'success');
       } else {
-        showToast(`Se eliminaron ${successCount} de ${total} personas. Algunas fallaron.`, 'warning');
+        const err = await response.json().catch(() => ({}));
+        showToast('Error al eliminar el lote: ' + (err.error || response.statusText), 'error');
       }
-      
-      loadPersonas();
+      loadPersonas(true);
     } catch (e) {
       console.error(e);
       showToast('Error de red al eliminar el lote.', 'error');
@@ -313,7 +327,8 @@ const Personas: React.FC = () => {
           onClose={() => setResolvingConflict(null)} 
           onResolved={() => {
             setResolvingConflict(null);
-            loadPersonas();
+            // El event listener de arriba se encarga de llamar a loadPersonas()
+            window.dispatchEvent(new Event('conflictosUpdated'));
           }} 
         />
       )}

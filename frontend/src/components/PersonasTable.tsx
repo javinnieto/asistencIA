@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import ConfirmModal from './ConfirmModal';
 import TablePagination from './TablePagination';
 import { useTableSelection } from '../hooks/useTableSelection';
+import { apiRequest } from '../config/api';
 
 
 interface Person {
@@ -53,6 +54,30 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   // Modo selección (toggle)
   const [selectionMode, setSelectionMode] = useState(false);
 
+  // Sorting
+  type SortDir = 'asc' | 'desc';
+  const [sortField, setSortField] = useState<string>('nombre');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  const getSortIcon = (field: string) => {
+    if (sortField === field) {
+      return sortDir === 'asc'
+        ? <i className="bi bi-sort-down ms-1" style={{ fontSize: '0.75rem' }}></i>
+        : <i className="bi bi-sort-up ms-1" style={{ fontSize: '0.75rem' }}></i>;
+    }
+    return <i className="bi bi-arrow-down-up ms-1" style={{ fontSize: '0.75rem', opacity: 0.3 }}></i>;
+  };
+
   // Modal states
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -60,34 +85,39 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   // Batch Delete state
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
 
-  // Categorías disponibles (deben coincidir con los TipoPersona reales)
-  const categorias = useMemo(() => {
-    const tipos = new Set<string>();
-    personas.forEach(p => {
-      p.roles?.forEach(r => {
-        if (r.tipo?.nombre) tipos.add(r.tipo.nombre);
-      });
-    });
-    return Array.from(tipos).sort();
-  }, [personas]);
+  // Filtros dinámicos desde API
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [cursosDisponibles, setCursosDisponibles] = useState<string[]>([]);
 
-  // Computar cursos únicos
-  const cursosDisponibles = useMemo(() => {
-    const cursos = new Set<string>();
-    personas.forEach(p => {
-      p.roles?.forEach(r => {
-        if (r.curso && r.curso.nombre) cursos.add(r.curso.nombre);
-      });
-    });
-    return Array.from(cursos).sort();
-  }, [personas]);
+  React.useEffect(() => {
+    const fetchFiltros = async () => {
+      try {
+        const [catRes, curRes] = await Promise.all([
+          apiRequest('/tipos-persona/'),
+          apiRequest('/cursos/')
+        ]);
+        if (catRes.ok) {
+          const data = await catRes.json();
+          const nombresCats = (data.results || data || []).map((t: any) => t.nombre);
+          setCategorias(Array.from(new Set(nombresCats)).sort() as string[]);
+        }
+        if (curRes.ok) {
+          const data = await curRes.json();
+          const nombresCursos = (data.results || data || []).map((c: any) => c.nombre);
+          setCursosDisponibles(Array.from(new Set(nombresCursos)).sort() as string[]);
+        }
+      } catch (e) {
+        console.error('Error fetching filters', e);
+      }
+    };
+    fetchFiltros();
+  }, []);
 
-  // Filtrar datos
+  // Filtrar y ordenar datos
   const filteredData = useMemo(() => {
-    return personas.filter(person => {
+    const filtered = personas.filter(person => {
       const fullName = `${person?.nombre || ''} ${person?.apellido || ''}`.trim();
       const normalizedSearch = normalizeString(searchTerm || '');
-      // Make sure we handle number/undefined IDs safely
       const safeId = person?.id ? String(person.id) : '';
       
       const matchesSearch = !searchTerm ||
@@ -105,7 +135,36 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 
       return matchesSearch && matchesCategoria && matchesCurso;
     });
-  }, [personas, searchTerm, filterCategoria, filterCurso]);
+
+    // Ordenar sobre la lista completa (antes de paginar)
+    return [...filtered].sort((a, b) => {
+      let valA = '';
+      let valB = '';
+
+      if (sortField === 'nombre') {
+        valA = normalizeString(a.nombre || '');
+        valB = normalizeString(b.nombre || '');
+      } else if (sortField === 'apellido') {
+        valA = normalizeString(a.apellido || '');
+        valB = normalizeString(b.apellido || '');
+      } else if (sortField === 'id') {
+        // IDs numéricos: comparar directamente como número
+        const nA = Number(a.id) || 0;
+        const nB = Number(b.id) || 0;
+        return sortDir === 'asc' ? nA - nB : nB - nA;
+      } else if (sortField === 'categoria') {
+        valA = normalizeString(a.roles?.[0]?.tipo?.nombre || '');
+        valB = normalizeString(b.roles?.[0]?.tipo?.nombre || '');
+      } else if (sortField === 'curso') {
+        valA = normalizeString(a.roles?.[0]?.curso?.nombre || '');
+        valB = normalizeString(b.roles?.[0]?.curso?.nombre || '');
+      }
+
+      if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [personas, searchTerm, filterCategoria, filterCurso, sortField, sortDir]);
 
   // Reset page to 1 whenever filters change
   React.useEffect(() => {
@@ -134,8 +193,10 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   // Fast lookup for conflicts mapped by Person ID
   const conflictosMap = useMemo(() => {
     const map = new Map<string, number>();
-    conflictos.forEach(c => {
-      map.set(String(c.persona_db.idPersona), c.idConflicto);
+    (conflictos || []).forEach(c => {
+      if (c && c.persona_db && c.persona_db.idPersona) {
+        map.set(String(c.persona_db.idPersona), c.idConflicto);
+      }
     });
     return map;
   }, [conflictos]);
@@ -167,23 +228,68 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   if (personas.length === 0) {
     return (
       <div className="personas-table-container">
-        <div className="empty-state">
-          <div className="empty-icon">👥</div>
-          <h3>No hay personas registradas</h3>
-          <p>Las personas se registran automáticamente cuando usan el terminal de reconocimiento facial.</p>
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: '400px', background: 'rgba(30, 41, 59, 0.4)', borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.05)', margin: '32px'
+        }}>
+          <div style={{
+            width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(99, 102, 241, 0.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px'
+          }}>
+            <i className="bi bi-people" style={{ fontSize: '2.5rem', color: '#818cf8' }}></i>
+          </div>
+          <h3 style={{ fontSize: '1.25rem', color: '#f8fafc', fontWeight: 600, marginBottom: '8px' }}>
+            Aún no hay personas registradas
+          </h3>
+          <p style={{ color: '#94a3b8', fontSize: '0.95rem', maxWidth: '400px', textAlign: 'center', marginBottom: '24px' }}>
+            Las personas pueden ser registradas manualmente o sincronizadas desde el dispositivo de reconocimiento.
+          </p>
+          {isAdmin && onSyncDevice && (
+            <button
+              onClick={onSyncDevice}
+              className="btn btn-primary d-flex align-items-center gap-2"
+              title="Obtener personas desde el lector"
+            >
+              <i className="bi bi-cloud-download"></i>
+              Importar desde el Lector
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
+
   return (
     <div className="personas-table-container">
+      {/* Acciones Globales Superiores */}
+      <div className="table-global-actions">
+        <div className="table-global-actions-left">
+          <h2 className="table-global-title">Personas</h2>
+          <span className="results-count-badge">
+            {filteredData.length} registros totales
+          </span>
+        </div>
+
+        {isAdmin && onSyncDevice && (
+          <button 
+            onClick={onSyncDevice}
+            className="btn btn-primary btn-sm d-flex align-items-center gap-2"
+            title="Importar nuevas personas desde el lector MQTT"
+          >
+            <i className="bi bi-arrow-repeat"></i>
+            Sincronizar Lector
+          </button>
+        )}
+      </div>
+
       {/* Combined Compact Header & Filters */}
       <div className="table-top-bar" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '20px 8px 50px 8px',
+        padding: '24px 32px 32px 32px',
         background: 'rgba(30, 41, 59, 0.4)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
         gap: '16px',
@@ -207,8 +313,8 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           <select
             value={filterCategoria}
             onChange={(e) => setFilterCategoria(e.target.value)}
-            className="filter-select form-select"
-            style={{ width: 'auto', minWidth: '140px' }}
+            className="custom-dark-select"
+            style={{ width: 'auto', minWidth: '160px' }}
           >
             <option value="">Todas las Categorías</option>
             {categorias.map(cat => (
@@ -219,8 +325,8 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           <select
             value={filterCurso}
             onChange={(e) => setFilterCurso(e.target.value)}
-            className="filter-select form-select"
-            style={{ width: 'auto', minWidth: '140px' }}
+            className="custom-dark-select"
+            style={{ width: 'auto', minWidth: '160px' }}
           >
             <option value="">Todos los Cursos</option>
             {cursosDisponibles.map(curso => (
@@ -229,9 +335,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           </select>
         </div>
 
-        {/* Right-side buttons & count */}
+        {/* Right-side batch actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* Batch delete button — solo visible en modo selección con algo seleccionado */}
+          {/* Batch delete button — visible cuando hay selección activa */}
           {selectionMode && selectedCount > 0 && isAdmin && (
             <button
               onClick={() => setBatchConfirmOpen(true)}
@@ -239,35 +345,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
               title="Eliminar filas seleccionadas"
             >
               <i className="bi bi-trash-fill"></i>
-              Eliminar ({selectedCount})
+              Eliminar Seleccionados ({selectedCount})
             </button>
           )}
-
-          {/* Toggle selección — solo admins */}
-          {isAdmin && (
-            <button
-              onClick={handleToggleSelectionMode}
-              className={`btn btn-sm d-flex align-items-center gap-2 ${selectionMode ? 'btn-outline-secondary' : 'btn-outline-light'}`}
-              title={selectionMode ? 'Cancelar selección' : 'Activar selección múltiple'}
-            >
-              <i className={`bi ${selectionMode ? 'bi-x-circle' : 'bi-check2-square'}`}></i>
-              {selectionMode ? 'Cancelar' : 'Seleccionar'}
-            </button>
-          )}
-
-          {isAdmin && onSyncDevice && (
-            <button 
-              onClick={onSyncDevice}
-              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2"
-              title="Obtener personas nuevas desde el lector MQTT"
-            >
-              <i className="bi bi-arrow-repeat"></i>
-              Sincronizar Lector
-            </button>
-          )}
-          <span className="results-count" style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-            {filteredData.length} registros
-          </span>
         </div>
       </div>
 
@@ -276,26 +356,78 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         <table className="personas-table">
           <thead>
             <tr>
-              {isAdmin && selectionMode && (
+              {/* Columna izquierda: toggle o checkbox-all según modo */}
+              {isAdmin && (
                 <th style={{ width: '40px', padding: '12px 10px', verticalAlign: 'middle', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    checked={isAllSelected}
-                    ref={input => {
-                      if (input) input.indeterminate = isIndeterminate;
-                    }}
-                    onChange={toggleSelectAll}
-                    style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
-                  />
+                  {selectionMode ? (
+                    // Modo activo → checkbox select-all
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={isAllSelected}
+                      ref={input => {
+                        if (input) input.indeterminate = isIndeterminate;
+                      }}
+                      onChange={toggleSelectAll}
+                      style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
+                    />
+                  ) : (
+                    // Modo inactivo → ícono pequeño para activar selección
+                    <button
+                      onClick={handleToggleSelectionMode}
+                      title="Activar selección múltiple"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '5px',
+                        padding: '2px 5px',
+                        cursor: 'pointer',
+                        color: '#475569',
+                        lineHeight: 1,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <i className="bi bi-check2-square" style={{ fontSize: '0.85rem' }}></i>
+                    </button>
+                  )}
                 </th>
               )}
-              <th style={{ width: '8%', whiteSpace: 'nowrap' }}>ID LECTOR</th>
+              <th
+                onClick={() => handleSort('id')}
+                className="sortable-header"
+                style={{ width: '8%', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
+              >
+                ID LECTOR {getSortIcon('id')}
+              </th>
               <th style={{ width: '60px' }}>FOTO</th>
-              <th style={{ width: '20%' }}>NOMBRE</th>
-              <th style={{ width: '20%' }}>APELLIDO</th>
-              <th style={{ width: '15%' }}>CATEGORÍA</th>
-              <th style={{ width: '25%' }}>CURSOS</th>
+              <th
+                onClick={() => handleSort('nombre')}
+                className="sortable-header"
+                style={{ width: '20%', cursor: 'pointer', userSelect: 'none' }}
+              >
+                NOMBRE {getSortIcon('nombre')}
+              </th>
+              <th
+                onClick={() => handleSort('apellido')}
+                className="sortable-header"
+                style={{ width: '20%', cursor: 'pointer', userSelect: 'none' }}
+              >
+                APELLIDO {getSortIcon('apellido')}
+              </th>
+              <th
+                onClick={() => handleSort('categoria')}
+                className="sortable-header"
+                style={{ width: '15%', cursor: 'pointer', userSelect: 'none' }}
+              >
+                CATEGORÍA {getSortIcon('categoria')}
+              </th>
+              <th
+                onClick={() => handleSort('curso')}
+                className="sortable-header"
+                style={{ width: '25%', cursor: 'pointer', userSelect: 'none' }}
+              >
+                CURSOS {getSortIcon('curso')}
+              </th>
               <th style={{ width: '15%', textAlign: 'right' }}>ACCIONES</th>
             </tr>
           </thead>
@@ -317,15 +449,17 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                     borderLeft: hasConflict ? '4px solid #ef4444' : undefined,
                   }}
                 >
-                  {isAdmin && selectionMode && (
-                    <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                      <input
-                        type="checkbox"
-                        className="form-check-input"
-                        checked={selectedIds.has(person.id)}
-                        onChange={() => toggleSelection(person.id)}
-                        style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
-                      />
+                  {isAdmin && (
+                    <td className="select-checkbox-cell" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', verticalAlign: 'middle', padding: '0 6px' }}>
+                      {selectionMode && (
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={selectedIds.has(person.id)}
+                          onChange={() => toggleSelection(person.id)}
+                          style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
+                        />
+                      )}
                     </td>
                   )}
                   <td data-label="ID LECTOR" style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '500' }}>
@@ -355,7 +489,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       </div>
                     )}
                   </td>
-                  <td data-label="Nombre">
+                  <td data-label="Nombre" className="desktop-cell">
                     <strong>{person.nombre}</strong>
                     {hasConflict && (
                       <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
@@ -363,7 +497,17 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       </span>
                     )}
                   </td>
-                  <td data-label="Apellido">{person.apellido}</td>
+                  <td data-label="Apellido" className="desktop-cell">{person.apellido}</td>
+                  
+                  {/* Celda combinada solo para móvil */}
+                  <td data-label="Persona" className="mobile-cell">
+                    <strong>{person.nombre} {person.apellido}</strong>
+                    {hasConflict && (
+                      <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
+                        ¡Duplicado!
+                      </span>
+                    )}
+                  </td>
                   <td data-label="Categoría">
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                       {(person.roles && person.roles.length > 0) ? person.roles.map((role, idx) => (
@@ -400,17 +544,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                           <i className="bi bi-exclamation-triangle-fill"></i>
                         </button>
                       )}
-                      <button
-                        className="btn-icon btn-view action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onView(person);
-                        }}
-                        title="Ver detalles"
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#3b82f6' }}
-                      >
-                        <i className="bi bi-eye-fill"></i>
-                      </button>
                       {(isAdmin || rol === 'guardia') && (
                         <button
                           className="btn-icon btn-edit action-btn"
@@ -462,8 +595,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleConfirmDelete}
         title="¿Eliminar Persona?"
-        message="¿Estás seguro que deseas eliminar a esta persona del sistema? Se perderá todo su historial."
+        message="¿Estás seguro que deseas eliminar a esta persona del sistema? Esta acción es irreversible y se perderá su historial de asistencia."
         confirmText="Sí, Eliminar"
+        requireDoubleConfirmText="ELIMINAR"
       />
 
       {/* Confirm Modal for batch selection */}
@@ -479,8 +613,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           setSelectionMode(false);
         }}
         title="¿Eliminar Personas Seleccionadas?"
-        message={`¿Estás seguro que deseas eliminar a las ${selectedCount} personas seleccionadas de la página actual?`}
+        message={`¿Estás seguro que deseas eliminar a las ${selectedCount} personas seleccionadas? Esta acción es absolutamente irreversible.`}
         confirmText="Eliminar Lote"
+        requireDoubleConfirmText="ELIMINAR"
       />
     </div>
   );

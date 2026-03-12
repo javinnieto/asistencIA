@@ -31,7 +31,7 @@ class InstitucionAdmin(SimpleHistoryAdmin):
     list_display = ('idInstitucion', 'nombre', 'activa')
 
 class TipoPersonaAdmin(SimpleHistoryAdmin):
-    list_display = ('idTipoPersona', 'nombre', 'institucion', 'activo')
+    list_display = ('idTipoPersona', 'nombre', 'activo')
 
 class EstadoAsistenciaAdmin(SimpleHistoryAdmin):
     list_display = ('idEstadoAsistencia', 'nombre')
