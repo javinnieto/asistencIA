@@ -12,6 +12,7 @@ interface Conflicto {
   persona_db: {
     idPersona: number;
     nombre: string;
+    foto?: string;
   };
   nombre_recibido: string;
   fechaHora: string;
@@ -60,9 +61,17 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
   useEffect(() => {
     if (token) {
       fetchConflictos();
-      // Optional: poll every minute
-      const interval = setInterval(fetchConflictos, 60000);
-      return () => clearInterval(interval);
+      // Polling cada 8 segundos para detectar conflictos nuevos sin recargar
+      const interval = setInterval(fetchConflictos, 8000);
+      // También escuchar el evento 'conflictosUpdated' para refresco inmediato
+      const handleRefresh = () => fetchConflictos();
+      window.addEventListener('conflictosUpdated', handleRefresh);
+      window.addEventListener('syncCompletado', handleRefresh);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('conflictosUpdated', handleRefresh);
+        window.removeEventListener('syncCompletado', handleRefresh);
+      };
     }
   }, [token]);
 
@@ -113,52 +122,101 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
               {/* Notificaciones de Conflicto */}
               <div className="navbar-dropdown-wrapper" ref={conflictosRef}>
                 <button
-                  className="navbar-icon-btn navbar-bell-btn position-relative"
+                  className={`navbar-icon-btn navbar-bell-btn position-relative${conflictos.length > 0 ? ' navbar-bell-active' : ''}`}
                   onClick={() => {
-                    setConflictosOpen((open) => !open);
+                    const opening = !conflictosOpen;
+                    setConflictosOpen(opening);
                     setDropdownOpen(false);
+                    // Refrescar al abrir para siempre tener datos frescos
+                    if (opening) fetchConflictos();
                   }}
                   title="Alertas de Seguridad"
                 >
                   <i className="bi bi-bell-fill"></i>
-                  {conflictos.length > 0 && (
-                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.55em', padding: '0.35em 0.5em' }}>
-                      {conflictos.length}
-                    </span>
-                  )}
+                  {conflictos.length > 0 && (() => {
+                    // Deduplicar: contar personas únicas con conflicto
+                    const uniqueCount = new Set(conflictos.map(c => c.persona_db.idPersona)).size;
+                    return (
+                      <span className="navbar-notif-badge">
+                        {uniqueCount > 9 ? '9+' : uniqueCount}
+                      </span>
+                    );
+                  })()}
                 </button>
 
                 {conflictosOpen && (
-                  <div className="navbar-dropdown-menu p-3 shadow" style={{ right: 0, left: 'auto' }}>
-                    <h6 className="dropdown-header text-danger mb-2 p-0"><i className="bi bi-shield-exclamation me-1"></i> Alertas de Seguridad</h6>
-                    {conflictos.length === 0 ? (
-                      <div className="text-muted text-center py-3">No hay alertas.</div>
-                    ) : (
-                      <div className="d-flex flex-column gap-3" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                        {conflictos.map(c => (
-                          <div 
-                            key={c.idConflicto} 
-                            className="card border-danger border-1 shadow-sm"
-                            style={{ cursor: 'pointer', transition: 'all 0.2s', backgroundColor: '#fff5f5' }}
+                  <div className="navbar-dropdown-menu navbar-notif-panel shadow">
+                    <div className="navbar-notif-header">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="navbar-notif-header-icon">
+                          <i className="bi bi-shield-exclamation"></i>
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9' }}>Alertas de Seguridad</div>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                            {/* Deduplicar por persona para el conteo */}
+                            {Array.from(new Map(conflictos.map(c => [c.persona_db.idPersona, c])).values()).length} persona{Array.from(new Map(conflictos.map(c => [c.persona_db.idPersona, c])).values()).length !== 1 ? 's' : ''} con conflicto pendiente
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="navbar-notif-body">
+                      {conflictos.length === 0 ? (
+                        <div className="navbar-notif-empty">
+                          <i className="bi bi-shield-check" style={{ fontSize: '2rem', color: '#4ade80', marginBottom: '10px' }}></i>
+                          <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Sin alertas activas</div>
+                        </div>
+                      ) : (
+                        // Deduplicar: tomar el conflicto más reciente por persona
+                        Array.from(
+                          new Map(
+                            [...conflictos]
+                              .sort((a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime())
+                              .map(c => [c.persona_db.idPersona, c])
+                          ).values()
+                        ).map(c => (
+                          <div
+                            key={c.idConflicto}
+                            className="navbar-notif-item"
                             onClick={() => {
                               setConflictosOpen(false);
                               setResolvingConflict(c);
                             }}
                           >
-                            <div className="card-body p-3">
-                              <small className="text-muted d-block mb-2">{new Date(c.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ID LECTOR: {c.persona_db.idPersona}</small>
-                              <div className="mb-2" style={{ fontSize: '0.9rem', color: '#334155' }}>
-                                Un rostro coincidente intentó ingresar usando el nombre <strong className="text-danger">{c.nombre_recibido}</strong>.<br/>
-                                Registrado en BD como: <strong>{c.persona_db.nombre}</strong>
+                            {/* Foto de la persona o ícono */}
+                            {c.persona_db.foto ? (
+                              <img
+                                src={c.persona_db.foto}
+                                alt={c.persona_db.nombre}
+                                style={{
+                                  width: '40px', height: '40px', borderRadius: '50%',
+                                  objectFit: 'cover', flexShrink: 0,
+                                  border: '2px solid rgba(239,68,68,0.4)',
+                                }}
+                              />
+                            ) : (
+                              <div className="navbar-notif-item-icon">
+                                <i className="bi bi-person-fill-exclamation"></i>
                               </div>
-                              <div className="text-primary fw-bold text-end" style={{ fontSize: '0.8rem', marginTop: '10px' }}>
-                                Clic para resolver <i className="bi bi-arrow-right"></i>
+                            )}
+                            <div className="navbar-notif-item-content">
+                              <div className="navbar-notif-item-title">
+                                {c.persona_db.nombre}
+                              </div>
+                              <div className="navbar-notif-item-sub">
+                                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Lector detectó: </span>
+                                <span className="navbar-notif-name-chip navbar-notif-name-chip-danger">{c.nombre_recibido}</span>
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '4px' }}>
+                                {new Date(c.fechaHora).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}
                               </div>
                             </div>
+                            <i className="bi bi-chevron-right" style={{ color: '#475569', fontSize: '0.8rem', flexShrink: 0 }}></i>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

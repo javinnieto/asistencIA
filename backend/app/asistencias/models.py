@@ -15,18 +15,14 @@ class Institucion(models.Model):
 
 
 class TipoPersona(models.Model):
-    """Tipos de persona por institución"""
+    """Tipos de persona genéricos"""
     idTipoPersona = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50)
-    institucion = models.ForeignKey(Institucion, on_delete=models.CASCADE, related_name='tipos_persona')
     activo = models.BooleanField(default=True)
     history = HistoricalRecords()
     
-    class Meta:
-        unique_together = ['nombre', 'institucion']
-    
     def __str__(self):
-        return f"{self.nombre} ({self.institucion.nombre})"
+        return self.nombre
 
 
 class Curso(models.Model):
@@ -191,6 +187,7 @@ class ConflictoIdentidad(models.Model):
     fechaHora = models.DateTimeField(auto_now_add=True)
     foto_recibida = models.TextField(null=True, blank=True)
     resuelto = models.BooleanField(default=False)
+    id_persona_nueva = models.IntegerField(null=True, blank=True, help_text="ID de la persona más nueva que genera el conflicto")
     history = HistoricalRecords()
 
     def __str__(self):

@@ -107,13 +107,30 @@
 
 /* Responsive mobile */
 @media (max-width: 767px) {
+  .table-pagination-wrapper {
+    gap: 0.5rem;
+    padding: 0.8rem 0.5rem;
+  }
   .pagination-info-text {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
+    text-align: center;
+    white-space: normal; /* Permite que el texto se acomode en múltiples líneas si es muy largo */
+  }
+
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.3rem;
   }
 
   .btn-page {
-    padding: 0.3rem 0.55rem;
-    font-size: 0.8rem;
-    min-width: 30px;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.75rem;
+    min-width: 28px;
+  }
+  
+  .per-page-selector select {
+    font-size: 0.75rem;
   }
 }

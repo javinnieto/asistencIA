@@ -12,6 +12,7 @@ interface ConfirmModalProps {
     cancelText?: string;
     type?: 'danger' | 'warning' | 'info';
     isLoading?: boolean;
+    requireDoubleConfirmText?: string; // Nuevo: texto exacto que el usuario debe tipear para confirmar
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -23,10 +24,19 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     confirmText = 'Confirmar',
     cancelText = 'Cancelar',
     type = 'danger',
-    isLoading = false
+    isLoading = false,
+    requireDoubleConfirmText
 }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [confirmationInput, setConfirmationInput] = useState(''); // Estado para el texto ingresado
+
+    // Resetear el input al abrir/cerrar
+    useEffect(() => {
+        if (isOpen) {
+            setConfirmationInput('');
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         setMounted(true);
@@ -68,6 +78,29 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 <h3 className="confirm-modal-title">{title}</h3>
                 <p className="confirm-modal-message">{message}</p>
 
+                {requireDoubleConfirmText && (
+                    <div className="confirm-modal-validation">
+                        <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '8px', marginTop: '16px' }}>
+                            Por favor escriba <strong>{requireDoubleConfirmText}</strong> para confirmar:
+                        </p>
+                        <input
+                            type="text"
+                            value={confirmationInput}
+                            onChange={(e) => setConfirmationInput(e.target.value)}
+                            onPaste={(e) => e.preventDefault()} // Prevenir pegar para forzar a tipear
+                            className="form-control text-center"
+                            placeholder={requireDoubleConfirmText}
+                            style={{
+                                background: 'rgba(15, 23, 42, 0.5)',
+                                color: '#f87171',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '8px',
+                                fontWeight: 'bold'
+                            }}
+                        />
+                    </div>
+                )}
+
                 <div className="confirm-modal-actions">
                     <button
                         className="btn-cancel"
@@ -81,7 +114,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                         onClick={() => {
                             if (!isLoading) onConfirm();
                         }}
-                        disabled={isLoading}
+                        disabled={isLoading || (requireDoubleConfirmText ? confirmationInput !== requireDoubleConfirmText : false)}
                     >
                         {isLoading ? <span className="spinner-mini"></span> : confirmText}
                     </button>

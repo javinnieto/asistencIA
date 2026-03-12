@@ -33,10 +33,10 @@ class Command(BaseCommand):
         tecno, _ = Institucion.objects.get_or_create(nombre='TecnoAliados', defaults={'descripcion': 'Academia de Tecnología', 'activa': True})
 
         # 2. Tipos de Persona
-        estudiante_isae, _ = TipoPersona.objects.get_or_create(nombre='Estudiante', institucion=isae)
-        profesor_isae, _ = TipoPersona.objects.get_or_create(nombre='Profesor', institucion=isae)
+        estudiante_isae, _ = TipoPersona.objects.get_or_create(nombre='Estudiante')
+        profesor_isae, _ = TipoPersona.objects.get_or_create(nombre='Docente')
         
-        estudiante_tecno, _ = TipoPersona.objects.get_or_create(nombre='Alumno', institucion=tecno)
+        no_docente_tecno, _ = TipoPersona.objects.get_or_create(nombre='No Docente')
 
         # 3. Cursos
         cursos_isae = []

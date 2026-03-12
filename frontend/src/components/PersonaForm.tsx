@@ -16,8 +16,8 @@ interface Person {
   fechaIngreso: string;
   estado: 'activo' | 'inactivo';
   foto?: string;
-  roles?: any[];
   requiere_salida?: boolean;
+  roles?: any[];
 }
 
 interface PersonaFormProps {
@@ -55,8 +55,8 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
   const [types, setTypes] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [selectedInstId, setSelectedInstId] = useState<string>('');
-  const [selectedTypeId, setSelectedTypeId] = useState<string>('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [selectedTypeId, setSelectedTypeId] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -97,11 +97,6 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
     }
   }, [person, mode]);
 
-  const filteredTypes = useMemo(() => {
-    if (!selectedInstId) return [];
-    return types.filter(t => t.institucion?.idInstitucion?.toString() === selectedInstId && t.activo);
-  }, [selectedInstId, types]);
-
   const filteredCourses = useMemo(() => {
     if (!selectedInstId) return [];
     return courses.filter(c => c.institucion?.idInstitucion?.toString() === selectedInstId && c.activo);
@@ -110,11 +105,11 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
   const handleAddRole = () => {
     if (!selectedInstId || !selectedTypeId) return;
     const inst = institutions.find(i => i.idInstitucion?.toString() === selectedInstId);
-    const type = types.find(t => t.idTipoPersona?.toString() === selectedTypeId);
+    const tipo = types.find(t => t.idTipoPersona?.toString() === selectedTypeId);
     const course = selectedCourseId ? courses.find(c => c.idCurso?.toString() === selectedCourseId) : null;
-    setFormData(prev => ({ ...prev, roles: [...(prev.roles || []), { institucion: inst, tipo: type, curso: course, horarios_personalizados: [], tempId: Date.now() }] }));
-    setSelectedTypeId('');
+    setFormData(prev => ({ ...prev, roles: [...(prev.roles || []), { institucion: inst, tipo: tipo, curso: course, horarios_personalizados: [], tempId: Date.now() }] }));
     setSelectedCourseId('');
+    // No reseteamos el tipo e inst por defecto para que sea más fácil cargar varios
     // Limpiar errores al agregar rol válido
     if (errors.roles) {
       setErrors(prev => ({ ...prev, roles: '' }));
@@ -253,7 +248,6 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                     onChange={e => setFormData({ ...formData, estado: e.target.value as 'activo' | 'inactivo' })}
                   >
                     <option value="activo">✅ Activo</option>
-                    <option value="inactivo">❌ Inactivo</option>
                   </select>
                 </div>
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -274,21 +268,20 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                 <div className="role-input-row">
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Institución</label>
-                    <select className="form-select" value={selectedInstId} onChange={e => { setSelectedInstId(e.target.value); setSelectedTypeId(''); setSelectedCourseId(''); }}>
+                    <select className="form-select" value={selectedInstId} onChange={(e: any) => { setSelectedInstId(e.target.value); setSelectedCourseId(''); }}>
                       <option value="">Seleccionar...</option>
-                      {institutions.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
+                      {institutions.map((i: any) => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
                     </select>
                   </div>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Tipo</label>
-                    <select className="form-select" value={selectedTypeId} onChange={e => setSelectedTypeId(e.target.value)} disabled={!selectedInstId}>
+                    <select className="form-select" value={selectedTypeId} onChange={e => setSelectedTypeId(e.target.value)}>
                       <option value="">Seleccionar...</option>
-                      {filteredTypes.map(t => <option key={t.idTipoPersona} value={t.idTipoPersona}>{t.nombre}</option>)}
+                      {types.filter(t => t.activo).map(t => <option key={t.idTipoPersona} value={t.idTipoPersona}>{t.nombre}</option>)}
                     </select>
                   </div>
                   {/* Campo Curso - Opcional */}
-                  {selectedTypeId && (
-                    <div className="form-group" style={{ flex: 1 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
                       <label>Curso <span style={{ color: '#888', fontWeight: 'normal' }}>(Opcional)</span></label>
                       <select
                         className="form-select"
@@ -303,7 +296,6 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                         ))}
                       </select>
                     </div>
-                  )}
                   <div style={{ alignSelf: 'flex-end', paddingBottom: '2px' }}>
                     <button type="button" className="btn-add-role" onClick={handleAddRole} disabled={!selectedInstId || !selectedTypeId}>➕</button>
                   </div>
@@ -312,9 +304,8 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                   {formData.roles && formData.roles.length > 0 ? formData.roles.map((role, idx) => (
                     <div key={idx} className={`role-item ${!role.curso ? 'role-item-error' : ''}`}>
                       <div className="role-item-content">
-                        <div className="role-item-inst">{role.institucion?.nombre}</div>
+                        <div className="role-item-inst">{role.institucion?.nombre} ({role.tipo?.nombre})</div>
                         <div className="role-item-details" style={{ width: '100%' }}>
-                          <span style={{ fontWeight: 'bold' }}>{role.tipo?.nombre}</span>
                           {role.curso ? (
                             <span className="role-item-course" style={{ marginLeft: '8px' }}>{role.curso.nombre}</span>
                           ) : (
