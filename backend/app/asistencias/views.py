@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import BasePermission, IsAuthenticated, IsAdminUser, SAFE_METHODS
+from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
@@ -68,16 +69,22 @@ class AuditLogMixin:
             pass
 
     def perform_create(self, serializer):
-        instance = serializer.save(_history_user=self.request.user)
+        instance = serializer.save()
         self._log_action(instance, ADDITION)
 
     def perform_update(self, serializer):
-        instance = serializer.save(_history_user=self.request.user)
+        instance = serializer.save()
         self._log_action(instance, CHANGE)
 
     def perform_destroy(self, instance):
         self._log_action(instance, DELETION, message="Eliminado vía API")
         instance.delete()
+
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 500
 
 
 class InstitucionViewSet(AuditLogMixin, viewsets.ModelViewSet):
@@ -101,10 +108,10 @@ class TipoPersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         return TipoPersonaSerializer
 
     def perform_create(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
 
     def perform_update(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
 
 
 class CursoViewSet(AuditLogMixin, viewsets.ModelViewSet):
@@ -120,10 +127,10 @@ class CursoViewSet(AuditLogMixin, viewsets.ModelViewSet):
         return CursoSerializer
 
     def perform_create(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
 
     def perform_update(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
 
 
 
@@ -140,10 +147,10 @@ class HorarioViewSet(AuditLogMixin, viewsets.ModelViewSet):
         return HorarioSerializer
 
     def perform_create(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
 
     def perform_update(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
     
     # Propagate logic removed: Schedules are now strictly linked to Cursos.
 
@@ -178,9 +185,11 @@ def sync_editar_persona_lector(persona):
         if persona.foto:
             payload_lib["picinfo"] = persona.foto
             
+        import json
         requests.post(
             f"http://{ip}/action/EditPerson",
-            json=payload_lib,
+            data=json.dumps(payload_lib, ensure_ascii=False).encode('utf-8'),
+            headers={'Content-Type': 'application/json; charset=utf-8'},
             auth=HTTPBasicAuth(user, password),
             timeout=5
         )
@@ -216,9 +225,11 @@ def sync_eliminar_persona_lector(persona_id):
             }
         }
         
+        import json
         requests.post(
             f"http://{ip}/action/DeletePerson",
-            json=payload_lib,
+            data=json.dumps(payload_lib, ensure_ascii=False).encode('utf-8'),
+            headers={'Content-Type': 'application/json; charset=utf-8'},
             auth=HTTPBasicAuth(user, password),
             timeout=5
         )
@@ -235,7 +246,8 @@ def sync_eliminar_persona_lector(persona_id):
         }
         requests.post(
             f"http://{ip}/action/DeletePerson",
-            json=payload_cust,
+            data=json.dumps(payload_cust, ensure_ascii=False).encode('utf-8'),
+            headers={'Content-Type': 'application/json; charset=utf-8'},
             auth=HTTPBasicAuth(user, password),
             timeout=5
         )
@@ -757,6 +769,7 @@ class EstadoAsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
 class AsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Asistencia.objects.all().select_related('persona', 'estado', 'horario', 'horario__curso').order_by('-fechaHora')
     permission_classes = [EsAdminOGuardiaParaEscritura]
+    pagination_class = CustomPageNumberPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = {
         'persona': ['exact'],
@@ -910,11 +923,11 @@ class AsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
             serializer.validated_data['horario'] = None
             serializer.validated_data['llegada_tarde_minutos'] = 0
 
-        instance = serializer.save(_history_user=self.request.user)
+        instance = serializer.save()
         self._log_action(instance, CHANGE)
 
     def perform_create(self, serializer):
-        instance = serializer.save(_history_user=self.request.user)
+        instance = serializer.save()
         self._log_action(instance, ADDITION)
 
     @action(detail=False, methods=['get'])
@@ -1158,10 +1171,10 @@ class DiaNoLaborableViewSet(AuditLogMixin, viewsets.ModelViewSet):
         return DiaNoLaborableSerializer
 
     def perform_create(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
 
     def perform_update(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
 
 
 class ConfiguracionSemanaViewSet(AuditLogMixin, viewsets.ModelViewSet):
@@ -1170,7 +1183,7 @@ class ConfiguracionSemanaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     serializer_class = ConfiguracionSemanaSerializer
 
     def perform_update(self, serializer):
-        serializer.save(_history_user=self.request.user)
+        serializer.save()
 
     @action(detail=False, methods=['get'])
     def actual(self, request):

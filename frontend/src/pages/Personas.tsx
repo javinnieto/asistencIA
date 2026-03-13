@@ -39,6 +39,8 @@ const Personas: React.FC = () => {
 
 
 
+
+
   const loadPersonas = async (showLoader = true) => {
     if (showLoader) setIsLoading(true);
     try {
@@ -172,6 +174,42 @@ const Personas: React.FC = () => {
     } catch (e) {
       console.error(e);
       showToast('Error de red al eliminar el lote.', 'error');
+    }
+  };
+
+  const handleAssignCourseBatch = (ids: string[]) => {
+    setBatchAssignIds(ids);
+    setIsAssignModalOpen(true);
+  };
+
+  const confirmAssignCourse = async (cursoId: string, tipoPersonaId: string, institucionId: string) => {
+    try {
+      const promises = batchAssignIds.map(async id => {
+        const payload = {
+          persona: parseInt(id),
+          curso: parseInt(cursoId),
+          tipo: parseInt(tipoPersonaId),
+          institucion: parseInt(institucionId),
+          activo: true
+        };
+        const res = await apiRequest('/persona_institucion/', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+           const err = await res.json().catch(() => ({}));
+           throw new Error(err.detail || JSON.stringify(err) || 'Error desconocido');
+        }
+        return res.json();
+      });
+      
+      await Promise.all(promises);
+      showToast(`Se asignaron ${batchAssignIds.length} personas al curso correctamente`, 'success');
+      setIsAssignModalOpen(false);
+      setBatchAssignIds([]);
+      loadPersonas(false);
+    } catch (e: any) {
+      showToast('Error asignando personas: ' + e.message, 'error');
     }
   };
 

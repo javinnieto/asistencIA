@@ -28,7 +28,6 @@ interface PersonasTableProps {
   onDelete: (id: string) => void;
   onView: (person: Person) => void;
   onSyncDevice?: () => void;
-  conflictos?: any[];
   onResolveConflict?: (person: Person, conflictoId: number) => void;
   onDeleteBatch?: (ids: string[]) => void;
 }
@@ -395,9 +394,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
               <th
                 onClick={() => handleSort('id')}
                 className="sortable-header"
-                style={{ width: '8%', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
+                style={{ width: '5%', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
               >
-                ID LECTOR {getSortIcon('id')}
+                ID {getSortIcon('id')}
               </th>
               <th style={{ width: '60px' }}>FOTO</th>
               <th
@@ -462,7 +461,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       )}
                     </td>
                   )}
-                  <td data-label="ID LECTOR" style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '500' }}>
+                  <td data-label="ID" style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: '500', letterSpacing: '-0.01em' }}>
                     #{person.id}
                   </td>
                   <td data-label="Foto">
