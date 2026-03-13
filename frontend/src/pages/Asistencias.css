@@ -640,75 +640,91 @@
   }
 
   .as-table,
-  .as-table tbody,
-  .as-table tr,
-  .as-table td {
+  .as-table tbody {
     display: block;
     width: 100%;
   }
 
   .as-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 
+      "user status"
+      "date type"
+      "course temp"
+      "details actions";
     background: #1e293b;
     border: 1px solid #334155;
     border-radius: 12px;
     margin-bottom: 16px;
     padding: 16px;
+    gap: 12px;
+    align-items: center;
   }
 
   .as-table td {
-    border: none;
-    padding: 8px 0;
-    position: relative;
     display: flex;
-    justify-content: space-between;
+    border: none;
+    padding: 0;
     align-items: center;
   }
 
   .as-table td:before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: #94a3b8;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    min-width: 100px;
+    display: none; /* Hide old fake labels */
   }
 
-  .as-table td:nth-of-type(1):before {
-    content: "Usuario";
+  /* 1: Persona */
+  .as-table td:nth-of-type(1) {
+    grid-area: user;
+    justify-content: flex-start;
   }
 
-  .as-table td:nth-of-type(2):before {
-    content: "Curso";
+  /* 2: Horario/Curso */
+  .as-table td:nth-of-type(2) {
+    grid-area: course;
+    justify-content: flex-start;
   }
 
-  .as-table td:nth-of-type(3):before {
-    content: "Fecha";
+  /* 3: Fecha/Hora */
+  .as-table td:nth-of-type(3) {
+    grid-area: date;
+    font-size: 0.95rem;
+    color: #e2e8f0;
   }
 
-  .as-table td:nth-of-type(4):before {
-    content: "Tipo";
+  /* 4: Tipo */
+  .as-table td:nth-of-type(4) {
+    grid-area: type;
+    justify-content: flex-end;
   }
 
-  .as-table td:nth-of-type(5):before {
-    content: "Temp";
+  /* 5: Temp */
+  .as-table td:nth-of-type(5) {
+    grid-area: temp;
+    justify-content: flex-end;
   }
 
-  .as-table td:nth-of-type(6):before {
-    content: "Estado";
+  /* 6: Estado */
+  .as-table td:nth-of-type(6) {
+    grid-area: status;
+    justify-content: flex-end;
   }
 
-  .as-table td:nth-of-type(7):before {
-    content: "Detalle";
+  /* 7: Detalle */
+  .as-table td:nth-of-type(7) {
+    grid-area: details;
+    font-size: 0.85rem;
   }
 
-  .as-table td:nth-of-type(8):before {
-    content: "Acciones";
+  /* 8: Acciones */
+  .as-table td:nth-of-type(8) {
+    grid-area: actions;
+    justify-content: flex-end;
   }
 
   .as-user-cell {
-    flex: 1;
-    justify-content: flex-end;
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .as-stats-grid {

@@ -158,7 +158,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.nombre?.trim()) newErrors.nombre = 'Nombre requerido';
-    if (!formData.apellido?.trim()) newErrors.apellido = 'Apellido requerido';
+    // El apellido ya no es obligatorio
 
     // El curso ya no es obligatorio
 

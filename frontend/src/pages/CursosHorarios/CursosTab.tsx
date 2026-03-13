@@ -4,6 +4,7 @@ import { apiRequest } from '../../config/api';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/ConfirmModal';
+import AsignacionMasivaAlumnosModal from '../../components/AsignacionMasivaAlumnosModal';
 import './CursosHorarios.css';
 
 
@@ -25,6 +26,7 @@ interface Curso {
     fecha_inicio?: string;
     fecha_fin?: string;
     horarios?: Horario[];
+    cantidad_alumnos?: number;
     institucion_id?: string | number; // For form handling
 }
 
@@ -42,6 +44,17 @@ const CursosTab: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentCurso, setCurrentCurso] = useState<Partial<Curso>>({});
     const [expandedCursoId, setExpandedCursoId] = useState<number | null>(null);
+
+    // Sorting
+    const [sortField, setSortField] = useState<'idCurso'|'nombre'|'institucion'|'cantidad_alumnos'|'activo'>('nombre');
+    const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
+    
+    // Highlight
+    const [highlightedHorarioIndex, setHighlightedHorarioIndex] = useState<number | null>(null);
+
+    // Asignacion Masiva Modal State
+    const [isAsignacionModalOpen, setIsAsignacionModalOpen] = useState(false);
+    const [asignacionCurso, setAsignacionCurso] = useState<{id: number, nombre: string, institucion: number} | null>(null);
 
     // Horarios management in modal
     const [horarios, setHorarios] = useState<Horario[]>([]);
@@ -79,7 +92,11 @@ const CursosTab: React.FC = () => {
             // Need to map Institucion object to ID for the form or keep it consistent
             // The form expects institucion_id which is not on the Curso interface from api
             // So we might need to cast or just use the ID from the nested object
-            setCurrentCurso({ ...curso, institucion: curso.institucion });
+            setCurrentCurso({ 
+                ...curso, 
+                institucion: curso.institucion,
+                institucion_id: curso.institucion?.idInstitucion
+            });
             setHorarios(curso.horarios || []);
         } else {
             setCurrentCurso({ activo: true, institucion: instituciones.find(i => i.idInstitucion === parseInt(selectedInstId)) });
@@ -191,7 +208,7 @@ const CursosTab: React.FC = () => {
 
                 // Crear nuevos horarios
                 for (const h of horarios) {
-                    await apiRequest('/horarios/', {
+                    const res = await apiRequest('/horarios/', {
                         method: 'POST',
                         body: JSON.stringify({
                             curso: currentCurso.idCurso,
@@ -203,6 +220,12 @@ const CursosTab: React.FC = () => {
                             semana: h.semana || 'Todas'
                         })
                     });
+                    
+                    if (!res.ok) {
+                        const err = await res.json();
+                        showToast('Error agregando horario: ' + (err.detail || JSON.stringify(err)), 'error');
+                        return; // Abortamos la creacion si uno falla.
+                    }
                 }
 
                 showToast('Curso actualizado exitosamente', 'success');
@@ -383,14 +406,50 @@ const CursosTab: React.FC = () => {
     };
 
     // Handle clicking a horario to edit it
-    const handleEditHorario = (curso: Curso, horario: Horario) => {
-        setCurrentCurso({ ...curso, institucion_id: curso.institucion?.idInstitucion });
+    const handleEditHorario = (curso: Curso, horario: Horario, index: number) => {
+        setCurrentCurso({ 
+            ...curso, 
+            institucion_id: curso.institucion?.idInstitucion 
+        });
         setHorarios(curso.horarios || []);
         setFormError(null);
         setIsModalOpen(true);
+        setHighlightedHorarioIndex(index);
+        
+        setTimeout(() => {
+            const el = document.getElementById(`horario-item-${index}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('highlight-flash');
+                setTimeout(() => el.classList.remove('highlight-flash'), 2000);
+            }
+        }, 100);
     };
 
-    const filteredCursos = cursos.filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
+    const handleSort = (field: 'idCurso'|'nombre'|'institucion'|'cantidad_alumnos'|'activo') => {
+        if (sortField === field) setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+        else { setSortField(field); setSortDir('asc'); }
+    };
+
+    const filteredCursos = cursos
+        .filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => {
+            let valA: any = a[sortField];
+            let valB: any = b[sortField];
+            if (sortField === 'institucion') {
+                valA = a.institucion?.nombre || '';
+                valB = b.institucion?.nombre || '';
+            } else if (sortField === 'cantidad_alumnos') {
+                valA = a.cantidad_alumnos || 0;
+                valB = b.cantidad_alumnos || 0;
+            } else if (sortField === 'nombre') {
+                valA = valA?.toLowerCase() || '';
+                valB = valB?.toLowerCase() || '';
+            }
+            if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
 
     return (
         <div className="ch-tab-wrapper">
@@ -443,13 +502,16 @@ const CursosTab: React.FC = () => {
 
             {/* Table */}
             <div className="ch-table-responsive">
-                <table className="ch-table">
-                    <thead className="ch-thead">
+                <table className="ch-table mobile-cards-table">
+                    <thead className="ch-thead hide-on-mobile">
                         <tr>
                             <th className="ch-th" style={{ width: '40px' }}></th>
-                            {['ID', 'NOMBRE', 'INSTITUCIÓN', 'HORARIOS', 'VIGENCIA', 'ESTADO', 'ACCIONES'].map((h, i) => (
-                                <th key={i} className="ch-th">{h}</th>
-                            ))}
+                            <th className="ch-th clickable-th" onClick={() => handleSort('idCurso')}>ID {sortField==='idCurso' && (sortDir==='asc'?'↑':'↓')}</th>
+                            <th className="ch-th clickable-th" onClick={() => handleSort('nombre')}>NOMBRE {sortField==='nombre' && (sortDir==='asc'?'↑':'↓')}</th>
+                            <th className="ch-th clickable-th" onClick={() => handleSort('institucion')}>INSTITUCIÓN {sortField==='institucion' && (sortDir==='asc'?'↑':'↓')}</th>
+                            <th className="ch-th clickable-th" onClick={() => handleSort('cantidad_alumnos')}>ALUMNOS {sortField==='cantidad_alumnos' && (sortDir==='asc'?'↑':'↓')}</th>
+                            <th className="ch-th clickable-th" onClick={() => handleSort('activo')}>ESTADO {sortField==='activo' && (sortDir==='asc'?'↑':'↓')}</th>
+                            <th className="ch-th">ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -460,27 +522,41 @@ const CursosTab: React.FC = () => {
                                     onClick={() => toggleExpand(curso.idCurso)}
                                     style={{ cursor: 'pointer' }}
                                 >
-                                    <td className="ch-td ch-td-expand">
+                                    <td className="ch-td ch-td-expand hide-on-mobile">
                                         <i className={`bi bi-chevron-${expandedCursoId === curso.idCurso ? 'down' : 'right'}`} style={{ transition: 'transform 0.2s', fontSize: '0.9rem', color: '#94a3b8' }}></i>
                                     </td>
-                                    <td className="ch-td dimmed" data-label="ID">#{curso.idCurso}</td>
-                                    <td className="ch-td bold" data-label="Nombre">{curso.nombre}</td>
-                                    <td className="ch-td dimmed" data-label="Institución">{curso.institucion?.nombre}</td>
-                                    <td className="ch-td" data-label="Horarios">
+                                    <td className="ch-td dimmed hide-on-mobile" data-label="ID">#{curso.idCurso}</td>
+                                    <td className="ch-td bold ch-mobile-title" data-label="Nombre">{curso.nombre}</td>
+                                    <td className="ch-td dimmed ch-mobile-institucion" data-label="Institución">{curso.institucion?.nombre}</td>
+                                    <td className="ch-td" data-label="Alumnos">
                                         <span className="horario-count-badge">
-                                            {curso.horarios?.length || 0} horario{(curso.horarios?.length || 0) !== 1 ? 's' : ''}
+                                            {curso.cantidad_alumnos || 0} alumno{(curso.cantidad_alumnos || 0) !== 1 ? 's' : ''}
                                         </span>
                                     </td>
-                                    <td className="ch-td dimmed" data-label="Vigencia" style={{ fontSize: '0.9rem' }}>
-                                        {curso.fecha_inicio ? `${curso.fecha_inicio} → ${curso.fecha_fin || '∞'}` : <span style={{ fontStyle: 'italic', opacity: 0.7 }}>Sin fechas</span>}
-                                    </td>
-                                    <td className="ch-td" data-label="Estado">
+                                    <td className="ch-td ch-mobile-estado" data-label="Estado">
                                         <span className={`ch-badge ${curso.activo ? 'active' : 'inactive'}`}>
                                             {curso.activo ? 'ACTIVO' : 'INACTIVO'}
                                         </span>
                                     </td>
-                                    <td className="ch-td">
+                                    <td className="ch-td ch-mobile-acciones">
                                         <div className="action-buttons">
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setAsignacionCurso({
+                                                            id: curso.idCurso,
+                                                            nombre: curso.nombre,
+                                                            institucion: curso.institucion?.idInstitucion
+                                                        });
+                                                        setIsAsignacionModalOpen(true);
+                                                    }}
+                                                    className="btn-icon text-success"
+                                                    title="Inscripción Masiva de Alumnos"
+                                                >
+                                                    <i className="bi bi-people-fill"></i>
+                                                </button>
+                                            )}
                                             {isAdmin && (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); openModal(curso); }}
@@ -504,7 +580,7 @@ const CursosTab: React.FC = () => {
                                 </tr>
                                 {expandedCursoId === curso.idCurso && (
                                     <tr className="expanded-row">
-                                        <td colSpan={8} style={{ padding: 0, background: 'rgba(15, 23, 42, 0.8)' }}>
+                                        <td colSpan={7} style={{ padding: 0, background: 'rgba(15, 23, 42, 0.8)' }}>
                                             <div className="horarios-expanded-container">
                                                 <div className="horarios-header">
                                                     <i className="bi bi-clock-fill"></i>
@@ -524,11 +600,17 @@ const CursosTab: React.FC = () => {
                                                                 <div key={dia} className="horario-day-row">
                                                                     <div className="horario-day-label">{dia}</div>
                                                                     <div className="horario-slots">
-                                                                        {grouped[dia].map((h: any, idx: number) => (
+                                                                        {grouped[dia].map((h: any, idx: number) => {
+                                                                            // find absolute index
+                                                                            const absIdx = curso.horarios!.indexOf(h);
+                                                                            return (
                                                                             <div
                                                                                 key={idx}
                                                                                 className={`horario-slot ${isAdmin ? 'horario-card-clickable' : ''}`}
-                                                                                onClick={() => isAdmin ? handleEditHorario(curso, h) : undefined}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    isAdmin && handleEditHorario(curso, h, absIdx);
+                                                                                }}
                                                                                 title={isAdmin ? "Click para editar este horario" : ""}
                                                                                 style={{ cursor: isAdmin ? 'pointer' : 'default' }}
                                                                             >
@@ -536,7 +618,7 @@ const CursosTab: React.FC = () => {
                                                                                 {h.materia && <div className="horario-subject">{h.materia}</div>}
                                                                                 {isAdmin && <div className="horario-edit-hint"><i className="bi bi-pencil"></i></div>}
                                                                             </div>
-                                                                        ))}
+                                                                        )})}
                                                                     </div>
                                                                 </div>
                                                             ));
@@ -555,7 +637,7 @@ const CursosTab: React.FC = () => {
                             </React.Fragment>
                         ))}
                         {filteredCursos.length === 0 && !loading && (
-                            <tr><td colSpan={8} style={{ padding: 0 }}>
+                            <tr><td colSpan={7} style={{ padding: 0 }}>
                                 <div className="ch-empty-state">
                                     <i className="bi bi-journal-x ch-empty-icon"></i>
                                     No se encontraron cursos.
@@ -603,6 +685,7 @@ const CursosTab: React.FC = () => {
                                         value={currentCurso.institucion_id || ''}
                                         onChange={e => setCurrentCurso({ ...currentCurso, institucion_id: e.target.value })}
                                         required
+                                        disabled={!!currentCurso.idCurso}
                                     >
                                         <option value="">Seleccionar...</option>
                                         {instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
@@ -647,7 +730,7 @@ const CursosTab: React.FC = () => {
 
                                 <div className="horarios-list-modal">
                                     {horarios.map((h, idx) => (
-                                        <div key={idx} className="horario-item-modal">
+                                        <div key={idx} id={`horario-item-${idx}`} className={`horario-item-modal ${highlightedHorarioIndex === idx ? 'highlighted-item' : ''}`}>
                                             <div className="horario-item-number">{idx + 1}</div>
                                             <div style={{ flex: 1 }}>
                                                 <div className="horario-item-fields">
@@ -689,19 +772,12 @@ const CursosTab: React.FC = () => {
                                                         style={{ colorScheme: 'dark', ...(horarioErrors[idx] ? { borderColor: '#ef4444' } : {}) }}
                                                         required
                                                     />
-                                                    <input
-                                                        type="text"
-                                                        value={h.materia || ''}
-                                                        onChange={e => updateHorario(idx, 'materia', e.target.value)}
-                                                        className="ch-input"
-                                                        placeholder="Materia (opcional)"
-                                                    />
+                                                    {horarioErrors[idx] && (
+                                                        <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <i className="bi bi-exclamation-circle"></i> {horarioErrors[idx]}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {horarioErrors[idx] && (
-                                                    <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '4px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <i className="bi bi-exclamation-circle"></i> {horarioErrors[idx]}
-                                                    </div>
-                                                )}
                                             </div>
                                             <button
                                                 type="button"
@@ -736,6 +812,23 @@ const CursosTab: React.FC = () => {
                 confirmText="Sí, Eliminar Curso"
                 isLoading={deleting}
             />
+            {/* Assignment Modal */}
+            {isAsignacionModalOpen && asignacionCurso && (
+                <AsignacionMasivaAlumnosModal
+                    isOpen={isAsignacionModalOpen}
+                    onClose={() => {
+                        setIsAsignacionModalOpen(false);
+                        setAsignacionCurso(null);
+                    }}
+                    cursoId={asignacionCurso.id}
+                    institucionId={asignacionCurso.institucion}
+                    courseName={asignacionCurso.nombre}
+                    selectedRoleType={1} // Asumimos que 1 es Estudiante, tal vez requiera ajustes si es dinámico.
+                    onSuccess={() => {
+                        fetchCursos();
+                    }}
+                />
+            )}
         </div>
     );
 };

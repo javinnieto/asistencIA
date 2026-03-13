@@ -564,6 +564,31 @@
     background: rgba(59, 130, 246, 0.05);
 }
 
+.ch-td-expand {
+    width: 50px;
+    text-align: center;
+    border-right: 1px solid rgba(51, 65, 85, 0.3);
+    background: rgba(15, 23, 42, 0.2);
+    transition: all 0.2s ease;
+}
+
+.ch-tr.clickable:hover .ch-td-expand {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.ch-td-expand i {
+    font-size: 1.1rem !important;
+    color: #3b82f6 !important; /* Brighter blue for visibility */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.ch-tr.clickable:hover .ch-td-expand i {
+    transform: scale(1.2);
+}
+
 .expanded-row {
     background: rgba(15, 23, 42, 0.8) !important;
     border-bottom: 1px solid #334155;
@@ -766,6 +791,25 @@
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
+.btn-remove-horario:hover i {
+    transform: scale(1.1);
+}
+
+/* =========================================
+   Highlight Effect for Editing Horarios
+   ========================================= */
+.highlight-flash {
+    animation: highlightFade 2s ease-out;
+}
+
+@keyframes highlightFade {
+    0% { background-color: rgba(59, 130, 246, 0.4); border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.6); }
+    100% { background-color: rgba(30, 41, 59, 0.6); border-color: rgba(102, 126, 234, 0.2); box-shadow: none; }
+}
+.highlighted-item {
+    border: 1px solid #3b82f6 !important;
+}
+
 .horarios-list-modal {
     display: flex;
     flex-direction: column;
@@ -948,6 +992,12 @@
 
     /* Hide expand chevron cell on mobile */
     .ch-td-expand {
+        display: none !important;
+    }
+
+    /* Hide columns marked as desktop-only */
+    .ch-td.hide-on-mobile,
+    .hide-on-mobile {
         display: none !important;
     }
 

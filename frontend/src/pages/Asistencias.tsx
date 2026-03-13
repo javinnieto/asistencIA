@@ -4,6 +4,7 @@ import { apiRequest } from '../config/api';
 import { includesNormalized } from '../utils/normalize';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
+import TablePagination from '../components/TablePagination';
 import './Asistencias.css';
 
 
@@ -136,7 +137,7 @@ const Asistencias: React.FC = () => {
   const [previousUrl, setPreviousUrl] = useState<string | null>(null);
   const [totalRecords, setTotalRecords] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const [itemsPerPage, setItemsPerPage] = useState(parseInt(searchParams.get('page_size') || '10'));
 
   // Sorting
   const [ordering, setOrdering] = useState(searchParams.get('ordering') || '-fechaHora');
@@ -178,6 +179,7 @@ const Asistencias: React.FC = () => {
     if (minTempFiltro) params.append('temperatura__gte', minTempFiltro);
     if (maxTempFiltro) params.append('temperatura__lte', maxTempFiltro);
     if (ordering) params.append('ordering', ordering);
+    params.append('page_size', itemsPerPage.toString());
 
     return params.toString();
   };
@@ -220,6 +222,7 @@ const Asistencias: React.FC = () => {
         if (horarioFiltro) cleanParams.set('horario', horarioFiltro);
         if (minTempFiltro) cleanParams.set('minTemp', minTempFiltro);
         if (ordering) cleanParams.set('ordering', ordering);
+        cleanParams.set('page_size', itemsPerPage.toString());
 
         if (pageForUrl > 1) cleanParams.set('page', pageForUrl.toString());
 
@@ -260,12 +263,17 @@ const Asistencias: React.FC = () => {
     cargarCursos();
   }, []);
 
+  // Trigger load when itemsPerPage changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+  
   // Trigger load when filters change
   useEffect(() => {
     const query = buildQueryString();
     cargarDatos();
     fetchStats(query);
-  }, [searchTerm, fechaInicio, fechaFin, cursoFiltro, estadoFiltro, horarioFiltro, minTempFiltro, maxTempFiltro, ordering]);
+  }, [searchTerm, fechaInicio, fechaFin, cursoFiltro, estadoFiltro, horarioFiltro, minTempFiltro, maxTempFiltro, ordering, itemsPerPage]);
 
   const handleCardClick = (filtro: string) => {
     if (filtro === 'Fiebre') {
@@ -277,7 +285,7 @@ const Asistencias: React.FC = () => {
     }
   };
 
-  const handlePageClick = (page: number) => {
+  const handlePageChange = (page: number) => {
     const params = new URLSearchParams();
     if (searchTerm) params.append('search', searchTerm);
     if (fechaInicio) params.append('fechaHora__gte', `${fechaInicio}T00:00:00`);
@@ -293,38 +301,13 @@ const Asistencias: React.FC = () => {
     if (maxTempFiltro) params.append('temperatura__lte', maxTempFiltro);
     if (ordering) params.append('ordering', ordering);
 
+    params.append('page_size', itemsPerPage.toString());
     params.append('page', page.toString());
 
     cargarDatos(`/asistencias/?${params.toString()}`);
   };
 
-  const totalPages = Math.ceil(totalRecords / pageSize);
-
-  const getPageNumbers = () => {
-    const delta = 2;
-    const range: number[] = []; // Explicit type
-    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-      range.push(i);
-    }
-
-    const pages: (number | string)[] = []; // Explicit type
-
-    if (totalPages >= 1) pages.push(1);
-
-    if (range.length > 0 && range[0] > 2) {
-      pages.push('...');
-    }
-
-    range.forEach(i => pages.push(i));
-
-    if (range.length > 0 && range[range.length - 1] < totalPages - 1) {
-      pages.push('...');
-    }
-
-    if (totalPages > 1) pages.push(totalPages);
-
-    return pages;
-  };
+  const totalPages = Math.max(1, Math.ceil(totalRecords / itemsPerPage));
 
   const handleEdit = (asistencia: Asistencia) => {
     setEditingAsistencia(asistencia);
@@ -401,34 +384,7 @@ const Asistencias: React.FC = () => {
     setMaxTempFiltro('');
   };
 
-  // Pagination Handlers
-  const handleNextPage = () => {
-    if (nextUrl) {
-      // Extract relative path + query from full URL
-      try {
-        const urlObj = new URL(nextUrl);
-        const relativePath = urlObj.pathname + urlObj.search;
-        // Remove /back/api prefix if present (apiRequest will add /api)
-        const cleanUrl = relativePath.replace(/^\/back\/api/, '');
-        cargarDatos(cleanUrl);
-      } catch (e) {
-        cargarDatos(nextUrl); // Fallback
-      }
-    }
-  };
-
-  const handlePreviousPage = () => {
-    if (previousUrl) {
-      try {
-        const urlObj = new URL(previousUrl);
-        const relativePath = urlObj.pathname + urlObj.search;
-        const cleanUrl = relativePath.replace(/^\/back\/api/, '');
-        cargarDatos(cleanUrl);
-      } catch (e) {
-        cargarDatos(previousUrl);
-      }
-    }
-  };
+  // Removed unused handleNextPage/handlePreviousPage now that TablePagination handles it
 
   const formatDateTime = (isoString: string) => {
     return new Date(isoString).toLocaleString('es-ES', {
@@ -691,36 +647,14 @@ const Asistencias: React.FC = () => {
 
       {/* Pagination Controls */}
       {totalRecords > 0 && (
-        <div className="as-pagination-container">
-          <button
-            onClick={handlePreviousPage}
-            disabled={!previousUrl}
-            className="as-btn-page navigation"
-          >
-            <i className="bi bi-chevron-left"></i>
-          </button>
-
-          <div className="as-page-numbers">
-            {getPageNumbers().map((p, idx) => (
-              <button
-                key={idx}
-                onClick={() => typeof p === 'number' ? handlePageClick(p) : null}
-                className={`as-btn-page ${p === currentPage ? 'active' : ''} ${p === '...' ? 'dots' : ''}`}
-                disabled={p === '...'}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={handleNextPage}
-            disabled={!nextUrl}
-            className="as-btn-page navigation"
-          >
-            <i className="bi bi-chevron-right"></i>
-          </button>
-        </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+          totalItems={totalRecords}
+        />
       )}
 
       {/* Edit Modal (Preserved as is mostly) */}

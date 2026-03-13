@@ -1,0 +1,214 @@
+/* =========================================
+   Modal de Asignación Masiva - Dark Theme
+   ========================================= */
+
+/* Overlay con z-index alto para que no quede tapado por el header */
+.asignacion-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1060;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Buscador integrado */
+.asignacion-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.asignacion-search-icon {
+    position: absolute;
+    left: 14px;
+    color: #64748b;
+    font-size: 0.95rem;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.asignacion-search-input {
+    width: 100%;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 10px 14px 10px 40px;
+    color: #f1f5f9;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.asignacion-search-input::placeholder {
+    color: #64748b;
+}
+
+.asignacion-search-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Base glass panel */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Theme Override */
+.modal-content.dark-theme {
+    background-color: #0f172a !important;
+    color: #f8f9fa !important;
+    border: 1px solid rgba(99, 102, 241, 0.2) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+}
+
+.modal-content.dark-theme .modal-header {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(99, 102, 241, 0.05));
+    border-bottom: 1px solid #1e293b !important;
+}
+
+.modal-content.dark-theme .modal-footer {
+    background: rgba(15, 23, 42, 0.6);
+    border-top: 1px solid #1e293b !important;
+}
+
+.modal-content.dark-theme .btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    opacity: 0.8;
+}
+
+.modal-content.dark-theme .btn-close-white:hover {
+    opacity: 1;
+}
+
+/* Search Campo */
+.modal-content.dark-theme .custom-search-group .input-group-text {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8;
+}
+
+.modal-content.dark-theme .custom-search-group input {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f1f5f9 !important;
+}
+
+.modal-content.dark-theme .custom-search-group input::placeholder {
+    color: #64748b !important;
+}
+
+.modal-content.dark-theme .custom-search-group input:focus {
+    background-color: #1e293b !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+    border-color: #3b82f6 !important;
+    color: #f1f5f9 !important;
+}
+
+/* Table Header con contraste mejorado */
+.modal-content.dark-theme .table-dark thead th {
+    background-color: #0f172a !important;
+    color: #94a3b8 !important;
+    border-bottom: 1px solid #334155 !important;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Checkboxes - contraste mejorado */
+.modal-content.dark-theme .form-check-input {
+    background-color: #1e293b !important;
+    border-color: #475569 !important;
+    width: 18px !important;
+    height: 18px !important;
+    cursor: pointer;
+}
+
+.modal-content.dark-theme .form-check-input:checked {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+}
+
+.modal-content.dark-theme .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Scrollbar oscuro en la card */
+.modal-content.dark-theme .card::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-content.dark-theme .card::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+.modal-content.dark-theme .card::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+.modal-content.dark-theme .card::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Text helper */
+.modal-content.dark-theme .text-muted {
+    color: #64748b !important;
+}
+
+/* Cursor y hover helpers */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.hover-opacity:hover {
+    opacity: 0.8;
+}
+
+.hover-scale {
+    transition: transform 0.2s ease;
+}
+.hover-scale:hover {
+    transform: scale(1.03);
+}
+
+/* =========================================
+   Mobile Responsive - Modal Asignación
+   ========================================= */
+@media (max-width: 576px) {
+    .modal-dialog.modal-lg {
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .modal-content {
+        border-radius: 16px 16px 0 0 !important;
+        margin-top: auto !important;
+    }
+
+    /* Ocultar columna "Cargo" en mobile para reducir scroll horizontal */
+    .asignacion-col-cargo {
+        display: none;
+    }
+
+    /* Tabla compacta en mobile */
+    .modal-content.dark-theme .table td,
+    .modal-content.dark-theme .table th {
+        padding: 10px 8px;
+    }
+
+    .modal-content.dark-theme .form-check-input {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* Modal ocupa toda la pantalla */
+    .modal.show .modal-dialog {
+        transform: translateY(0) !important;
+    }
+}
