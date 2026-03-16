@@ -27,6 +27,7 @@ interface Curso {
     fecha_fin?: string;
     horarios?: Horario[];
     cantidad_alumnos?: number;
+    cantidad_horarios?: number;
     institucion_id?: string | number; // For form handling
 }
 
