@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { apiRequest } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { getLocalDateString } from '../utils/dateUtils';
+import { useModalBackButton } from '../hooks/useModalBackButton';
 import './PersonaForm.css';
 
 interface Person {
@@ -36,6 +38,10 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
   mode
 }) => {
   const { rol } = useAuth();
+
+  // Botón atrás del navegador/sistema cierra el modal
+  useModalBackButton(isOpen, onClose);
+
   const [formData, setFormData] = useState<Omit<Person, 'id'>>({
     nombre: '',
     apellido: '',
@@ -44,7 +50,7 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
     telefono_emergencia: '',
     departamento: '',
     cargo: '',
-    fechaIngreso: new Date().toISOString().split('T')[0],
+    fechaIngreso: getLocalDateString(),
     estado: 'activo',
     foto: '',
     roles: [],

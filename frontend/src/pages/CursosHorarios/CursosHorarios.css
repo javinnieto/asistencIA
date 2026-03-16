@@ -53,8 +53,8 @@
 }
 
 .ch-tab-button.active {
-    background: rgba(59, 130, 246, 0.08);
-    border-bottom-color: #3b82f6;
+    background: rgba(139, 92, 246, 0.08);
+    border-bottom-color: #8b5cf6;
 }
 
 .ch-tab-icon-wrapper {
@@ -71,7 +71,7 @@
 }
 
 .ch-tab-button.active .ch-tab-icon-wrapper {
-    background: #3b82f6;
+    background: #8b5cf6;
 }
 
 .ch-tab-label {
@@ -305,7 +305,7 @@
 .ch-checkbox {
     width: 24px !important;
     height: 24px !important;
-    accent-color: #3b82f6;
+    accent-color: #8b5cf6;
     cursor: pointer;
 }
 
@@ -333,7 +333,7 @@
 
 .ch-btn-save {
     padding: 12px 24px;
-    background: #3b82f6;
+    background: #8b5cf6;
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -343,8 +343,8 @@
 }
 
 .ch-btn-save:hover {
-    background: #2563eb;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    background: #7c3aed;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 /* =========================================
@@ -375,7 +375,7 @@
 .ch-title-bar {
     width: 4px;
     height: 32px;
-    background: #3b82f6;
+    background: #8b5cf6;
     border-radius: 4px;
 }
 
@@ -410,7 +410,7 @@
 }
 
 .ch-day-header {
-    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+    background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
     padding: 12px 24px;
     color: #fff;
     font-weight: 700;
@@ -483,31 +483,48 @@
 }
 
 .btn-edit {
-    background: rgba(245, 158, 11, 0.1);
-    color: #fbbf24;
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid #334155;
 }
 
 .btn-edit:hover {
-    background: rgba(245, 158, 11, 0.2);
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    background: rgba(148, 163, 184, 0.1);
+    color: #cbd5e1;
+    border-color: #475569;
     transform: translateY(-1px);
 }
 
 .btn-delete {
-    background: rgba(239, 68, 68, 0.1);
-    color: #f87171;
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid #334155;
     position: relative;
     z-index: 10;
 }
 
 .btn-delete:hover {
-    background: rgba(239, 68, 68, 0.2);
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-icon.text-success {
+    background: transparent !important;
+    color: #94a3b8 !important;
+    border: 1px solid #334155;
+}
+
+.btn-icon.text-success:hover {
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: #cbd5e1 !important;
+    border-color: #475569;
     transform: translateY(-1px);
 }
 
 .btn-primary-action {
-    background: #3b82f6;
+    background: #8b5cf6;
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -521,8 +538,8 @@
 }
 
 .btn-primary-action:hover {
-    background: #2563eb;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    background: #7c3aed;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
     transform: translateY(-1px);
 }
 
@@ -545,8 +562,8 @@
 }
 
 .search-input-styled:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
 }
 
 .search-icon-pos {
@@ -561,7 +578,7 @@
    Expandable Rows & Horarios Display
    ========================================= */
 .ch-tr.clickable:hover {
-    background: rgba(59, 130, 246, 0.05);
+    background: rgba(139, 92, 246, 0.05);
 }
 
 .ch-td-expand {
@@ -573,16 +590,16 @@
 }
 
 .ch-tr.clickable:hover .ch-td-expand {
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(139, 92, 246, 0.15);
 }
 
 .ch-td-expand i {
     font-size: 1.1rem !important;
-    color: #3b82f6 !important; /* Brighter blue for visibility */
+    color: #8b5cf6 !important; /* Brighter blue for visibility */
     display: flex;
     align-items: center;
     justify-content: center;
-    text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
 }
 
 .ch-tr.clickable:hover .ch-td-expand i {
@@ -608,68 +625,63 @@
     font-size: 1rem;
 }
 
-.horarios-by-day {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.horario-day-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 12px 16px;
-    background: rgba(30, 41, 59, 0.5);
-    border: 1px solid rgba(102, 126, 234, 0.15);
-    border-left: 3px solid #667eea;
-    border-radius: 10px;
-}
-
-.horario-day-label {
-    min-width: 100px;
-    font-weight: 700;
-    color: #a5b4fc;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding-top: 6px;
-    flex-shrink: 0;
-}
-
-.horario-slots {
+.horarios-compact-grid {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    flex: 1;
 }
 
 .horario-slot {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(102, 126, 234, 0.25);
-    border-radius: 10px;
-    padding: 10px 16px;
-    position: relative;
-    transition: all 0.2s;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 8px 12px;
     min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    transition: all 0.2s ease;
 }
 
-.horario-slot:hover {
-    border-color: #3b82f6;
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+.horario-slot.horario-card-clickable:hover {
+    background: #2a3b5c;
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
-.horario-slot .horario-edit-hint {
+.horario-time-compact {
+    font-size: 0.85rem;
+    color: #f1f5f9;
+    font-weight: 500;
+}
+
+.horario-time-compact strong {
+    color: #a5b4fc;
+}
+
+.horario-subject-compact {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.horario-edit-hint-compact {
     position: absolute;
-    top: 8px;
+    top: 6px;
     right: 8px;
     opacity: 0;
+    color: #667eea;
+    font-size: 0.85rem;
     transition: opacity 0.2s;
-    color: #3b82f6;
-    font-size: 0.8rem;
 }
 
-.horario-slot:hover .horario-edit-hint {
+.horario-slot.horario-card-clickable:hover .horario-edit-hint-compact {
     opacity: 1;
 }
 
@@ -693,9 +705,9 @@
 }
 
 .horario-card-clickable:hover {
-    border-color: #3b82f6;
+    border-color: #8b5cf6;
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.3);
 }
 
 .horario-card-clickable .horario-edit-hint {
@@ -704,7 +716,7 @@
     right: 10px;
     opacity: 0;
     transition: opacity 0.2s;
-    color: #3b82f6;
+    color: #8b5cf6;
     font-size: 0.9rem;
 }
 
@@ -803,11 +815,11 @@
 }
 
 @keyframes highlightFade {
-    0% { background-color: rgba(59, 130, 246, 0.4); border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.6); }
+    0% { background-color: rgba(139, 92, 246, 0.4); border-color: #8b5cf6; box-shadow: 0 0 15px rgba(139, 92, 246, 0.6); }
     100% { background-color: rgba(30, 41, 59, 0.6); border-color: rgba(102, 126, 234, 0.2); box-shadow: none; }
 }
 .highlighted-item {
-    border: 1px solid #3b82f6 !important;
+    border: 1px solid #8b5cf6 !important;
 }
 
 .horarios-list-modal {
@@ -878,10 +890,17 @@
     cursor: not-allowed;
 }
 
+/* Elements visible only on mobile — hidden by default on desktop */
+.hide-on-desktop,
+.ch-mobile-expand-indicator {
+    display: none !important;
+}
+
 /* =========================================
    Responsive Mobile Design
    ========================================= */
 @media (max-width: 768px) {
+
 
     /* General responsive adjustments */
     .ch-header-controls {
@@ -931,58 +950,93 @@
     .ch-table,
     .ch-table tbody,
     .ch-tr,
-    .ch-td {
+    .ch-td,
+    .expanded-row,
+    .expanded-row td {
         display: block;
         width: 100%;
     }
 
-    /* Style rows as cards */
+    /* Style rows as floating cards */
     .ch-tr {
-        background: #1e293b;
+        background: linear-gradient(145deg, #1e293b, #0f172a);
         border: 1px solid #334155;
-        border-radius: 12px;
-        margin-bottom: 16px;
-        padding: 16px;
-        border-bottom: 1px solid #334155;
+        border-radius: 16px;
+        margin-bottom: 20px;
+        padding: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .ch-tr:active {
+        transform: scale(0.98);
+    }
+    
+    .ch-tr.expanded-active {
+        border-color: #8b5cf6;
+        border-bottom-color: transparent;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        margin-bottom: 0;
+        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        position: relative;
+        z-index: 2;
     }
 
-    /* Style cells */
+    /* Base cell styles */
     .ch-td {
         border: none;
-        padding: 8px 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        padding: 0;
         text-align: left !important;
+        margin-bottom: 8px;
     }
 
-    /* Add labels before content */
-    .ch-td:before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: #94a3b8;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        min-width: 100px;
-        flex-shrink: 0;
+    /* Title cell */
+    .ch-td.ch-mobile-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #f8fafc !important;
+        margin-bottom: 2px;
+        letter-spacing: -0.025em;
     }
 
-    /* Last cell (actions) should stack properly */
-    .ch-td:last-child {
-        justify-content: flex-end;
-        padding-top: 12px;
-        margin-top: 8px;
-        border-top: 1px solid #334155;
+    /* Institution cell */
+    .ch-td.ch-mobile-institucion {
+        color: #94a3b8 !important;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        margin-bottom: 16px;
     }
 
-    .ch-td:last-child:before {
-        content: none;
+    /* Badges flex row */
+    .ch-td.ch-mobile-badges {
+        margin-bottom: 20px;
     }
 
-    /* Action buttons in mobile */
-    .action-buttons {
+    /* Actions cell */
+    .ch-td.ch-mobile-actions {
+        margin-top: 16px;
+        display: block;
+    }
+
+    /* Full-width action buttons on mobile */
+    .ch-td.ch-mobile-actions .action-buttons {
         width: 100%;
+    }
+
+    .ch-td.ch-mobile-actions .btn-icon {
+        flex: 1;
+        padding: 12px 0;
+        border-radius: 10px;
+        min-height: 48px; /* touch-friendly target */
+        justify-content: center;
+    }
+
+
+    /* Hide pseudo labels for cards */
+    .ch-td:before {
+        content: none !important;
     }
 
     /* Tabs responsive */
@@ -990,10 +1044,16 @@
         grid-template-columns: 1fr;
     }
 
+    /* Expansion Indicator styling */
+    .ch-mobile-expand-indicator {
+        opacity: 0.8;
+    }
+
     /* Hide expand chevron cell on mobile */
     .ch-td-expand {
         display: none !important;
     }
+
 
     /* Hide columns marked as desktop-only */
     .ch-td.hide-on-mobile,
@@ -1018,6 +1078,13 @@
         display: none;
     }
 
+    .hide-on-desktop,
+    .ch-mobile-expand-indicator {
+        display: block !important;
+    }
+
+
+
     .ch-tab-icon-wrapper {
         width: 36px;
         height: 36px;
@@ -1041,16 +1108,73 @@
         grid-template-columns: 1fr;
     }
 
+    /* Expanded Horarios layout fixes in mobile */
+    .horarios-expanded-container {
+        width: 100% !important;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .horarios-compact-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        width: 100%;
+    }
+
+    .horario-slot {
+        width: auto;
+        min-width: unset;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 8px;
+    }
+
     /* Horario items - remove min-width to prevent overflow */
     .ch-horario-item {
         min-width: unset;
         max-width: 100%;
     }
 
+
+    /* Wrap filters on mobile to avoid scroll */
+    .ch-controls-row.nowrap {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .ch-select {
+        max-width: 100% !important;
+    }
+
     /* Search container */
     .search-container {
         min-width: unset;
         width: 100%;
+    }
+
+    /* Floating Action Button for Nuevo Curso */
+    .btn-fab-mobile {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        padding: 0;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        z-index: 1000;
+        font-size: 1.5rem;
+    }
+    .btn-fab-mobile .hide-on-mobile-fab {
+        display: none;
+    }
+    .btn-fab-mobile i {
+        margin: 0 !important;
     }
 
     /* Empty state */
@@ -1075,6 +1199,19 @@
     }
 
     /* Expanded rows */
+    .expanded-row {
+        background: linear-gradient(145deg, #1e293b, #0f172a) !important;
+        border: 1px solid #8b5cf6 !important;
+        border-top: none !important;
+        border-radius: 0 0 16px 16px !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+        position: relative;
+        z-index: 1;
+        display: block;
+        width: 100%;
+    }
+
     .expanded-row td {
         display: block !important;
         padding: 0 !important;

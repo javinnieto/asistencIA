@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
+import { useModalBackButton } from '../hooks/useModalBackButton';
 import './ConfirmModal.css';
 
 interface ConfirmModalProps {
@@ -30,6 +31,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     const [isVisible, setIsVisible] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [confirmationInput, setConfirmationInput] = useState(''); // Estado para el texto ingresado
+
+    // Botón atrás del navegador/sistema cierra el modal
+    useModalBackButton(isOpen, onClose);
 
     // Resetear el input al abrir/cerrar
     useEffect(() => {

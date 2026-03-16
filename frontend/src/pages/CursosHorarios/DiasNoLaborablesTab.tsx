@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 import { apiRequest } from '../../config/api';
 import { useToast } from '../../components/Toast';
 import ConfirmModal from '../../components/ConfirmModal';
+import { getLocalDateString } from '../../utils/dateUtils';
+import { useModalBackButton } from '../../hooks/useModalBackButton';
 import './CursosHorarios.css';
 
 interface Institucion {
@@ -159,7 +161,7 @@ const DiasNoLaborablesTab: React.FC = () => {
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState<DiaNoLaborable>({
-        fecha_inicio: new Date().toISOString().split('T')[0],
+        fecha_inicio: getLocalDateString(),
         fecha_fin: '',
         motivo: '',
         institucion: '',
@@ -173,6 +175,9 @@ const DiasNoLaborablesTab: React.FC = () => {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
     const [deleting, setDeleting] = useState(false);
+
+    // Botón atrás: cierra el modal de nuevo/editar día no laborable
+    useModalBackButton(isModalOpen, () => setIsModalOpen(false));
 
     // Fetch instituciones on mount
     useEffect(() => {
@@ -234,7 +239,7 @@ const DiasNoLaborablesTab: React.FC = () => {
             });
         } else {
             setFormData({
-                fecha_inicio: new Date().toISOString().split('T')[0],
+                fecha_inicio: getLocalDateString(),
                 fecha_fin: '',
                 motivo: '',
                 institucion: selectedInstId ? parseInt(selectedInstId) : (instituciones[0]?.idInstitucion || ''),
@@ -321,7 +326,7 @@ const DiasNoLaborablesTab: React.FC = () => {
 
     // Build scope summary for table
     const getScopeSummary = (dia: DiaNoLaborable) => {
-        if (dia.aplica_a_todos) return <span className="ch-badge active">TODA LA INSTITUCIÓN</span>;
+        if (dia.aplica_a_todos) return <span className="ch-badge bg-success text-white">General</span>;
 
         const parts: React.ReactNode[] = [];
         if (dia.cursos_afectados && dia.cursos_afectados.length > 0) {
@@ -365,13 +370,13 @@ const DiasNoLaborablesTab: React.FC = () => {
                             Feriados, jornadas y excepciones
                         </p>
                     </div>
-                    <button onClick={() => openModal()} className="btn-primary-action">
-                        <i className="bi bi-plus-lg"></i> Nuevo Día
+                    <button onClick={() => openModal()} className="btn-primary-action btn-fab-mobile">
+                        <i className="bi bi-plus-lg"></i> <span className="hide-on-mobile-fab">Nuevo Día</span>
                     </button>
                 </div>
 
                 <div className="ch-controls-row nowrap">
-                    <div className="search-container" style={{ flex: '1 1 200px', minWidth: '200px' }}>
+                    <div className="search-container" style={{ flex: '1' }}>
                         <i className="bi bi-search search-icon-pos"></i>
                         <input
                             type="text"
@@ -406,20 +411,37 @@ const DiasNoLaborablesTab: React.FC = () => {
                     </thead>
                     <tbody>
                         {filteredDias.map(dia => (
-                            <tr key={dia.idDia} className="ch-tr">
-                                <td className="ch-td bold" data-label="Fecha">
-                                    {formatDate(dia.fecha_inicio)}
-                                    {dia.fecha_fin && dia.fecha_fin !== dia.fecha_inicio && (
-                                        <span style={{ color: '#94a3b8', fontWeight: 400 }}> → {formatDate(dia.fecha_fin)}</span>
-                                    )}
+                            <tr key={dia.idDia} className="ch-tr clickable" style={{ cursor: 'default' }}>
+                                {/* Mobile Title Area */}
+                                <td className="ch-td bold ch-mobile-title" data-label="Fecha">
+                                    <div className="d-flex justify-content-between align-items-start w-100">
+                                        <div className="text-wrap me-2">
+                                            {dia.motivo}
+                                        </div>
+                                        <div className="hide-on-desktop d-flex flex-column align-items-end flex-shrink-0">
+                                            {getScopeSummary(dia)}
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginTop: '4px', fontWeight: 'normal' }}>
+                                        <i className="bi bi-calendar-event me-2"></i>
+                                        {formatDate(dia.fecha_inicio)}
+                                        {dia.fecha_fin && dia.fecha_fin !== dia.fecha_inicio && (
+                                            <span> → {formatDate(dia.fecha_fin)}</span>
+                                        )}
+                                    </div>
                                 </td>
-                                <td className="ch-td bold" data-label="Motivo">{dia.motivo}</td>
-                                <td className="ch-td dimmed" data-label="Institución">
+
+                                {/* Desktop Columns that combine motive and date */}
+                                <td className="ch-td bold hide-on-mobile" data-label="Motivo">{dia.motivo}</td>
+
+                                <td className="ch-td dimmed ch-mobile-institucion" data-label="Institución">
+                                    <i className="bi bi-building me-2 hide-on-desktop"></i>
                                     {typeof dia.institucion === 'object' ? dia.institucion.nombre : ''}
                                 </td>
-                                <td className="ch-td" data-label="Alcance">{getScopeSummary(dia)}</td>
-                                <td className="ch-td">
-                                    <div className="action-buttons">
+
+                                <td className="ch-td hide-on-mobile" data-label="Alcance">{getScopeSummary(dia)}</td>
+                                <td className="ch-td ch-mobile-actions">
+                                    <div className="action-buttons d-flex gap-2">
                                         <button onClick={() => openModal(dia)} className="btn-icon btn-edit" title="Editar">
                                             <i className="bi bi-pencil-fill"></i>
                                         </button>
@@ -446,7 +468,15 @@ const DiasNoLaborablesTab: React.FC = () => {
             {isModalOpen && ReactDOM.createPortal(
                 <div className="ch-modal-overlay">
                     <div className="ch-modal-content" style={{ maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h2 className="ch-modal-title">{formData.idDia ? 'Editar' : 'Nuevo'} Día No Laborable</h2>
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+                            <h2 className="ch-modal-title mb-0">{formData.idDia ? 'Editar' : 'Nuevo'} Día No Laborable</h2>
+                            <button 
+                                type="button" 
+                                className="btn-close btn-close-white" 
+                                onClick={() => setIsModalOpen(false)}
+                                aria-label="Close"
+                            ></button>
+                        </div>
 
                         <form onSubmit={handleSave}>
                             <div style={{ marginBottom: '24px' }}>

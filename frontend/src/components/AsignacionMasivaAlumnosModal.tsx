@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { apiRequest } from '../config/api';
 import { useToast } from './Toast';
+import { useModalBackButton } from '../hooks/useModalBackButton';
 import './AsignacionMasivaAlumnosModal.css';
 
 interface Person {
@@ -17,8 +19,8 @@ interface AsignacionMasivaModalProps {
   cursoId: number;
   institucionId: number;
   courseName: string;
-  selectedRoleType: number; // Por defecto el ID del rol "Estudiante"
-  onSuccess: () => void; // Para recargar los datos si es necesario
+  selectedRoleType: number;
+  onSuccess: () => void;
 }
 
 const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
@@ -32,21 +34,28 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'todos' | 'asignados'>('todos');
+
+  // Botón atrás del navegador/sistema cierra el modal
+  useModalBackButton(isOpen, onClose);
 
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
       fetchPersonas();
       setSearchTerm('');
+      setActiveTab('todos');
+      return () => { document.body.style.overflow = ''; };
     }
   }, [isOpen]);
 
   const fetchPersonas = async () => {
     setLoading(true);
     try {
-      // 1. Fetch all people
-      const resPersonas = await apiRequest('/personas/?limit=500');
-      // 2. Fetch people in this course
-      const resInscritos = await apiRequest(`/persona-institucion/?curso=${cursoId}&limit=500`);
+      const [resPersonas, resInscritos] = await Promise.all([
+        apiRequest('/personas/?limit=500'),
+        apiRequest(`/persona-institucion/?curso=${cursoId}&limit=500`)
+      ]);
       
       if (resPersonas.ok && resInscritos.ok) {
         const dataPersonas = await resPersonas.json();
@@ -57,9 +66,9 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
         const piMap: Record<number, number> = {};
 
         inscritosList.forEach((pi: any) => {
-            const pId = typeof pi.persona === 'object' ? pi.persona.idPersona : pi.persona;
-            initialSet.add(pId);
-            piMap[pId] = pi.idPersonaInstitucion;
+          const pId = typeof pi.persona === 'object' ? pi.persona.idPersona : pi.persona;
+          initialSet.add(pId);
+          piMap[pId] = pi.idPersonaInstitucion;
         });
 
         const list = (dataPersonas.results || dataPersonas).map((p: any) => ({
@@ -71,11 +80,11 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
         }));
 
         list.sort((a: any, b: any) => {
-            const aInscrito = initialSet.has(a.idPersona);
-            const bInscrito = initialSet.has(b.idPersona);
-            if (aInscrito && !bInscrito) return -1;
-            if (!aInscrito && bInscrito) return 1;
-            return a.nombre.localeCompare(b.nombre);
+          const aInscrito = initialSet.has(a.idPersona);
+          const bInscrito = initialSet.has(b.idPersona);
+          if (aInscrito && !bInscrito) return -1;
+          if (!aInscrito && bInscrito) return 1;
+          return a.nombre.localeCompare(b.nombre);
         });
 
         setPersonas(list);
@@ -84,17 +93,26 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
         setPersonInstitutions(piMap);
       }
     } catch (e) {
-      console.error(e);
       showToast('Error cargando la lista de personas', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredPersonas = personas.filter(p => {
-    const fullName = `${p.nombre} ${p.apellido}`.toLowerCase();
-    return fullName.includes(searchTerm.toLowerCase()) || (p.departamento && p.departamento.toLowerCase().includes(searchTerm.toLowerCase()));
-  });
+  const filteredPersonas = useMemo(() => {
+    let list = activeTab === 'asignados'
+      ? personas.filter(p => selectedIds.has(p.idPersona))
+      : personas;
+    
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(p =>
+        `${p.nombre} ${p.apellido}`.toLowerCase().includes(q) ||
+        p.departamento?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [personas, selectedIds, searchTerm, activeTab]);
 
   const toggleSelection = (id: number) => {
     const next = new Set(selectedIds);
@@ -104,72 +122,65 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredPersonas.length) {
-      setSelectedIds(new Set());
+    if (filteredPersonas.every(p => selectedIds.has(p.idPersona))) {
+      const next = new Set(selectedIds);
+      filteredPersonas.forEach(p => next.delete(p.idPersona));
+      setSelectedIds(next);
     } else {
-      setSelectedIds(new Set(filteredPersonas.map(p => p.idPersona)));
+      const next = new Set(selectedIds);
+      filteredPersonas.forEach(p => next.add(p.idPersona));
+      setSelectedIds(next);
     }
   };
 
-  const handleConfirm = async () => {
+  const pendingToAdd = useMemo(() =>
+    Array.from(selectedIds).filter(id => !initialSelectedIds.has(id)),
+    [selectedIds, initialSelectedIds]);
+
+  const pendingToRemove = useMemo(() =>
+    Array.from(initialSelectedIds).filter(id => !selectedIds.has(id)),
+    [selectedIds, initialSelectedIds]);
+
+  const hasChanges = pendingToAdd.length > 0 || pendingToRemove.length > 0;
+
+  const handleSave = async () => {
     setSaving(true);
     let successCount = 0;
     let failCount = 0;
-
-    const toAdd = Array.from(selectedIds).filter(id => !initialSelectedIds.has(id));
-    const toRemove = Array.from(initialSelectedIds).filter(id => !selectedIds.has(id));
-
     const promises: Promise<any>[] = [];
 
-    // Adds
-    toAdd.forEach(personaId => {
+    pendingToAdd.forEach(personaId => {
       promises.push((async () => {
         try {
-          const payload = {
-            persona: personaId,
-            curso: cursoId,
-            tipo: selectedRoleType,
-            institucion: institucionId,
-            activo: true
-          };
           const res = await apiRequest('/persona-institucion/', {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ persona: personaId, curso: cursoId, tipo: selectedRoleType, institucion: institucionId, activo: true })
           });
-          if (res.ok) successCount++;
-          else failCount++;
-        } catch (e) {
-          failCount++;
-        }
+          if (res.ok) successCount++; else failCount++;
+        } catch { failCount++; }
       })());
     });
 
-    // Removes
-    toRemove.forEach(personaId => {
-        const piId = personInstitutions[personaId];
-        if (piId) {
-            promises.push((async () => {
-                try {
-                    const res = await apiRequest(`/persona-institucion/${piId}/`, {
-                        method: 'DELETE'
-                    });
-                    if (res.ok) successCount++;
-                    else failCount++;
-                } catch (e) {
-                    failCount++;
-                }
-            })());
-        }
+    pendingToRemove.forEach(personaId => {
+      const piId = personInstitutions[personaId];
+      if (piId) {
+        promises.push((async () => {
+          try {
+            const res = await apiRequest(`/persona-institucion/${piId}/`, { method: 'DELETE' });
+            if (res.ok) successCount++; else failCount++;
+          } catch { failCount++; }
+        })());
+      }
     });
 
     await Promise.all(promises);
 
-    if (failCount === 0 && (toAdd.length > 0 || toRemove.length > 0)) {
-      showToast(`Se guardaron exitosamente ${successCount} cambios.`, 'success');
-    } else if (successCount > 0) {
-      showToast(`Se guardaron ${successCount} cambios. ${failCount} fallaron.`, 'warning');
-    } else if (toAdd.length === 0 && toRemove.length === 0) {
+    if (!hasChanges) {
       showToast('No se realizaron cambios.', 'info');
+    } else if (failCount === 0) {
+      showToast(`${successCount} cambios guardados exitosamente.`, 'success');
+    } else if (successCount > 0) {
+      showToast(`${successCount} cambios guardados. ${failCount} fallaron.`, 'warning');
     } else {
       showToast('Error al efectuar los cambios.', 'error');
     }
@@ -179,152 +190,235 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
     onClose();
   };
 
+  const getInitials = (nombre: string, apellido: string) =>
+    `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
+
   if (!isOpen) return null;
 
-  return (
-    <div className="modal fade show d-block asignacion-overlay" tabIndex={-1}>
-      <div className="modal-dialog modal-dialog-centered modal-lg">
-        {/* Usamos dark-theme para marchar con el UI general según feedback */}
-        <div className="modal-content glass-panel dark-theme border-0 shadow-lg" style={{ borderRadius: '15px' }}>
-          <div className="modal-header border-0 pb-0 pt-4 px-4">
-            <h5 className="modal-title fw-bold" style={{ color: 'var(--primary-color, #4da6ff)' }}>
-              Estudiantes en <span className="text-white">{courseName}</span>
-            </h5>
-            <button type="button" className="btn-close btn-close-white" onClick={onClose} aria-label="Cerrar"></button>
+  const allFiltered = filteredPersonas.every(p => selectedIds.has(p.idPersona));
+  const someFiltered = filteredPersonas.some(p => selectedIds.has(p.idPersona)) && !allFiltered;
+
+  const modal = (
+    <div className="am-overlay" onClick={onClose}>
+      <div className="am-sheet" onClick={e => e.stopPropagation()}>
+
+        {/* ── HEADER ── */}
+        <div className="am-header">
+          <div className="am-header-icon">
+            <i className="bi bi-people-fill"></i>
           </div>
-          <div className="modal-body px-4">
-            <p className="text-muted small mb-3">
-              Seleccioná los estudiantes que querés inscribir o desmarcalos para darlos de baja.
+          <div className="am-header-text">
+            <h2 className="am-title">Gestión de Estudiantes</h2>
+            <p className="am-subtitle">
+              <span className="am-course-name">{courseName}</span>
+              <span className="am-dot">·</span>
+              Asigná o remové alumnos del curso
             </p>
-
-            <div className="asignacion-search-wrapper mb-3">
-              <i className="bi bi-search asignacion-search-icon"></i>
-              <input
-                type="text"
-                className="asignacion-search-input"
-                placeholder="Buscar por nombre o apellido..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="card bg-transparent border border-secondary shadow-sm" style={{ maxHeight: '420px', overflowY: 'auto' }}>
-              {loading ? (
-                <div className="d-flex justify-content-center p-5">
-                  <div className="spinner-border text-primary" role="status"></div>
-                </div>
-              ) : (
-                 <table className="table table-hover table-dark table-borderless align-middle mb-0 text-start" style={{ minWidth: '0' }}>
-                  <thead className="sticky-top" style={{ backgroundColor: '#212529', boxShadow: '0 2px 5px rgba(0,0,0,0.2)', zIndex: 10 }}>
-                    <tr>
-                      <th scope="col" style={{ width: '50px' }} className="text-center py-3">
-                        <div className="form-check d-flex justify-content-center m-0">
-                          <input 
-                            className="form-check-input cursor-pointer" 
-                            type="checkbox" 
-                            checked={filteredPersonas.length > 0 && selectedIds.size === filteredPersonas.length}
-                            onChange={toggleSelectAll}
-                          />
-                        </div>
-                      </th>
-                      <th scope="col" style={{ width: '60px' }} className="py-3">Foto</th>
-                      <th scope="col" className="py-3">Nombre del Estudiante</th>
-                      <th scope="col" className="py-3 asignacion-col-cargo">Cargo/Aclaración</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPersonas.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="text-center py-5 text-muted">No se encontraron personas con ese término.</td>
-                      </tr>
-                    ) : (
-                      filteredPersonas.map(p => {
-                        const isInscrito = initialSelectedIds.has(p.idPersona);
-                        const isSelected = selectedIds.has(p.idPersona);
-                        
-                        // Resaltar visualmente si hay un cambio (para dar feedback)
-                        const isNewlyAdded = !isInscrito && isSelected;
-                        const isNewlyRemoved = isInscrito && !isSelected;
-                        
-                        let rowBg = 'transparent';
-                        if (isNewlyAdded) rowBg = 'rgba(25, 135, 84, 0.1)'; // green fade
-                        else if (isNewlyRemoved) rowBg = 'rgba(220, 53, 69, 0.1)'; // red fade
-                        else if (isInscrito) rowBg = 'rgba(255, 255, 255, 0.03)'; // subtle highlight for enrolled
-
-                        return (
-                          <tr key={p.idPersona} onClick={() => toggleSelection(p.idPersona)} style={{ cursor: 'pointer', backgroundColor: rowBg, transition: 'background-color 0.2s' }}>
-                            <td className="text-center border-bottom border-dark">
-                              <div className="form-check d-flex justify-content-center m-0">
-                                <input 
-                                  className="form-check-input" 
-                                  type="checkbox" 
-                                  checked={isSelected}
-                                  readOnly
-                                />
-                              </div>
-                            </td>
-                            <td className="border-bottom border-dark text-center">
-                              {p.foto ? (
-                                <img 
-                                  src={p.foto} 
-                                  alt={p.nombre} 
-                                  className="rounded-circle object-fit-cover shadow-sm border border-secondary"
-                                  style={{ width: '40px', height: '40px' }}
-                                />
-                              ) : (
-                                <div className="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold shadow-sm mx-auto" style={{ width: '40px', height: '40px' }}>
-                                  {p.nombre.charAt(0)}
-                                </div>
-                              )}
-                            </td>
-                            <td className="border-bottom border-dark">
-                              <div className="fw-semibold d-flex align-items-center gap-2 text-white">
-                                {p.nombre} {p.apellido} 
-                                {isInscrito && !isNewlyRemoved && <span className="badge bg-primary text-white" style={{fontSize: '0.65rem'}}>Asignado</span>}
-                                {isNewlyRemoved && <span className="badge bg-danger text-white" style={{fontSize: '0.65rem'}}>Baja pendiente</span>}
-                                {isNewlyAdded && <span className="badge bg-success text-white" style={{fontSize: '0.65rem'}}>Alta pendiente</span>}
-                              </div>
-                              <div className="text-muted small" style={{ fontSize: '0.75rem'}}>ID: {p.idPersona}</div>
-                            </td>
-                            <td className="border-bottom border-dark asignacion-col-cargo">
-                              <span className="badge bg-dark text-light border border-secondary">{p.departamento || 'Sin asignar'}</span>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              )}
-            </div>
           </div>
-          <div className="modal-footer border-0 pt-3 pb-4 px-4 bg-transparent d-flex justify-content-between align-items-center">
-            <span className="text-muted small">
-              <i className="bi bi-people-fill me-2"></i>
-              {selectedIds.size} seleccionados
-            </span>
-            <div>
-                <button type="button" className="btn btn-dark rounded-pill px-4 shadow-sm border border-secondary me-2 hover-opacity" onClick={onClose} disabled={saving}>
-                Cancelar
-                </button>
-                <button 
-                type="button" 
-                className="btn btn-primary rounded-pill px-4 shadow text-white fw-semibold hover-scale"
-                onClick={handleConfirm}
-                disabled={saving}
-                >
-                {saving ? (
-                    <><span className="spinner-border spinner-border-sm me-2"></span>Guardando...</>
-                ) : (
-                    <><i className="bi bi-check2-circle me-2"></i>Guardar Cambios</>
-                )}
-                </button>
-            </div>
+          <button className="am-close-btn" onClick={onClose} aria-label="Cerrar">
+            <i className="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        {/* ── STATS BAR ── */}
+        <div className="am-stats">
+          <div className="am-stat am-stat-total">
+            <span className="am-stat-num">{personas.length}</span>
+            <span className="am-stat-lbl">Total personas</span>
+          </div>
+          <div className="am-stat-divider"></div>
+          <div className="am-stat am-stat-assigned">
+            <span className="am-stat-num">{initialSelectedIds.size}</span>
+            <span className="am-stat-lbl">En el curso</span>
+          </div>
+          <div className="am-stat-divider"></div>
+          {pendingToAdd.length > 0 && (
+            <>
+              <div className="am-stat am-stat-add">
+                <span className="am-stat-num">+{pendingToAdd.length}</span>
+                <span className="am-stat-lbl">Por agregar</span>
+              </div>
+              <div className="am-stat-divider"></div>
+            </>
+          )}
+          {pendingToRemove.length > 0 && (
+            <>
+              <div className="am-stat am-stat-remove">
+                <span className="am-stat-num">-{pendingToRemove.length}</span>
+                <span className="am-stat-lbl">Por quitar</span>
+              </div>
+              <div className="am-stat-divider"></div>
+            </>
+          )}
+          <div className="am-stat am-stat-selected">
+            <span className="am-stat-num">{selectedIds.size}</span>
+            <span className="am-stat-lbl">Seleccionados</span>
           </div>
         </div>
+
+        {/* ── TOOLBAR ── */}
+        <div className="am-toolbar">
+          <div className="am-search-wrap">
+            <i className="bi bi-search am-search-icon"></i>
+            <input
+              type="text"
+              className="am-search"
+              placeholder="Buscar por nombre o cargo..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button className="am-search-clear" onClick={() => setSearchTerm('')}>
+                <i className="bi bi-x"></i>
+              </button>
+            )}
+          </div>
+          <div className="am-tabs">
+            <button
+              className={`am-tab ${activeTab === 'todos' ? 'active' : ''}`}
+              onClick={() => setActiveTab('todos')}
+            >
+              Todos
+            </button>
+            <button
+              className={`am-tab ${activeTab === 'asignados' ? 'active' : ''}`}
+              onClick={() => setActiveTab('asignados')}
+            >
+              Asignados <span className="am-tab-badge">{selectedIds.size}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── LIST ── */}
+        <div className="am-list-container">
+          {loading ? (
+            <div className="am-loading">
+              <div className="am-spinner"></div>
+              <span>Cargando personas...</span>
+            </div>
+          ) : filteredPersonas.length === 0 ? (
+            <div className="am-empty">
+              <i className="bi bi-person-slash"></i>
+              <p>{searchTerm ? 'No hay resultados para tu búsqueda.' : 'No hay personas en esta vista.'}</p>
+            </div>
+          ) : (
+            <>
+              {/* Select-all header */}
+              <div className="am-list-header">
+                <label className="am-checkbox-wrap am-select-all-wrap">
+                  <input
+                    type="checkbox"
+                    className="am-checkbox"
+                    checked={allFiltered && filteredPersonas.length > 0}
+                    ref={el => { if (el) el.indeterminate = someFiltered; }}
+                    onChange={toggleSelectAll}
+                  />
+                  <span className="am-checkbox-custom"></span>
+                </label>
+                <span className="am-list-header-text">
+                  {filteredPersonas.length} persona{filteredPersonas.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <ul className="am-list">
+                {filteredPersonas.map(p => {
+                  const isSelected = selectedIds.has(p.idPersona);
+                  const wasInCourse = initialSelectedIds.has(p.idPersona);
+                  const isNewlyAdded = !wasInCourse && isSelected;
+                  const isNewlyRemoved = wasInCourse && !isSelected;
+
+                  return (
+                    <li
+                      key={p.idPersona}
+                      className={`am-person ${isSelected ? 'selected' : ''} ${isNewlyAdded ? 'newly-added' : ''} ${isNewlyRemoved ? 'newly-removed' : ''}`}
+                      onClick={() => toggleSelection(p.idPersona)}
+                    >
+                      <label className="am-checkbox-wrap" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="am-checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelection(p.idPersona)}
+                        />
+                        <span className="am-checkbox-custom"></span>
+                      </label>
+
+                      <div className="am-avatar-wrap">
+                        {p.foto ? (
+                          <img src={p.foto} alt={p.nombre} className="am-avatar-img" />
+                        ) : (
+                          <div className="am-avatar-initials">
+                            {getInitials(p.nombre, p.apellido)}
+                          </div>
+                        )}
+                        {wasInCourse && !isNewlyRemoved && (
+                          <span className="am-avatar-dot am-dot-in"></span>
+                        )}
+                      </div>
+
+                      <div className="am-person-info">
+                        <span className="am-person-name">{p.nombre} {p.apellido}</span>
+                        {p.departamento && (
+                          <span className="am-person-dept">
+                            <i className="bi bi-briefcase me-1"></i>{p.departamento}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="am-person-status">
+                        {isNewlyAdded && <span className="am-badge am-badge-add"><i className="bi bi-plus-circle"></i> Alta</span>}
+                        {isNewlyRemoved && <span className="am-badge am-badge-remove"><i className="bi bi-dash-circle"></i> Baja</span>}
+                        {wasInCourse && !isNewlyRemoved && !isNewlyAdded && (
+                          <span className="am-badge am-badge-current"><i className="bi bi-check-circle"></i> Asignado</span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </div>
+
+        {/* ── FOOTER ── */}
+        <div className="am-footer">
+          {hasChanges && (
+            <div className="am-changes-summary">
+              {pendingToAdd.length > 0 && (
+                <span className="am-change-pill am-pill-add">
+                  <i className="bi bi-person-plus-fill"></i> {pendingToAdd.length} alta{pendingToAdd.length > 1 ? 's' : ''}
+                </span>
+              )}
+              {pendingToRemove.length > 0 && (
+                <span className="am-change-pill am-pill-remove">
+                  <i className="bi bi-person-dash-fill"></i> {pendingToRemove.length} baja{pendingToRemove.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          )}
+          <div className="am-footer-actions">
+            <button className="am-btn am-btn-ghost" onClick={onClose} disabled={saving}>
+              Cancelar
+            </button>
+            <button
+              className={`am-btn am-btn-primary ${!hasChanges ? 'am-btn-muted' : ''}`}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <><span className="am-spinner-sm"></span> Guardando...</>
+              ) : (
+                <><i className="bi bi-check2-circle"></i> Guardar Cambios</>
+              )}
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modal, document.body);
 };
 
 export default AsignacionMasivaAlumnosModal;

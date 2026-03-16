@@ -67,7 +67,6 @@ class Horario(models.Model):
     dia = models.CharField(max_length=20, choices=DIAS_SEMANA)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
-    materia = models.CharField(max_length=100, null=True, blank=True)
     activo = models.BooleanField(default=True)
     semana = models.CharField(max_length=5, choices=SEMANAS, default='Todas')
     history = HistoricalRecords()
