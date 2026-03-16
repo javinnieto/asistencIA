@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { apiRequest } from '../config/api';
 import './Dashboard.css';
+import { getLocalDateString, formatDateAr } from '../utils/dateUtils';
 
 // Types
 type TimeRange = 'day' | 'week' | 'month' | 'custom';
@@ -41,8 +42,8 @@ const Dashboard: React.FC = () => {
   const [chartMode, setChartMode] = useState<ChartMode>((searchParams.get('chartMode') as ChartMode) || 'attendance');
 
   // Custom Date Range State - Init from URL
-  const [startDate, setStartDate] = useState(searchParams.get('startDate') || new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(searchParams.get('endDate') || new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(searchParams.get('startDate') || getLocalDateString());
+  const [endDate, setEndDate] = useState(searchParams.get('endDate') || getLocalDateString());
 
   // Sync state changes to URL
   useEffect(() => {
@@ -85,18 +86,16 @@ const Dashboard: React.FC = () => {
     let startD = new Date();
 
     if (timeRange === 'day') {
-      params.append('fechaHora__date', now.toISOString().split('T')[0]);
+      params.append('fechaHora__date', getLocalDateString(now));
     } else if (timeRange === 'week') {
       startD.setDate(now.getDate() - 7);
-      params.append('fechaHora__gte', startD.toISOString());
+      params.append('fechaHora__gte', getLocalDateString(startD) + 'T00:00:00');
     } else if (timeRange === 'month') {
       startD.setMonth(now.getMonth() - 1);
-      params.append('fechaHora__gte', startD.toISOString());
+      params.append('fechaHora__gte', getLocalDateString(startD) + 'T00:00:00');
     } else if (timeRange === 'custom') {
-      params.append('fechaHora__gte', new Date(startDate).toISOString());
-      const endD = new Date(endDate);
-      endD.setHours(23, 59, 59);
-      params.append('fechaHora__lte', endD.toISOString());
+      params.append('fechaHora__gte', `${startDate}T00:00:00`);
+      params.append('fechaHora__lte', `${endDate}T23:59:59`);
     }
 
     // Scope Filters
@@ -140,7 +139,13 @@ const Dashboard: React.FC = () => {
       // Process chart data
       if (chartRes.ok) {
         const chartResult: ChartData[] = await chartRes.json();
-        setChartData(chartResult);
+        
+        const formattedResult = chartResult.map(c => ({
+          ...c,
+          name: timeRange === 'day' ? c.name : formatDateAr(c.name)
+        }));
+        
+        setChartData(formattedResult);
 
         // Calculate avgTemp from chart data
         const tempsWithData = chartResult.filter(d => d.avgTemp > 0);
@@ -215,17 +220,17 @@ const Dashboard: React.FC = () => {
     let startD = new Date();
 
     if (timeRange === 'day') {
-      const dayStr = now.toISOString().split('T')[0];
+      const dayStr = getLocalDateString(now);
       params.append('fechaInicio', dayStr);
       params.append('fechaFin', dayStr);
     } else if (timeRange === 'week') {
       startD.setDate(now.getDate() - 7);
-      params.append('fechaInicio', startD.toISOString().split('T')[0]);
-      params.append('fechaFin', now.toISOString().split('T')[0]);
+      params.append('fechaInicio', getLocalDateString(startD));
+      params.append('fechaFin', getLocalDateString(now));
     } else if (timeRange === 'month') {
       startD.setMonth(now.getMonth() - 1);
-      params.append('fechaInicio', startD.toISOString().split('T')[0]);
-      params.append('fechaFin', now.toISOString().split('T')[0]);
+      params.append('fechaInicio', getLocalDateString(startD));
+      params.append('fechaFin', getLocalDateString(now));
     } else if (timeRange === 'custom') {
       params.append('fechaInicio', startDate);
       params.append('fechaFin', endDate);
@@ -247,128 +252,135 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Header with Filters */}
-      <div className="dashboard-header">
-        <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Panel de Control
-          </h1>
-          <p style={{ color: '#64748b' }}>Monitoreo en tiempo real</p>
-        </div>
-
-        <div className="filters-container">
-          {/* Time Range */}
-          <div className="filter-group">
-            <button className={`filter-btn ${timeRange === 'day' ? 'active' : ''}`} onClick={() => setTimeRange('day')}>Día</button>
-            <button className={`filter-btn ${timeRange === 'week' ? 'active' : ''}`} onClick={() => setTimeRange('week')}>Semana</button>
-            <button className={`filter-btn ${timeRange === 'month' ? 'active' : ''}`} onClick={() => setTimeRange('month')}>Mes</button>
-            <button className={`filter-btn ${timeRange === 'custom' ? 'active' : ''}`} onClick={() => setTimeRange('custom')}>Personalizado</button>
-          </div>
-
-          {timeRange === 'custom' && (
-            <div className="custom-range-inputs" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input
-                type="date"
-                className="ch-input"
-                style={{ width: '130px', padding: '6px' }}
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-              />
-              <span style={{ color: '#64748b' }}>—</span>
-              <input
-                type="date"
-                className="ch-input"
-                style={{ width: '130px', padding: '6px' }}
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', height: '24px' }}></div>
-
-          {/* Scope Selector */}
-          <select
-            className="scope-select"
-            value={scopeType}
-            onChange={(e) => {
-              setScopeType(e.target.value as ScopeType);
-              setSelectedScopeId('');
-            }}
-          >
-            <option value="all">Todos los Cursos</option>
-            <option value="institution">Por Institución</option>
-            <option value="course">Por Curso Specifico</option>
-          </select>
-
-          {scopeType !== 'all' && (
-            <select
-              className="scope-select"
-              value={selectedScopeId}
-              onChange={(e) => setSelectedScopeId(e.target.value)}
-            >
-              <option value="">Seleccionar...</option>
-              {scopeType === 'institution'
-                ? instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)
-                : cursos.map(c => <option key={c.idCurso} value={c.idCurso}>{c.nombre}</option>)
-              }
-            </select>
-          )}
-        </div>
+      <div className="header-title-group">
+        <h1 style={{ fontSize: '2rem', fontWeight: 800, background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
+          {timeRange === 'day' ? 'Datos del día de hoy' : 
+           timeRange === 'week' ? 'Datos de los últimos 7 días' : 
+           timeRange === 'month' ? 'Datos de los últimos 30 días' : 
+           `Datos de Rango Personalizado`}
+        </h1>
+        <p style={{ color: '#94a3b8', margin: '4px 0 0 0', fontWeight: 500 }}>
+           {timeRange === 'custom' ? `Desde el ${formatDateAr(startDate)} hasta el ${formatDateAr(endDate)}` : 'Monitoreo de Asistencias'}
+        </p>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="stats-grid">
-        <div onClick={() => navigate(buildAsistenciasUrl())} style={{ cursor: 'pointer' }}>
-          <StatCard icon="bi-people-fill" label="Total Registros" value={stats.total} color="primary" />
-        </div>
-        <div onClick={() => navigate(buildAsistenciasUrl({ estado: 'Presente' }))} style={{ cursor: 'pointer' }}>
-          <StatCard icon="bi-check-circle-fill" label="Presentes" value={stats.presentes} color="success" />
-        </div>
-        <div onClick={() => navigate(buildAsistenciasUrl({ estado: 'Tardanza' }))} style={{ cursor: 'pointer' }}>
-          <StatCard icon="bi-exclamation-circle-fill" label="Tardanzas" value={stats.tardanzas} color="warning" />
-        </div>
-        <div onClick={() => navigate(buildAsistenciasUrl({ minTemp: '37.6' }))} style={{ cursor: 'pointer' }}>
-          <StatCard icon="bi-thermometer-high" label="Fiebre (>37.5)" value={stats.fiebre} color="danger" />
-        </div>
-      </div>
+      {/* Inline Filters Container */}
+      <div className="header-filters-wrapper">
+        <div className="filters-container inline-filters">
+              {/* Time Range */}
+              <div className="filter-group">
+                  <button className={`filter-btn ${timeRange === 'day' ? 'active' : ''}`} onClick={() => setTimeRange('day')}>Hoy</button>
+                  <button className={`filter-btn ${timeRange === 'week' ? 'active' : ''}`} onClick={() => setTimeRange('week')}>Semana</button>
+                  <button className={`filter-btn ${timeRange === 'month' ? 'active' : ''}`} onClick={() => setTimeRange('month')}>Mes</button>
+                  <button className={`filter-btn ${timeRange === 'custom' ? 'active' : ''}`} onClick={() => setTimeRange('custom')}>Custom</button>
+              </div>
 
-      {/* Merged Chart Section */}
-      <div className="dashboard-card chart-container" style={{ gridColumn: '1 / -1', minHeight: '400px' }}>
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h3 className="card-title">
-            {chartMode === 'attendance' ? 'Tendencia de Asistencia' : 'Historial de Temperatura'}
-          </h3>
-          <div className="filter-group">
-            <button
-              className={`filter-btn ${chartMode === 'attendance' ? 'active' : ''}`}
-              onClick={() => setChartMode('attendance')}
-            >
-              Asistencia
-            </button>
-            <button
-              className={`filter-btn ${chartMode === 'temperature' ? 'active' : ''}`}
-              onClick={() => setChartMode('temperature')}
-            >
-              Temperatura
-            </button>
+              {timeRange === 'custom' && (
+                  <div className="custom-range-inputs d-flex gap-2 align-items-center">
+                      <input
+                          type="date"
+                          className="ch-input border-0 bg-transparent text-white"
+                          style={{ padding: '0 4px', fontSize: '0.85rem' }}
+                          value={startDate}
+                          onChange={e => setStartDate(e.target.value)}
+                      />
+                      <span style={{ color: '#64748b' }}>-</span>
+                      <input
+                          type="date"
+                          className="ch-input border-0 bg-transparent text-white"
+                          style={{ padding: '0 4px', fontSize: '0.85rem' }}
+                          value={endDate}
+                          onChange={e => setEndDate(e.target.value)}
+                      />
+                  </div>
+              )}
+
+              <div className="filter-divider d-none d-md-block"></div>
+
+              {/* Scope Selector */}
+              <select
+                  className="scope-select sleek-select"
+                  value={scopeType}
+                  onChange={(e) => {
+                      setScopeType(e.target.value as ScopeType);
+                      setSelectedScopeId('');
+                  }}
+              >
+                  <option value="all" className="text-dark">Todos los Cursos</option>
+                  <option value="institution" className="text-dark">Por Institución</option>
+                  <option value="course" className="text-dark">Por Curso Específico</option>
+              </select>
+
+              {scopeType !== 'all' && (
+                  <select
+                      className="scope-select sleek-select"
+                      value={selectedScopeId}
+                      onChange={(e) => setSelectedScopeId(e.target.value)}
+                  >
+                      <option value="" className="text-dark">Seleccionar...</option>
+                      {scopeType === 'institution'
+                          ? instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion} className="text-dark">{i.nombre}</option>)
+                          : cursos.map(c => <option key={c.idCurso} value={c.idCurso} className="text-dark">{c.nombre}</option>)
+                      }
+                  </select>
+              )}
           </div>
         </div>
 
-        {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350 }}>
-            <div className="dashboard-spinner"></div>
+      <div className="dashboard-main-layout">
+        {/* Left Column: Metrics Grid */}
+        <div className="stats-grid">
+          <div onClick={() => navigate(buildAsistenciasUrl())} style={{ cursor: 'pointer' }}>
+            <StatCard icon="bi-people-fill" label="Total Registros" value={stats.total} color="primary" />
           </div>
-        ) : chartData.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350, color: '#64748b', fontSize: '1.1rem' }}>
-            <div style={{ textAlign: 'center' }}>
-              <i className="bi bi-bar-chart" style={{ fontSize: '3rem', display: 'block', marginBottom: '12px', opacity: 0.5 }}></i>
-              No hay datos para el período seleccionado
+          <div onClick={() => navigate(buildAsistenciasUrl({ estado: 'Presente' }))} style={{ cursor: 'pointer' }}>
+            <StatCard icon="bi-check-circle-fill" label="Presentes" value={stats.presentes} color="success" />
+          </div>
+          <div onClick={() => navigate(buildAsistenciasUrl({ estado: 'Tardanza' }))} style={{ cursor: 'pointer' }}>
+            <StatCard icon="bi-exclamation-circle-fill" label="Tardanzas" value={stats.tardanzas} color="warning" />
+          </div>
+          <div onClick={() => navigate(buildAsistenciasUrl({ minTemp: '37.6' }))} style={{ cursor: 'pointer' }}>
+            <StatCard icon="bi-thermometer-high" label="Fiebre (>37.5)" value={stats.fiebre} color="danger" />
+          </div>
+        </div>
+
+        {/* Right Column: Chart Section */}
+        <div className="dashboard-card chart-container">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h3 className="card-title">
+              {chartMode === 'attendance' ? 'Tendencia de Asistencia' : 'Historial de Temperatura'}
+            </h3>
+            <div className="toggle-group filter-group" style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '4px', borderRadius: '100px' }}>
+              <button
+                className={`filter-btn ${chartMode === 'attendance' ? 'active' : ''}`}
+                onClick={() => setChartMode('attendance')}
+              >
+                Asistencia
+              </button>
+              <button
+                className={`filter-btn ${chartMode === 'temperature' ? 'active' : ''}`}
+                onClick={() => setChartMode('temperature')}
+              >
+                Temperatura
+              </button>
             </div>
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={350}>
-            <AreaChart data={chartData}>
+
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350 }}>
+              <div className="dashboard-spinner"></div>
+            </div>
+          ) : chartData.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350, color: '#64748b', fontSize: '1.1rem' }}>
+              <div style={{ textAlign: 'center' }}>
+                <i className="bi bi-bar-chart" style={{ fontSize: '3rem', display: 'block', marginBottom: '12px', opacity: 0.5 }}></i>
+                No hay datos para el período seleccionado
+              </div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, minHeight: 400, paddingBottom: '20px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height={350}>
+              <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 30 }}>
               <defs>
                 <linearGradient id="colorPresentes" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -430,7 +442,9 @@ const Dashboard: React.FC = () => {
               )}
             </AreaChart>
           </ResponsiveContainer>
-        )}
+           </div>
+          )}
+        </div>
       </div>
     </div>
   );

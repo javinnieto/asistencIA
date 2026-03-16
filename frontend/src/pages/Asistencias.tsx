@@ -5,6 +5,7 @@ import { includesNormalized } from '../utils/normalize';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import TablePagination from '../components/TablePagination';
+import { useModalBackButton } from '../hooks/useModalBackButton';
 import './Asistencias.css';
 
 
@@ -146,6 +147,11 @@ const Asistencias: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAsistencia, setEditingAsistencia] = useState<Asistencia | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
+  // Botón atrás: cierra el modal de editar asistencia
+  useModalBackButton(showEditModal, () => setShowEditModal(false));
+  // Botón atrás: cierra el modal de confirmar borrado
+  useModalBackButton(deleteConfirm !== null, () => setDeleteConfirm(null));
 
   const handleSort = (field: string) => {
     setOrdering(prev => {
@@ -407,57 +413,67 @@ const Asistencias: React.FC = () => {
           <span className="as-count-badge">{totalRecords} REGISTROS</span>
         </div>
 
-        <div className="as-filters-row">
-          <div className="as-input-group">
-            <i className="bi bi-search as-input-icon"></i>
+        <div className="as-filters-container">
+          {/* Row 1: Search */}
+          <div className="as-filter-group search-group">
+            <div className="as-input-group w-100">
+              <i className="bi bi-search as-input-icon"></i>
+              <input
+                type="text"
+                className="as-input"
+                placeholder="Buscar persona..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Dates */}
+          <div className="as-filter-group dates-group">
             <input
-              type="text"
-              className="as-input"
-              placeholder="Buscar persona..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              type="date"
+              className="as-date-input"
+              value={fechaInicio}
+              onChange={e => setFechaInicio(e.target.value)}
+            />
+            <input
+              type="date"
+              className="as-date-input"
+              value={fechaFin}
+              onChange={e => setFechaFin(e.target.value)}
+              placeholder="Fecha fin"
             />
           </div>
 
-          <input
-            type="date"
-            className="as-date-input"
-            value={fechaInicio}
-            onChange={e => setFechaInicio(e.target.value)}
-          />
+          {/* Row 3: Selects */}
+          <div className="as-filter-group selects-group">
+            <select
+              className="as-select"
+              value={cursoFiltro}
+              onChange={e => setCursoFiltro(e.target.value)}
+            >
+              <option value="">Todos los cursos</option>
+              {cursos.map(c => (
+                <option key={c.idCurso} value={c.idCurso}>{c.nombre}</option>
+              ))}
+            </select>
 
-          <input
-            type="date"
-            className="as-date-input"
-            value={fechaFin}
-            onChange={e => setFechaFin(e.target.value)}
-            placeholder="Fecha fin"
-          />
+            <select
+              className="as-select"
+              value={horarioFiltro}
+              onChange={e => setHorarioFiltro(e.target.value)}
+            >
+              <option value="">Todos los registros</option>
+              <option value="en_horario">✅ En horario</option>
+              <option value="fuera_horario">⚠️ Fuera de horario</option>
+            </select>
 
-          <select
-            className="as-select"
-            value={cursoFiltro}
-            onChange={e => setCursoFiltro(e.target.value)}
-          >
-            <option value="">Todos los cursos</option>
-            {cursos.map(c => (
-              <option key={c.idCurso} value={c.idCurso}>{c.nombre}</option>
-            ))}
-          </select>
-
-          <select
-            className="as-select"
-            value={horarioFiltro}
-            onChange={e => setHorarioFiltro(e.target.value)}
-          >
-            <option value="">Todos los registros</option>
-            <option value="en_horario">✅ En horario</option>
-            <option value="fuera_horario">⚠️ Fuera de horario</option>
-          </select>
-
-          <button className="as-btn-reset" title="Limpiar filtros" onClick={limpiarFiltros}>
-            <i className="bi bi-x-circle"></i>
-          </button>
+            {(searchTerm !== '' || fechaInicio !== '' || fechaFin !== '' || cursoFiltro !== '' || estadoFiltro !== '' || horarioFiltro !== '' || minTempFiltro !== '') && (
+              <button className="as-btn-reset" title="Limpiar filtros" onClick={limpiarFiltros}>
+                <i className="bi bi-x-circle"></i>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -473,7 +489,7 @@ const Asistencias: React.FC = () => {
           </div>
           <div className="as-stat-info">
             <h3>{stats.presentes}</h3>
-            <p>Presentes (página)</p>
+            <p>Presentes</p>
           </div>
         </div>
         <div
@@ -486,7 +502,7 @@ const Asistencias: React.FC = () => {
           </div>
           <div className="as-stat-info">
             <h3>{stats.tardanzas}</h3>
-            <p>Tardanzas (página)</p>
+            <p>Tardanzas</p>
           </div>
         </div>
         <div
@@ -499,7 +515,7 @@ const Asistencias: React.FC = () => {
           </div>
           <div className="as-stat-info">
             <h3>{stats.ausentes}</h3>
-            <p>Ausentes (página)</p>
+            <p>Ausentes</p>
           </div>
         </div>
         <div
@@ -512,7 +528,7 @@ const Asistencias: React.FC = () => {
           </div>
           <div className="as-stat-info">
             <h3>{stats.fiebre}</h3>
-            <p>Fiebre (página)</p>
+            <p>Fiebre</p>
           </div>
         </div>
       </div>

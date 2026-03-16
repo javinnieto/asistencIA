@@ -14,9 +14,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
 
   const menuItems = [
     { path: '/dashboard', icon: 'bi-grid-1x2-fill', label: 'Dashboard' },
-    { path: '/personas', icon: 'bi-people-fill', label: 'Personas' },
     { path: '/asistencias', icon: 'bi-calendar-check-fill', label: 'Asistencias' },
+    { path: '/personas', icon: 'bi-people-fill', label: 'Personas' },
     { path: '/cursos-horarios', icon: 'bi-calendar-week-fill', label: 'Cursos y Horarios' },
+    { path: '/dias-no-laborables', icon: 'bi-calendar-x-fill', label: 'Días No Laborables' },
   ];
 
   return (

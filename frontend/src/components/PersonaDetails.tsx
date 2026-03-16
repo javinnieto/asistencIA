@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip
 } from 'recharts';
 import { apiRequest } from '../config/api';
+import { useModalBackButton } from '../hooks/useModalBackButton';
 import './PersonaDetails.css';
 
 interface Person {
@@ -64,6 +65,9 @@ const PersonaDetails: React.FC<PersonaDetailsProps> = ({ person, onClose, onEdit
   const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
   const [roleStats, setRoleStats] = useState<RoleStats[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
+
+  // Botón atrás del navegador/sistema cierra el modal (siempre montado cuando visible)
+  useModalBackButton(true, onClose);
 
   const handleEdit = () => {
     onEdit(person);

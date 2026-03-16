@@ -20,8 +20,9 @@ class AsistenciaAdmin(SimpleHistoryAdmin):
     list_filter = ('tipo', 'estado', 'justificado')
 
 class HorarioAdmin(SimpleHistoryAdmin):
-    list_display = ('idHorario', 'dia', 'hora_inicio', 'hora_fin', 'materia', 'activo')
-    list_filter = ('dia', 'activo')
+    list_display = ('idHorario', 'curso', 'dia', 'hora_inicio', 'hora_fin', 'semana', 'activo')
+    list_filter = ('curso', 'dia', 'semana', 'activo')
+    search_fields = ('curso__nombre', 'dia')
 
 class CursoAdmin(SimpleHistoryAdmin):
     list_display = ('idCurso', 'nombre', 'institucion', 'activo')

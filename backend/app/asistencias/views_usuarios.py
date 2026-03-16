@@ -66,12 +66,34 @@ class UsuariosViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='cambiar_mi_password', permission_classes=[IsAuthenticated])
     def cambiar_mi_password(self, request):
         user = request.user
+        actual = request.data.get('password_actual', '')
         nueva = request.data.get('nueva_password', '')
-        if not nueva or len(nueva) < 4:
+        confirmar = request.data.get('confirmar_password', '')
+
+        if not actual:
             return Response(
-                {'error': 'La nueva contraseña debe tener al menos 4 caracteres.'},
+                {'error': 'Debe ingresar su contraseña actual.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+            
+        if not user.check_password(actual):
+            return Response(
+                {'error': 'La contraseña actual es incorrecta.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not nueva or len(nueva) < 6:
+            return Response(
+                {'error': 'La nueva contraseña debe tener al menos 6 caracteres.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        if nueva != confirmar:
+            return Response(
+                {'error': 'Las contraseñas nuevas no coinciden.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user.set_password(nueva)
         user.save()
         return Response({'status': 'Tu contraseña ha sido actualizada correctamente.'})

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { getConflictos } from '../config/api';
 import { useToast } from '../components/Toast';
 import ConflictoModal from './ConflictoModal';
+import CambiarPasswordModal from './CambiarPasswordModal';
 import './Navbar.css';
 
 interface Conflicto {
@@ -40,6 +41,9 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
   // Dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Password Modal state
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   // Conflicts state
   const [conflictos, setConflictos] = useState<Conflicto[]>([]);
@@ -249,8 +253,12 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
                       <Link to="/audit-log" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
                         <i className="bi bi-journal-text me-2"></i>Logs de Auditoría
                       </Link>
+                      <div className="dropdown-divider"></div>
                     </>
                   )}
+                    <button className="dropdown-item" onClick={() => { setPasswordModalOpen(true); setDropdownOpen(false); }}>
+                      <i className="bi bi-key-fill me-2"></i>Cambiar Contraseña
+                    </button>
                     <button className="dropdown-item" onClick={handleLogout}>
                       <i className="bi bi-box-arrow-right me-2"></i>Logout
                     </button>
@@ -270,6 +278,12 @@ const Navbar: React.FC<NavbarProps & { onToggleMobileSidebar?: () => void }> = (
                   }}
                 />
               )}
+
+              <CambiarPasswordModal
+                  isOpen={passwordModalOpen}
+                  onClose={() => setPasswordModalOpen(false)}
+                  onSuccess={() => showToast('Contraseña actualizada correctamente', 'success')}
+              />
             </>
           ) : (
             <Link to="/login" className="btn btn-outline-light">

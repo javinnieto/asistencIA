@@ -7,7 +7,6 @@ import TablePagination from './TablePagination';
 import { useTableSelection } from '../hooks/useTableSelection';
 import { apiRequest } from '../config/api';
 
-
 interface Person {
   id: string;
   nombre: string;
@@ -22,14 +21,39 @@ interface Person {
   roles?: any[];
 }
 
+interface PersonasStats {
+  total: number;
+  activos: number;
+  inactivos: number;
+  por_tipo: { tipo__nombre: string; cantidad: number }[];
+}
+
 interface PersonasTableProps {
   personas: Person[];
   onEdit: (person: Person) => void;
   onDelete: (id: string) => void;
   onView: (person: Person) => void;
   onSyncDevice?: () => void;
+  conflictos?: any[];
   onResolveConflict?: (person: Person, conflictoId: number) => void;
   onDeleteBatch?: (ids: string[]) => void;
+
+  // Server-side pagination
+  currentPage: number;
+  totalPages: number;
+  itemsPerPage: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
+  onItemsPerPageChange: (perPage: number) => void;
+
+  // Server-side filters
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  filterActivo: string;
+  onFilterActivoChange: (value: string) => void;
+
+  // Stats cards
+  stats?: PersonasStats;
 }
 
 const PersonasTable: React.FC<PersonasTableProps> = ({
@@ -40,20 +64,29 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   onSyncDevice,
   conflictos = [],
   onResolveConflict,
-  onDeleteBatch
+  onDeleteBatch,
+  currentPage,
+  totalPages,
+  itemsPerPage,
+  totalItems,
+  onPageChange,
+  onItemsPerPageChange,
+  searchTerm,
+  onSearchChange,
+  filterActivo,
+  onFilterActivoChange,
+  stats,
 }) => {
   const { isAdmin, rol } = useAuth();
 
-  const [searchTerm, setSearchTerm] = useState('');
+  // Filtros client-side de categoría y curso (dropdowns cargados desde API)
   const [filterCategoria, setFilterCategoria] = useState('');
   const [filterCurso, setFilterCurso] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Modo selección (toggle)
   const [selectionMode, setSelectionMode] = useState(false);
 
-  // Sorting
+  // Sorting (client-side sobre los datos de la página actual)
   type SortDir = 'asc' | 'desc';
   const [sortField, setSortField] = useState<string>('nombre');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -65,7 +98,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
       setSortField(field);
       setSortDir('asc');
     }
-    setCurrentPage(1);
   };
 
   const getSortIcon = (field: string) => {
@@ -80,11 +112,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   // Modal states
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  
-  // Batch Delete state
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
 
-  // Filtros dinámicos desde API
+  // Filtros dinámicos depuis API
   const [categorias, setCategorias] = useState<string[]>([]);
   const [cursosDisponibles, setCursosDisponibles] = useState<string[]>([]);
 
@@ -112,30 +142,19 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
     fetchFiltros();
   }, []);
 
-  // Filtrar y ordenar datos
+  // Filtrado client-side sobre los datos YA paginados (solo categoría/curso ya que search y activo van al server)
   const filteredData = useMemo(() => {
     const filtered = personas.filter(person => {
-      const fullName = `${person?.nombre || ''} ${person?.apellido || ''}`.trim();
-      const normalizedSearch = normalizeString(searchTerm || '');
-      const safeId = person?.id ? String(person.id) : '';
-      
-      const matchesSearch = !searchTerm ||
-        normalizeString(fullName).includes(normalizedSearch) ||
-        safeId.includes(searchTerm.trim());
-
       const matchesCategoria = !filterCategoria || (
         person.departamento === filterCategoria ||
         person.roles?.some(r => r.tipo?.nombre === filterCategoria)
       );
-
       const userCourses = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
-      const hasCourse = userCourses.includes(filterCurso);
-      const matchesCurso = !filterCurso || hasCourse;
-
-      return matchesSearch && matchesCategoria && matchesCurso;
+      const matchesCurso = !filterCurso || userCourses.includes(filterCurso);
+      return matchesCategoria && matchesCurso;
     });
 
-    // Ordenar sobre la lista completa (antes de paginar)
+    // Ordenar sobre la página actual
     return [...filtered].sort((a, b) => {
       let valA = '';
       let valB = '';
@@ -147,7 +166,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         valA = normalizeString(a.apellido || '');
         valB = normalizeString(b.apellido || '');
       } else if (sortField === 'id') {
-        // IDs numéricos: comparar directamente como número
         const nA = Number(a.id) || 0;
         const nB = Number(b.id) || 0;
         return sortDir === 'asc' ? nA - nB : nB - nA;
@@ -163,22 +181,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
       if (valA > valB) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [personas, searchTerm, filterCategoria, filterCurso, sortField, sortDir]);
+  }, [personas, filterCategoria, filterCurso, sortField, sortDir]);
 
-  // Reset page to 1 whenever filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterCategoria, filterCurso]);
-
-  // Paginación
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
-  // Ensure currentPage is valid for the current filteredData length
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  
-  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
-  const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
-
-  // Initialise the multi-select hook passing only the data visible on this page
+  // Multiselect (sobre los datos de la página visible)
   const {
     selectedIds,
     isAllSelected,
@@ -187,7 +192,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
     toggleSelectAll,
     clearSelection,
     selectedCount
-  } = useTableSelection(currentData);
+  } = useTableSelection(filteredData);
 
   // Fast lookup for conflicts mapped by Person ID
   const conflictosMap = useMemo(() => {
@@ -199,8 +204,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
     });
     return map;
   }, [conflictos]);
-
-  const handlePageChange = (page: number) => setCurrentPage(page);
 
   const handleDeleteRequest = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -218,13 +221,76 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   };
 
   const handleToggleSelectionMode = () => {
-    if (selectionMode) {
-      clearSelection();
-    }
+    if (selectionMode) clearSelection();
     setSelectionMode(prev => !prev);
   };
 
-  if (personas.length === 0) {
+  // ── Stats cards (si se proveen) ──────────────────────────────────────────
+  const renderStatsCards = () => {
+    if (!stats) return null;
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: '12px',
+        padding: '20px 32px 0 32px',
+      }}>
+        {/* Total */}
+        <div style={{
+          background: 'rgba(99, 102, 241, 0.12)',
+          border: '1px solid rgba(99, 102, 241, 0.25)',
+          borderRadius: '10px',
+          padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', gap: '4px'
+        }}>
+          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#818cf8', fontWeight: 600 }}>Total</span>
+          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#e0e7ff', lineHeight: 1 }}>{stats.total.toLocaleString()}</span>
+        </div>
+
+        {/* Activos */}
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.10)',
+          border: '1px solid rgba(16, 185, 129, 0.22)',
+          borderRadius: '10px',
+          padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', gap: '4px'
+        }}>
+          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#34d399', fontWeight: 600 }}>Activos</span>
+          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#d1fae5', lineHeight: 1 }}>{stats.activos.toLocaleString()}</span>
+        </div>
+
+        {/* Inactivos */}
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.10)',
+          border: '1px solid rgba(239, 68, 68, 0.22)',
+          borderRadius: '10px',
+          padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', gap: '4px'
+        }}>
+          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#f87171', fontWeight: 600 }}>Inactivos</span>
+          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fee2e2', lineHeight: 1 }}>{stats.inactivos.toLocaleString()}</span>
+        </div>
+
+        {/* Por tipo (primeros 3) */}
+        {stats.por_tipo.slice(0, 3).map(tipo => (
+          <div key={tipo.tipo__nombre} style={{
+            background: 'rgba(245, 158, 11, 0.10)',
+            border: '1px solid rgba(245, 158, 11, 0.22)',
+            borderRadius: '10px',
+            padding: '14px 16px',
+            display: 'flex', flexDirection: 'column', gap: '4px'
+          }}>
+            <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#fbbf24', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {tipo.tipo__nombre || 'Sin tipo'}
+            </span>
+            <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fef3c7', lineHeight: 1 }}>{tipo.cantidad.toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  if (personas.length === 0 && !searchTerm && !filterCategoria && !filterCurso && !filterActivo) {
     return (
       <div className="personas-table-container">
         <div style={{
@@ -259,20 +325,22 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
     );
   }
 
-
   return (
     <div className="personas-table-container">
+      {/* Stats cards */}
+      {renderStatsCards()}
+
       {/* Acciones Globales Superiores */}
       <div className="table-global-actions">
         <div className="table-global-actions-left">
           <h2 className="table-global-title">Personas</h2>
           <span className="results-count-badge">
-            {filteredData.length} registros totales
+            {totalItems.toLocaleString()} registros totales
           </span>
         </div>
 
         {isAdmin && onSyncDevice && (
-          <button 
+          <button
             onClick={onSyncDevice}
             className="btn btn-primary btn-sm d-flex align-items-center gap-2"
             title="Importar nuevas personas desde el lector MQTT"
@@ -283,7 +351,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         )}
       </div>
 
-      {/* Combined Compact Header & Filters */}
+      {/* Barra de filtros */}
       <div className="table-top-bar" style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -295,20 +363,32 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         flexWrap: 'wrap'
       }}>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1, flexWrap: 'wrap' }}>
-          {/* Search - Flexible Width */}
+          {/* Búsqueda server-side */}
           <div className="search-box" style={{ flex: '1 1 200px', minWidth: '200px' }}>
             <i className="bi bi-search search-icon"></i>
             <input
               type="text"
-              placeholder="Buscar..."
+              placeholder="Buscar por nombre o ID..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => onSearchChange(e.target.value)}
               className="search-input"
               style={{ height: '40px', fontSize: '0.9rem' }}
             />
           </div>
 
-          {/* Inline Filters */}
+          {/* Filtro activo/inactivo → server-side */}
+          <select
+            value={filterActivo}
+            onChange={(e) => onFilterActivoChange(e.target.value)}
+            className="custom-dark-select"
+            style={{ width: 'auto', minWidth: '150px' }}
+          >
+            <option value="">Todos los estados</option>
+            <option value="true">Solo activos</option>
+            <option value="false">Solo inactivos</option>
+          </select>
+
+          {/* Filtro categoría → client-side (sobre la página) */}
           <select
             value={filterCategoria}
             onChange={(e) => setFilterCategoria(e.target.value)}
@@ -321,6 +401,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
             ))}
           </select>
 
+          {/* Filtro curso → client-side (sobre la página) */}
           <select
             value={filterCurso}
             onChange={(e) => setFilterCurso(e.target.value)}
@@ -334,9 +415,8 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
           </select>
         </div>
 
-        {/* Right-side batch actions */}
+        {/* Batch actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* Batch delete button — visible cuando hay selección activa */}
           {selectionMode && selectedCount > 0 && isAdmin && (
             <button
               onClick={() => setBatchConfirmOpen(true)}
@@ -355,11 +435,9 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         <table className="personas-table">
           <thead>
             <tr>
-              {/* Columna izquierda: toggle o checkbox-all según modo */}
               {isAdmin && (
                 <th style={{ width: '40px', padding: '12px 10px', verticalAlign: 'middle', textAlign: 'center' }}>
                   {selectionMode ? (
-                    // Modo activo → checkbox select-all
                     <input
                       type="checkbox"
                       className="form-check-input"
@@ -371,7 +449,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
                     />
                   ) : (
-                    // Modo inactivo → ícono pequeño para activar selección
                     <button
                       onClick={handleToggleSelectionMode}
                       title="Activar selección múltiple"
@@ -431,161 +508,160 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {currentData.map((person) => {
-              const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
-              const cursosText = cursos.length > 0 ? cursos.join(', ') : '-';
-              
-              const conflictoId = person.id ? conflictosMap.get(String(person.id)) : null;
-              const hasConflict = !!conflictoId;
+            {filteredData.length === 0 ? (
+              <tr>
+                <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <i className="bi bi-search" style={{ fontSize: '2rem', display: 'block', marginBottom: '12px' }}></i>
+                  No se encontraron personas con los filtros aplicados.
+                </td>
+              </tr>
+            ) : (
+              filteredData.map((person) => {
+                const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
+                const cursosText = cursos.length > 0 ? cursos.join(', ') : '-';
+                const conflictoId = person.id ? conflictosMap.get(String(person.id)) : null;
+                const hasConflict = !!conflictoId;
 
-              return (
-                <tr
-                  key={person.id}
-                  onClick={() => onView(person)}
-                  style={{ 
-                    cursor: 'pointer',
-                    backgroundColor: selectedIds.has(person.id) ? 'rgba(59, 130, 246, 0.08)' : (hasConflict ? 'rgba(239, 68, 68, 0.05)' : undefined),
-                    borderLeft: hasConflict ? '4px solid #ef4444' : undefined,
-                  }}
-                >
-                  {isAdmin && (
-                    <td className="select-checkbox-cell" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', verticalAlign: 'middle', padding: '0 6px' }}>
-                      {selectionMode && (
-                        <input
-                          type="checkbox"
-                          className="form-check-input"
-                          checked={selectedIds.has(person.id)}
-                          onChange={() => toggleSelection(person.id)}
-                          style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
+                return (
+                  <tr
+                    key={person.id}
+                    onClick={() => onView(person)}
+                    style={{
+                      cursor: 'pointer',
+                      backgroundColor: selectedIds.has(person.id) ? 'rgba(59, 130, 246, 0.08)' : (hasConflict ? 'rgba(239, 68, 68, 0.05)' : undefined),
+                      borderLeft: hasConflict ? '4px solid #ef4444' : undefined,
+                    }}
+                  >
+                    {isAdmin && (
+                      <td className="select-checkbox-cell" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', verticalAlign: 'middle', padding: '0 6px' }}>
+                        {selectionMode && (
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={selectedIds.has(person.id)}
+                            onChange={() => toggleSelection(person.id)}
+                            style={{ cursor: 'pointer', transform: 'scale(1.1)' }}
+                          />
+                        )}
+                      </td>
+                    )}
+                    <td data-label="ID" style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: '500', letterSpacing: '-0.01em' }}>
+                      #{person.id}
+                    </td>
+                    <td data-label="Foto">
+                      {person.foto ? (
+                        <img
+                          src={person.foto}
+                          alt={`${person.nombre} ${person.apellido}`}
+                          className="person-avatar"
+                          style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
                         />
+                      ) : (
+                        <div className="avatar-placeholder" style={{
+                          width: '42px', height: '42px', borderRadius: '50%', background: '#e2e8f0',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#64748b', fontSize: '1.5rem'
+                        }}>
+                          <i className="bi bi-person-circle"></i>
+                        </div>
                       )}
                     </td>
-                  )}
-                  <td data-label="ID" style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: '500', letterSpacing: '-0.01em' }}>
-                    #{person.id}
-                  </td>
-                  <td data-label="Foto">
-                    {person.foto ? (
-                      <img
-                        src={person.foto}
-                        alt={`${person.nombre} ${person.apellido}`}
-                        className="person-avatar"
-                        style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div className="avatar-placeholder" style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '50%',
-                        background: '#e2e8f0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#64748b',
-                        fontSize: '1.5rem'
-                      }}>
-                        <i className="bi bi-person-circle"></i>
-                      </div>
-                    )}
-                  </td>
-                  <td data-label="Nombre" className="desktop-cell">
-                    <strong>{person.nombre}</strong>
-                    {hasConflict && (
-                      <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
-                        ¡Duplicado!
-                      </span>
-                    )}
-                  </td>
-                  <td data-label="Apellido" className="desktop-cell">{person.apellido}</td>
-                  
-                  {/* Celda combinada solo para móvil */}
-                  <td data-label="Persona" className="mobile-cell">
-                    <strong>{person.nombre} {person.apellido}</strong>
-                    {hasConflict && (
-                      <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
-                        ¡Duplicado!
-                      </span>
-                    )}
-                  </td>
-                  <td data-label="Categoría">
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {(person.roles && person.roles.length > 0) ? person.roles.map((role, idx) => (
-                        <span key={idx} className="department-badge" style={{
-                          padding: '4px 8px',
-                          borderRadius: '12px',
-                          fontSize: '0.7rem',
-                          fontWeight: '600',
-                          background: role.tipo?.nombre === 'Estudiante' ? '#dbeafe' :
-                            role.tipo?.nombre === 'Docente' ? '#fef3c7' : '#f3e8ff',
-                          color: role.tipo?.nombre === 'Estudiante' ? '#1e40af' :
-                            role.tipo?.nombre === 'Docente' ? '#92400e' : '#6b21a8'
-                        }}>
-                          {role.tipo?.nombre}
+                    <td data-label="Nombre" className="desktop-cell">
+                      <strong>{person.nombre}</strong>
+                      {hasConflict && (
+                        <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
+                          ¡Duplicado!
                         </span>
-                      )) : (
-                        <span className="department-badge">-</span>
                       )}
-                    </div>
-                  </td>
-                  <td data-label="Cursos" style={{ fontSize: '0.85rem', color: '#64748b' }}>{cursosText}</td>
-                  <td data-label="Acciones">
-                    <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                      {hasConflict && onResolveConflict && (
-                        <button
-                          className="btn-icon action-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onResolveConflict(person, conflictoId!);
-                          }}
-                          title="Resolver Conflicto"
-                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#ef4444' }}
-                        >
-                          <i className="bi bi-exclamation-triangle-fill"></i>
-                        </button>
+                    </td>
+                    <td data-label="Apellido" className="desktop-cell">{person.apellido}</td>
+
+                    {/* Celda combinada solo para móvil */}
+                    <td data-label="Persona" className="mobile-cell">
+                      <strong>{person.nombre} {person.apellido}</strong>
+                      {hasConflict && (
+                        <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
+                          ¡Duplicado!
+                        </span>
                       )}
-                      {(isAdmin || rol === 'guardia') && (
-                        <button
-                          className="btn-icon btn-edit action-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(person);
-                          }}
-                          title="Editar"
-                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#fbbf24' }}
-                        >
-                          <i className="bi bi-pencil-fill"></i>
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button
-                          className="btn-icon btn-delete action-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteRequest(person.id, e);
-                          }}
-                          title="Eliminar"
-                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#f87171', zIndex: 10, position: 'relative' }}
-                        >
-                          <i className="bi bi-trash-fill"></i>
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                    </td>
+                    <td data-label="Categoría">
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {(person.roles && person.roles.length > 0) ? person.roles.map((role, idx) => (
+                          <span key={idx} className="department-badge" style={{
+                            padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600',
+                            background: role.tipo?.nombre === 'Estudiante' ? '#dbeafe' :
+                              role.tipo?.nombre === 'Docente' ? '#fef3c7' : '#f3e8ff',
+                            color: role.tipo?.nombre === 'Estudiante' ? '#1e40af' :
+                              role.tipo?.nombre === 'Docente' ? '#92400e' : '#6b21a8'
+                          }}>
+                            {role.tipo?.nombre}
+                          </span>
+                        )) : (
+                          <span className="department-badge">-</span>
+                        )}
+                      </div>
+                    </td>
+                    <td data-label="Cursos" style={{ fontSize: '0.85rem', color: '#64748b' }}>{cursosText}</td>
+                    <td data-label="Acciones">
+                      <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        {hasConflict && onResolveConflict && (
+                          <button
+                            className="btn-icon action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onResolveConflict(person, conflictoId!);
+                            }}
+                            title="Resolver Conflicto"
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#ef4444' }}
+                          >
+                            <i className="bi bi-exclamation-triangle-fill"></i>
+                          </button>
+                        )}
+                        {(isAdmin || rol === 'guardia') && (
+                          <button
+                            className="btn-icon btn-edit action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit(person);
+                            }}
+                            title="Editar"
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#fbbf24' }}
+                          >
+                            <i className="bi bi-pencil-fill"></i>
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            className="btn-icon btn-delete action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRequest(person.id, e);
+                            }}
+                            title="Eliminar"
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#f87171', zIndex: 10, position: 'relative' }}
+                          >
+                            <i className="bi bi-trash-fill"></i>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Paginación */}
+      {/* Paginación server-side */}
       <TablePagination
-        currentPage={safeCurrentPage}
+        currentPage={currentPage}
         totalPages={totalPages}
-        onPageChange={handlePageChange}
+        onPageChange={onPageChange}
         itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={filteredData.length}
+        onItemsPerPageChange={onItemsPerPageChange}
+        totalItems={totalItems}
       />
 
       {/* Confirm Modal for single entity */}

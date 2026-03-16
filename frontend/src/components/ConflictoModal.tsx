@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useState } from 'react';
 import { actualizarNombreConflicto, eliminarDuplicado, apiRequest } from '../config/api';
 import { useToast } from './Toast';
+import { useModalBackButton } from '../hooks/useModalBackButton';
 
 interface Conflicto {
   idConflicto: number;
@@ -130,6 +131,9 @@ const ConflictoModal: React.FC<ConflictoModalProps> = ({ conflict, onClose, onRe
   const [action, setAction] = useState<ActionType>(null);
   const [hoveredAction, setHoveredAction] = useState<ActionType>(null);
   const [nombreEdit, setNombreEdit] = useState('');
+
+  // Botón atrás del navegador/sistema cierra el modal (siempre mounted = siempre open)
+  useModalBackButton(true, onClose);
 
   const idOriginal = conflict.persona_db.idPersona;
   const idNuevo = conflict.id_persona_nueva ?? null;

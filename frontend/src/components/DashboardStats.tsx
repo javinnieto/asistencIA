@@ -16,6 +16,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import { getLocalDateString, formatDateAr } from '../utils/dateUtils';
 
 interface Asistencia {
   idAsistencia: number;
@@ -66,19 +67,23 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ asistencias }) => {
 
   // Estadísticas por fecha
   const statsPorFecha = asistencias.reduce((acc, asistencia) => {
-    const fecha = asistencia.fecha_hora.split('T')[0];
-    if (!acc[fecha]) {
-      acc[fecha] = { fecha, presentes: 0, ausentes: 0 };
+    const localDate = new Date(asistencia.fecha_hora);
+    const fechaYMD = getLocalDateString(localDate);
+    
+    if (!acc[fechaYMD]) {
+      acc[fechaYMD] = { fecha: formatDateAr(fechaYMD), fechaYMD, presentes: 0, ausentes: 0 };
     }
     if (asistencia.estado.nombre === 'Presente') {
-      acc[fecha].presentes++;
+      acc[fechaYMD].presentes++;
     } else {
-      acc[fecha].ausentes++;
+      acc[fechaYMD].ausentes++;
     }
     return acc;
-  }, {} as Record<string, { fecha: string; presentes: number; ausentes: number }>);
+  }, {} as Record<string, { fecha: string; fechaYMD: string; presentes: number; ausentes: number }>);
 
-  const datosPorFecha = Object.values(statsPorFecha).slice(-7); // Últimos 7 días
+  const datosPorFecha = Object.values(statsPorFecha)
+    .sort((a, b) => a.fechaYMD.localeCompare(b.fechaYMD))
+    .slice(-7); // Últimos 7 días
 
   // Estadísticas de temperatura
   const temperaturasValidas = asistencias.filter(a => a.temperatura > 0);

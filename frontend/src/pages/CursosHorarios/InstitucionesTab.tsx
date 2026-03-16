@@ -3,6 +3,7 @@ import { apiRequest } from '../../config/api';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/ConfirmModal';
+import { useModalBackButton } from '../../hooks/useModalBackButton';
 import './CursosHorarios.css';
 
 
@@ -28,6 +29,9 @@ const InstitucionesTab: React.FC = () => {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
     const [deleting, setDeleting] = useState(false);
+
+    // Botón atrás: cierra el modal de nueva/editar institución
+    useModalBackButton(isModalOpen, () => setIsModalOpen(false));
 
     // Fetch Data
     const fetchInstituciones = useCallback(async () => {

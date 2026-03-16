@@ -1,6 +1,11 @@
 /* Personas.css - Estilos modernos y profesionales para la página de gestión de personas */
 
+/* ── Identidad de color: Esmeralda (#10b981) ──
+   Se sobreescribe --primary localmente para que todos los
+   elementos que usan var(--primary) hereden el color de esta sección. */
 .personas-page {
+  --primary: #10b981;
+  --primary-hover: #059669;
   padding: 0;
   min-height: 100vh;
   background: #0f172a;

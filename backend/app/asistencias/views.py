@@ -267,7 +267,41 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     search_fields = ['nombre', 'idPersona']
     ordering_fields = ['nombre', 'idPersona']
     ordering = ['nombre']
-    pagination_class = None
+    pagination_class = CustomPageNumberPagination
+
+    @action(detail=False, methods=['get'], url_path='stats')
+    def stats(self, request):
+        """
+        Devuelve contadores agregados de personas SIN traer todos los registros.
+        Aplica los mismos filtros que el listado (activo, search) usando el
+        queryset ya filtrado por get_queryset().
+        """
+        from django.db.models import Count, Q
+        qs = self.filter_queryset(self.get_queryset())
+
+        totales = qs.aggregate(
+            total=Count('idPersona'),
+            activos=Count('idPersona', filter=Q(activo=True)),
+            inactivos=Count('idPersona', filter=Q(activo=False)),
+        )
+
+        # Conteo por tipo de persona (usando PersonaInstitucion para no hacer N+1)
+        from asistencias.models import PersonaInstitucion
+        persona_ids = qs.values_list('idPersona', flat=True)
+        tipos = (
+            PersonaInstitucion.objects
+            .filter(persona_id__in=persona_ids, activo=True)
+            .values('tipo__nombre')
+            .annotate(cantidad=Count('persona_id', distinct=True))
+            .order_by('-cantidad')
+        )
+
+        return Response({
+            'total': totales['total'],
+            'activos': totales['activos'],
+            'inactivos': totales['inactivos'],
+            'por_tipo': list(tipos),
+        })
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:

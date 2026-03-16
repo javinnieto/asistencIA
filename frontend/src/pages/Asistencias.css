@@ -49,10 +49,39 @@
 }
 
 /* Filters */
-.as-filters-row {
+.as-filters-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.as-filter-group {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
+}
+
+.search-group {
+  flex: 1 1 250px;
+}
+
+.dates-group, .selects-group {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1200px) {
+  .as-filter-group {
+    flex: 1 1 100%;
+  }
+  
+  .dates-group .as-date-input {
+    flex: 1 1 50%;
+  }
+
+  .selects-group .as-select {
+    flex: 1 1 0;
+    min-width: 0; /* allows shrinking below natural text width */
+  }
 }
 
 .as-input-group {
@@ -61,9 +90,9 @@
   background: #0f172a;
   border: 1px solid #334155;
   border-radius: 8px;
-  padding: 0 12px;
-  height: 42px;
-  min-width: 200px;
+  padding: 0 10px;
+  height: 38px;
+  min-width: 180px;
 }
 
 .as-input-icon {
@@ -84,20 +113,20 @@
   background: #0f172a;
   border: 1px solid #334155;
   border-radius: 8px;
-  padding: 0 12px;
-  height: 42px;
+  padding: 0 10px;
+  height: 38px;
   color: #f1f5f9;
   outline: none;
   cursor: pointer;
-  min-width: 150px;
+  min-width: 130px;
 }
 
 .as-date-input {
   background: #0f172a;
   border: 1px solid #334155;
   border-radius: 8px;
-  padding: 0 12px;
-  height: 42px;
+  padding: 0 10px;
+  height: 38px;
   color: #f1f5f9;
   color-scheme: dark;
   font-family: inherit;
@@ -109,8 +138,8 @@
   color: #f87171;
   border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: 8px;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -125,9 +154,16 @@
 /* Stats */
 .as-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   padding: 24px;
+}
+
+@media (max-width: 992px) {
+  .as-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px;
+  }
 }
 
 .as-stat-card {
@@ -727,8 +763,9 @@
     justify-content: flex-start;
   }
 
+  /* Force 2x2 mosaic on mobile as requested */
   .as-stats-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 12px;
     gap: 8px;
   }
@@ -827,7 +864,7 @@
   }
 
   .as-stats-grid {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     padding: 8px;
   }

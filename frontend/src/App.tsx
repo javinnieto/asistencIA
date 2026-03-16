@@ -7,6 +7,7 @@ import Personas from './pages/Personas';
 import Asistencias from './pages/Asistencias';
 import Usuarios from './pages/Usuarios';
 import CursosHorarios from './pages/CursosHorarios';
+import DiasNoLaborables from './pages/DiasNoLaborables';
 import InstitucionesTab from './pages/CursosHorarios/InstitucionesTab';
 import AuditLog from './pages/AuditLog';
 import Login from './pages/Login';
@@ -41,10 +42,35 @@ const AppContent: React.FC = () => {
 
   const isLoginRoute = location.pathname === '/login';
 
-  // Close mobile sidebar on route change
+  // Cierra sidebar mobile al cambiar de ruta
   React.useEffect(() => {
     setMobileSidebarOpen(false);
   }, [location]);
+
+  // Manejo del botón "atrás" del sistema / navegador en mobile:
+  // Cuando se abre el sidebar, empujamos un estado extra al historial.
+  // Si el usuario aprieta "atrás", capturamos el popstate y simplemente
+  // cerramos el sidebar (sin navegar).
+  React.useEffect(() => {
+    if (mobileSidebarOpen) {
+      // Empujamos un estado "dummy" para que el botón atrás tenga algo que consumir
+      window.history.pushState({ sidebarOpen: true }, '');
+
+      const handlePopState = (e: PopStateEvent) => {
+        // Si el estado que se está sacando es el nuestro (o cualquiera mientras el sidebar está abierto)
+        if (mobileSidebarOpen) {
+          setMobileSidebarOpen(false);
+          // Prevenimos que el navegador haga la navegación real
+          e.stopImmediatePropagation?.();
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [mobileSidebarOpen]);
 
   if (isLoginRoute) {
     return <Routes><Route path="/login" element={<Login />} /></Routes>;
@@ -69,14 +95,15 @@ const AppContent: React.FC = () => {
         setCollapsed={setSidebarCollapsed}
       />
 
-      {/* Mobile Overlay to close sidebar */}
+      {/* Mobile Overlay: clic fuera del sidebar → lo cierra */}
       {mobileSidebarOpen && (
         <div
           className="mobile-sidebar-overlay"
           onClick={() => setMobileSidebarOpen(false)}
           style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 900
-            // Visual style is handled in CSS by ::before on .app-layout, but this div ensures click capture
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 951,   // encima del ::before visual (950) pero bajo el sidebar (1000)
+            cursor: 'pointer',
           }}
         />
       )}
@@ -113,6 +140,14 @@ const AppContent: React.FC = () => {
             element={
               <PrivateRoute>
                 <CursosHorarios />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dias-no-laborables"
+            element={
+              <PrivateRoute>
+                <DiasNoLaborables />
               </PrivateRoute>
             }
           />

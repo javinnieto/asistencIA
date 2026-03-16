@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
+import { useModalBackButton } from '../hooks/useModalBackButton';
 import './Usuarios.css';
 
 interface Usuario {
@@ -34,6 +35,11 @@ const Usuarios: React.FC = () => {
     const [modal, setModal] = useState<ModalState>(initModal());
     const [saving, setSaving] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<Usuario | null>(null);
+
+    // Botón atrás: cierra el modal de editar/crear usuario
+    useModalBackButton(modal.open, () => setModal(initModal()));
+    // Botón atrás: cierra el modal de confirmar borrado de usuario
+    useModalBackButton(confirmDelete !== null, () => setConfirmDelete(null));
 
     const fetchUsuarios = async () => {
         try {

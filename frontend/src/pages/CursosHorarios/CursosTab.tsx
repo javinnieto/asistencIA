@@ -5,6 +5,7 @@ import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/ConfirmModal';
 import AsignacionMasivaAlumnosModal from '../../components/AsignacionMasivaAlumnosModal';
+import { useModalBackButton } from '../../hooks/useModalBackButton';
 import './CursosHorarios.css';
 
 
@@ -14,7 +15,6 @@ interface Horario {
     dia: string;
     hora_inicio: string;
     hora_fin: string;
-    materia: string;
     activo?: boolean;
     semana?: string;
 }
@@ -68,6 +68,9 @@ const CursosTab: React.FC = () => {
     const [formError, setFormError] = useState<string | null>(null);
     const [horarioErrors, setHorarioErrors] = useState<Record<number, string>>({});
 
+    // Botón atrás: cierra el modal de nuevo/editar curso
+    useModalBackButton(isModalOpen, () => setIsModalOpen(false));
+
     useEffect(() => {
         apiRequest('/instituciones/').then(async res => {
             if (res.ok) setInstituciones((await res.json()).results || []);
@@ -101,7 +104,7 @@ const CursosTab: React.FC = () => {
         } else {
             setCurrentCurso({ activo: true, institucion: instituciones.find(i => i.idInstitucion === parseInt(selectedInstId)) });
             // Start with a smart default for new course too
-            setHorarios([{ dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true, semana: 'Todas' }]);
+            setHorarios([{ dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', activo: true, semana: 'Todas' }]);
         }
         setFormError(null);
         setHorarioErrors({});
@@ -172,7 +175,6 @@ const CursosTab: React.FC = () => {
                     dia: h.dia,
                     hora_inicio: h.hora_inicio,
                     hora_fin: h.hora_fin,
-                    materia: h.materia || '',
                     activo: h.activo !== false,
                     semana: h.semana || 'Todas'
                 }))
@@ -215,7 +217,6 @@ const CursosTab: React.FC = () => {
                             dia: h.dia,
                             hora_inicio: h.hora_inicio,
                             hora_fin: h.hora_fin,
-                            materia: h.materia || '',
                             activo: h.activo !== false,
                             semana: h.semana || 'Todas'
                         })
@@ -299,7 +300,6 @@ const CursosTab: React.FC = () => {
                     dia: baseDay,
                     hora_inicio: startStr,
                     hora_fin: endStr,
-                    materia: '',
                     activo: true,
                     semana: 'Todas'
                 };
@@ -307,7 +307,7 @@ const CursosTab: React.FC = () => {
         }
 
         // Fallback if no slot found easily
-        return { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', materia: '', activo: true, semana: 'Todas' };
+        return { dia: 'Lunes', hora_inicio: '08:00', hora_fin: '09:00', activo: true, semana: 'Todas' };
     };
 
     const addHorario = () => {
@@ -468,16 +468,16 @@ const CursosTab: React.FC = () => {
                     {isAdmin && (
                         <button
                             onClick={() => openModal()}
-                            className="btn-primary-action"
+                            className="btn-primary-action btn-fab-mobile"
                         >
-                            <i className="bi bi-plus-lg"></i> Nuevo Curso
+                            <i className="bi bi-plus-lg"></i> <span className="hide-on-mobile-fab">Nuevo Curso</span>
                         </button>
                     )}
                 </div>
 
                 {/* Bottom Row: Filters */}
                 <div className="ch-controls-row nowrap">
-                    <div className="search-container" style={{ flex: '1 1 200px', minWidth: '200px' }}>
+                    <div className="search-container" style={{ flex: '1' }}>
                         <i className="bi bi-search search-icon-pos"></i>
                         <input
                             type="text"
@@ -505,8 +505,7 @@ const CursosTab: React.FC = () => {
                 <table className="ch-table mobile-cards-table">
                     <thead className="ch-thead hide-on-mobile">
                         <tr>
-                            <th className="ch-th" style={{ width: '40px' }}></th>
-                            <th className="ch-th clickable-th" onClick={() => handleSort('idCurso')}>ID {sortField==='idCurso' && (sortDir==='asc'?'↑':'↓')}</th>
+                            <th className="ch-th ch-th-expand"></th>
                             <th className="ch-th clickable-th" onClick={() => handleSort('nombre')}>NOMBRE {sortField==='nombre' && (sortDir==='asc'?'↑':'↓')}</th>
                             <th className="ch-th clickable-th" onClick={() => handleSort('institucion')}>INSTITUCIÓN {sortField==='institucion' && (sortDir==='asc'?'↑':'↓')}</th>
                             <th className="ch-th clickable-th" onClick={() => handleSort('cantidad_alumnos')}>ALUMNOS {sortField==='cantidad_alumnos' && (sortDir==='asc'?'↑':'↓')}</th>
@@ -517,95 +516,120 @@ const CursosTab: React.FC = () => {
                     <tbody>
                         {filteredCursos.map(curso => (
                             <React.Fragment key={curso.idCurso}>
-                                <tr
-                                    className="ch-tr clickable"
+                                <tr 
+                                    key={curso.idCurso} 
+                                    className={`ch-tr clickable ${expandedCursoId === curso.idCurso ? 'expanded-active text-white' : ''}`}
                                     onClick={() => toggleExpand(curso.idCurso)}
-                                    style={{ cursor: 'pointer' }}
                                 >
+                                    {/* Col 1: Expand chevron (desktop only) */}
                                     <td className="ch-td ch-td-expand hide-on-mobile">
                                         <i className={`bi bi-chevron-${expandedCursoId === curso.idCurso ? 'down' : 'right'}`} style={{ transition: 'transform 0.2s', fontSize: '0.9rem', color: '#94a3b8' }}></i>
                                     </td>
-                                    <td className="ch-td dimmed hide-on-mobile" data-label="ID">#{curso.idCurso}</td>
-                                    <td className="ch-td bold ch-mobile-title" data-label="Nombre">{curso.nombre}</td>
-                                    <td className="ch-td dimmed ch-mobile-institucion" data-label="Institución">{curso.institucion?.nombre}</td>
-                                    <td className="ch-td" data-label="Alumnos">
-                                        <span className="horario-count-badge">
-                                            {curso.cantidad_alumnos || 0} alumno{(curso.cantidad_alumnos || 0) !== 1 ? 's' : ''}
-                                        </span>
+
+                                    {/* Col 2: Nombre — in mobile, this is the card title */}
+                                    <td className="ch-td bold ch-mobile-title">
+                                        <div className="d-flex justify-content-between align-items-start w-100">
+                                            <span className="text-wrap me-2">{curso.nombre}</span>
+                                            {/* Mobile-only badges at top right */}
+                                            <div className="hide-on-desktop d-flex flex-column align-items-end gap-3 flex-shrink-0">
+                                                <span className="horario-count-badge m-0">
+                                                    {curso.cantidad_alumnos || 0} alumno{(curso.cantidad_alumnos || 0) !== 1 ? 's' : ''}
+                                                </span>
+                                                <span className={`ch-badge ${curso.activo ? 'active' : 'inactive'} m-0`}>
+                                                    {curso.activo ? 'Activo' : 'Inactivo'}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td className="ch-td ch-mobile-estado" data-label="Estado">
+
+                                    {/* Col 3: Institución */}
+                                    <td className="ch-td dimmed ch-mobile-institucion">
+                                        <i className="bi bi-building me-2 hide-on-desktop"></i>
+                                        {curso.institucion?.nombre}
+                                    </td>
+
+                                    {/* Col 4: Alumnos (desktop only, as mobile is above) */}
+                                    <td className="ch-td hide-on-mobile">
+                                        <div className="d-flex gap-2 align-items-center">
+                                            <span className="horario-count-badge">
+                                                {curso.cantidad_alumnos || 0} alumno{(curso.cantidad_alumnos || 0) !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    {/* Col 5: Estado (desktop only) */}
+                                    <td className="ch-td hide-on-mobile">
                                         <span className={`ch-badge ${curso.activo ? 'active' : 'inactive'}`}>
-                                            {curso.activo ? 'ACTIVO' : 'INACTIVO'}
+                                            {curso.activo ? 'Activo' : 'Inactivo'}
                                         </span>
                                     </td>
-                                    <td className="ch-td ch-mobile-acciones">
-                                        <div className="action-buttons">
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setAsignacionCurso({
-                                                            id: curso.idCurso,
-                                                            nombre: curso.nombre,
-                                                            institucion: curso.institucion?.idInstitucion
-                                                        });
-                                                        setIsAsignacionModalOpen(true);
-                                                    }}
-                                                    className="btn-icon text-success"
-                                                    title="Inscripción Masiva de Alumnos"
-                                                >
-                                                    <i className="bi bi-people-fill"></i>
-                                                </button>
-                                            )}
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); openModal(curso); }}
-                                                    className="btn-icon btn-edit"
-                                                    title="Editar"
-                                                >
-                                                    <i className="bi bi-pencil-fill"></i>
-                                                </button>
-                                            )}
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); promptDelete(curso.idCurso); }}
-                                                    className="btn-icon btn-delete"
-                                                    title="Eliminar"
-                                                >
-                                                    <i className="bi bi-trash-fill"></i>
-                                                </button>
+
+                                    {/* Col 6: Acciones — also contains mobile expand indicator */}
+                                    <td className="ch-td ch-mobile-actions" onClick={(e) => e.stopPropagation()}>
+                                        <div className="btn-group gap-2 d-flex action-buttons">
+                                            <button
+                                                className="btn-icon text-success"
+                                                onClick={() => {
+                                                    setAsignacionCurso({ id: curso.idCurso, nombre: curso.nombre, institucion: curso.institucion?.idInstitucion });
+                                                    setIsAsignacionModalOpen(true);
+                                                }}
+                                                title="Asignación Masiva"
+                                            >
+                                                <i className="bi bi-people-fill"></i>
+                                            </button>
+                                            <button
+                                                className="btn-icon btn-edit"
+                                                onClick={() => openModal(curso)}
+                                                title="Editar"
+                                            >
+                                                <i className="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button
+                                                className="btn-icon btn-delete"
+                                                onClick={() => promptDelete(curso.idCurso)}
+                                                title="Eliminar"
+                                            >
+                                                <i className="bi bi-trash-fill"></i>
+                                            </button>
+                                        </div>
+
+                                        {/* Mobile-only: "Ver/Ocultar Horarios" indicator — has its own click to bypass stopPropagation */}
+                                        <div
+                                            className="ch-mobile-expand-indicator hide-on-desktop mt-3 pt-2 border-top border-secondary text-center w-100 small fw-semibold"
+                                            style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                                            onClick={(e) => { e.stopPropagation(); toggleExpand(curso.idCurso); }}
+                                        >
+                                            {expandedCursoId === curso.idCurso ? (
+                                                <><i className="bi bi-chevron-up me-1"></i> Ocultar Horarios</>
+                                            ) : (
+                                                <><i className="bi bi-chevron-down me-1"></i> Ver {curso.cantidad_horarios} Horarios</>
                                             )}
                                         </div>
                                     </td>
+
                                 </tr>
+
                                 {expandedCursoId === curso.idCurso && (
                                     <tr className="expanded-row">
-                                        <td colSpan={7} style={{ padding: 0, background: 'rgba(15, 23, 42, 0.8)' }}>
-                                            <div className="horarios-expanded-container">
-                                                <div className="horarios-header">
-                                                    <i className="bi bi-clock-fill"></i>
-                                                    <span>Horarios de {curso.nombre}</span>
-                                                </div>
+                                        <td colSpan={6} style={{ padding: 0, background: 'rgba(15, 23, 42, 0.8)' }}>
+                                            <div className="horarios-expanded-container w-100">
                                                 {curso.horarios && curso.horarios.length > 0 ? (
                                                     <div className="horarios-by-day">
                                                         {(() => {
-                                                            const grouped: Record<string, typeof curso.horarios> = {};
                                                             const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-                                                            curso.horarios.forEach((h: any) => {
-                                                                if (!grouped[h.dia]) grouped[h.dia] = [];
-                                                                grouped[h.dia].push(h);
+                                                            const sortedHorarios = [...curso.horarios].sort((a: any, b: any) => {
+                                                                if (a.dia !== b.dia) {
+                                                                     return dayOrder.indexOf(a.dia) - dayOrder.indexOf(b.dia);
+                                                                }
+                                                                return a.hora_inicio.localeCompare(b.hora_inicio);
                                                             });
-                                                            const sortedDays = Object.keys(grouped).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
-                                                            return sortedDays.map(dia => (
-                                                                <div key={dia} className="horario-day-row">
-                                                                    <div className="horario-day-label">{dia}</div>
-                                                                    <div className="horario-slots">
-                                                                        {grouped[dia].map((h: any, idx: number) => {
-                                                                            // find absolute index
-                                                                            const absIdx = curso.horarios!.indexOf(h);
-                                                                            return (
+                                                            return (
+                                                                <div className="horarios-compact-grid">
+                                                                    {sortedHorarios.map((h: any, idx: number) => {
+                                                                        const absIdx = curso.horarios!.indexOf(h);
+                                                                        return (
                                                                             <div
-                                                                                key={idx}
+                                                                                key={absIdx}
                                                                                 className={`horario-slot ${isAdmin ? 'horario-card-clickable' : ''}`}
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
@@ -614,14 +638,15 @@ const CursosTab: React.FC = () => {
                                                                                 title={isAdmin ? "Click para editar este horario" : ""}
                                                                                 style={{ cursor: isAdmin ? 'pointer' : 'default' }}
                                                                             >
-                                                                                <div className="horario-time">{h.hora_inicio.slice(0, 5)} - {h.hora_fin.slice(0, 5)} {h.semana && h.semana !== 'Todas' ? `[Sem. ${h.semana}]` : ''}</div>
-                                                                                {h.materia && <div className="horario-subject">{h.materia}</div>}
-                                                                                {isAdmin && <div className="horario-edit-hint"><i className="bi bi-pencil"></i></div>}
+                                                                                <div className="horario-time-compact">
+                                                                                    <strong>{h.dia.slice(0, 3)}.</strong> {h.hora_inicio.slice(0, 5)} - {h.hora_fin.slice(0, 5)} {h.semana && h.semana !== 'Todas' ? `[S. ${h.semana}]` : ''}
+                                                                                </div>
+                                                                                {isAdmin && <div className="horario-edit-hint-compact"><i className="bi bi-pencil"></i></div>}
                                                                             </div>
-                                                                        )})}
-                                                                    </div>
+                                                                        );
+                                                                    })}
                                                                 </div>
-                                                            ));
+                                                            );
                                                         })()}
                                                     </div>
                                                 ) : (
@@ -637,7 +662,7 @@ const CursosTab: React.FC = () => {
                             </React.Fragment>
                         ))}
                         {filteredCursos.length === 0 && !loading && (
-                            <tr><td colSpan={7} style={{ padding: 0 }}>
+                            <tr><td colSpan={6} style={{ padding: 0 }}>
                                 <div className="ch-empty-state">
                                     <i className="bi bi-journal-x ch-empty-icon"></i>
                                     No se encontraron cursos.
@@ -652,7 +677,10 @@ const CursosTab: React.FC = () => {
             {isModalOpen && ReactDOM.createPortal(
                 <div className="ch-modal-overlay">
                     <div className="ch-modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h2 className="ch-modal-title">{currentCurso.idCurso ? 'Editar' : 'Nuevo'} Curso</h2>
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+                            <h2 className="ch-modal-title mb-0">{currentCurso.idCurso ? 'Editar' : 'Nuevo'} Curso</h2>
+                            <button type="button" className="btn-close btn-close-white" aria-label="Close" onClick={() => setIsModalOpen(false)}></button>
+                        </div>
 
                         {formError && (
                             <div style={{
