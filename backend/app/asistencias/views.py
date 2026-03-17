@@ -21,7 +21,7 @@ from .serializers import (
     AsistenciaCreateSerializer, TipoPersonaCreateSerializer, CursoCreateSerializer,
     HorarioSerializer, HorarioCreateSerializer, ConflictoIdentidadSerializer,
     DiaNoLaborableSerializer, DiaNoLaborableCreateSerializer,
-    ConfiguracionSemanaSerializer
+    ConfiguracionSemanaSerializer, AsistenciaListSerializer
 )
 
 from django.conf import settings
@@ -801,8 +801,17 @@ class EstadoAsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
 
 
 class AsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
-    queryset = Asistencia.objects.all().select_related('persona', 'estado', 'horario', 'horario__curso').order_by('-fechaHora')
+    queryset = Asistencia.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
+
+    def get_queryset(self):
+        # We use select_related for immediate foreign keys 
+        # And prefetch_related for persona->roles->(tipo, curso, horarios) to prevent N+1 queries in the list serializer
+        return Asistencia.objects.all().select_related(
+            'persona', 'estado', 'horario', 'horario__curso', 'institucion'
+        ).prefetch_related(
+            'persona__roles__tipo', 'persona__roles__curso__horarios'
+        ).order_by('-fechaHora')
     pagination_class = CustomPageNumberPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = {
@@ -823,6 +832,8 @@ class AsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return AsistenciaCreateSerializer
+        elif self.action == 'list':
+            return AsistenciaListSerializer
         return AsistenciaSerializer
 
     def _check_guardia_restrictions(self, request):

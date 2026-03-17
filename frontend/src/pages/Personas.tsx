@@ -23,12 +23,7 @@ interface Person {
   requiere_salida?: boolean;
 }
 
-interface PersonasStats {
-  total: number;
-  activos: number;
-  inactivos: number;
-  por_tipo: { tipo__nombre: string; cantidad: number }[];
-}
+
 
 const Personas: React.FC = () => {
   const { showToast } = useToast();
@@ -49,8 +44,7 @@ const Personas: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterActivo, setFilterActivo] = useState('');
 
-  // Stats for summary cards
-  const [stats, setStats] = useState<PersonasStats>({ total: 0, activos: 0, inactivos: 0, por_tipo: [] });
+
 
   // Conflicts State
   const [conflictos, setConflictos] = useState<any[]>([]);
@@ -107,20 +101,14 @@ const Personas: React.FC = () => {
     if (showLoader) setIsLoading(true);
     try {
       const qs = buildQueryString(page, perPage, search, activo);
-      const [response, confRes, statsRes] = await Promise.all([
+      const [response, confRes] = await Promise.all([
         apiRequest(`/personas/?${qs}`),
-        apiRequest(`/conflictos/?resuelto=false`),
-        apiRequest(`/personas/stats/?${new URLSearchParams({ ...(search ? { search } : {}), ...(activo ? { activo } : {}) }).toString()}`)
+        apiRequest(`/conflictos/?resuelto=false`)
       ]);
 
       if (confRes.ok) {
         const confData = await confRes.json();
         setConflictos(confData.results || confData || []);
-      }
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
       }
 
       if (response.ok) {
@@ -308,8 +296,6 @@ const Personas: React.FC = () => {
           setPersonas(prev => prev.map(p => p.id === transformed.id ? transformed : p));
           setIsFormOpen(false);
           showToast('Cambios guardados exitosamente', 'success');
-          // Refresh stats
-          loadPersonas(currentPage, itemsPerPage, searchTerm, filterActivo, false);
         } else {
           const errorData = await response.json().catch(() => ({}));
           let errorMsg = 'Error al guardar los cambios';
@@ -369,8 +355,6 @@ const Personas: React.FC = () => {
         onSearchChange={handleSearchChange}
         filterActivo={filterActivo}
         onFilterActivoChange={handleFilterActivoChange}
-        // Stats cards
-        stats={stats}
       />
 
       {resolvingConflict && (

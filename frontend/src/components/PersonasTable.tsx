@@ -21,13 +21,6 @@ interface Person {
   roles?: any[];
 }
 
-interface PersonasStats {
-  total: number;
-  activos: number;
-  inactivos: number;
-  por_tipo: { tipo__nombre: string; cantidad: number }[];
-}
-
 interface PersonasTableProps {
   personas: Person[];
   onEdit: (person: Person) => void;
@@ -51,9 +44,6 @@ interface PersonasTableProps {
   onSearchChange: (value: string) => void;
   filterActivo: string;
   onFilterActivoChange: (value: string) => void;
-
-  // Stats cards
-  stats?: PersonasStats;
 }
 
 const PersonasTable: React.FC<PersonasTableProps> = ({
@@ -75,7 +65,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   onSearchChange,
   filterActivo,
   onFilterActivoChange,
-  stats,
 }) => {
   const { isAdmin, rol } = useAuth();
 
@@ -225,70 +214,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
     setSelectionMode(prev => !prev);
   };
 
-  // ── Stats cards (si se proveen) ──────────────────────────────────────────
-  const renderStatsCards = () => {
-    if (!stats) return null;
-    return (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: '12px',
-        padding: '20px 32px 0 32px',
-      }}>
-        {/* Total */}
-        <div style={{
-          background: 'rgba(99, 102, 241, 0.12)',
-          border: '1px solid rgba(99, 102, 241, 0.25)',
-          borderRadius: '10px',
-          padding: '14px 16px',
-          display: 'flex', flexDirection: 'column', gap: '4px'
-        }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#818cf8', fontWeight: 600 }}>Total</span>
-          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#e0e7ff', lineHeight: 1 }}>{stats.total.toLocaleString()}</span>
-        </div>
-
-        {/* Activos */}
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.10)',
-          border: '1px solid rgba(16, 185, 129, 0.22)',
-          borderRadius: '10px',
-          padding: '14px 16px',
-          display: 'flex', flexDirection: 'column', gap: '4px'
-        }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#34d399', fontWeight: 600 }}>Activos</span>
-          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#d1fae5', lineHeight: 1 }}>{stats.activos.toLocaleString()}</span>
-        </div>
-
-        {/* Inactivos */}
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.10)',
-          border: '1px solid rgba(239, 68, 68, 0.22)',
-          borderRadius: '10px',
-          padding: '14px 16px',
-          display: 'flex', flexDirection: 'column', gap: '4px'
-        }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#f87171', fontWeight: 600 }}>Inactivos</span>
-          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fee2e2', lineHeight: 1 }}>{stats.inactivos.toLocaleString()}</span>
-        </div>
-
-        {/* Por tipo (primeros 3) */}
-        {stats.por_tipo.slice(0, 3).map(tipo => (
-          <div key={tipo.tipo__nombre} style={{
-            background: 'rgba(245, 158, 11, 0.10)',
-            border: '1px solid rgba(245, 158, 11, 0.22)',
-            borderRadius: '10px',
-            padding: '14px 16px',
-            display: 'flex', flexDirection: 'column', gap: '4px'
-          }}>
-            <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#fbbf24', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {tipo.tipo__nombre || 'Sin tipo'}
-            </span>
-            <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fef3c7', lineHeight: 1 }}>{tipo.cantidad.toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   if (personas.length === 0 && !searchTerm && !filterCategoria && !filterCurso && !filterActivo) {
     return (
@@ -327,9 +252,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 
   return (
     <div className="personas-table-container">
-      {/* Stats cards */}
-      {renderStatsCards()}
-
       {/* Acciones Globales Superiores */}
       <div className="table-global-actions">
         <div className="table-global-actions-left">
