@@ -57,11 +57,11 @@ class Command(BaseCommand):
             for dia in dias:
                 Horario.objects.get_or_create(
                     curso=curso, dia=dia, hora_inicio=time(8, 0), hora_fin=time(9, 0), 
-                    defaults={'materia': 'Matemáticas', 'activo': True}
+                    defaults={'activo': True}
                 )
                 Horario.objects.get_or_create(
                     curso=curso, dia=dia, hora_inicio=time(9, 15), hora_fin=time(10, 15), 
-                    defaults={'materia': 'Lengua', 'activo': True}
+                    defaults={'activo': True}
                 )
 
         # Horarios para Tecno (Turno noche)
@@ -69,7 +69,7 @@ class Command(BaseCommand):
             for dia in ['Martes', 'Jueves']:
                 Horario.objects.get_or_create(
                     curso=curso, dia=dia, hora_inicio=time(19, 0), hora_fin=time(22, 0), 
-                    defaults={'materia': 'Clase Práctica', 'activo': True}
+                    defaults={'activo': True}
                 )
 
         # 5. Estados

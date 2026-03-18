@@ -142,7 +142,7 @@ class HorarioViewSet(AuditLogMixin, viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     pagination_class = CustomPageNumberPagination
     filterset_fields = ['curso', 'dia', 'activo']
-    search_fields = ['materia', 'curso__nombre']
+    search_fields = ['curso__nombre']
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -370,7 +370,6 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
                             dia=h_data.get('dia'),
                             hora_inicio=h_data.get('hora_inicio'),
                             hora_fin=h_data.get('hora_fin'),
-                            materia=h_data.get('materia', 'Personalizado'),
                             activo=h_data.get('activo', True)
                         )
                         
@@ -429,7 +428,6 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
                             dia=h_data.get('dia'),
                             hora_inicio=h_data.get('hora_inicio'),
                             hora_fin=h_data.get('hora_fin'),
-                            materia=h_data.get('materia', 'Personalizado'),
                             activo=h_data.get('activo', True)
                         )
         
@@ -1369,7 +1367,7 @@ class AuditLogView(APIView):
         # Only admins see all logs; staff/guardia only see their own
         is_admin = request.user.is_superuser
 
-        all_entries = []
+        all_metadata = []
 
         models_to_query = {filter_model: HISTORY_MODELS[filter_model]} if filter_model and filter_model in HISTORY_MODELS else HISTORY_MODELS
 
@@ -1392,35 +1390,14 @@ class AuditLogView(APIView):
             if date_to:
                 qs = qs.filter(history_date__date__lte=date_to)
 
-            for h in qs.select_related('history_user'):
-                # django-simple-history appends ' as of [timestamp]' to the string representation.
-                # We split it out to give the frontend a clean object name.
-                try:
-                    obj_repr = str(h)
-                    if ' as of ' in obj_repr:
-                        obj_repr = obj_repr.split(' as of ')[0]
-                except Exception:
-                    obj_repr = f'{model_name} #{getattr(h, "history_id", "?")}'
+            # Optimization: only fetch date and ID to sort globally
+            for h_date, h_id in qs.values_list('history_date', 'history_id'):
+                all_metadata.append((h_date, model_name, h_id))
 
-                try:
-                    all_entries.append({
-                        'id':           h.history_id,
-                        'model':        model_name,
-                        'object_id':    str(h.pk),
-                        'object_repr':  obj_repr,
-                        'action':       HISTORY_TYPE_MAP.get(h.history_type, h.history_type),
-                        'action_raw':   h.history_type,
-                        'user':         h.history_user.username if h.history_user else None,
-                        'date':         h.history_date.isoformat(),
-                        'changes':      _get_diff(h),
-                    })
-                except Exception:
-                    pass  # skip malformed history records
+        # Sort all by date descending
+        all_metadata.sort(key=operator.itemgetter(0), reverse=True)
 
-        # Sort all entries by date descending
-        all_entries.sort(key=operator.itemgetter('date'), reverse=True)
-
-        # Manual pagination
+        # Pagination
         try:
             page_size = min(int(request.query_params.get('page_size', 50)), 200)
         except (ValueError, TypeError):
@@ -1430,15 +1407,43 @@ class AuditLogView(APIView):
         except (ValueError, TypeError):
             page = 1
 
-        total = len(all_entries)
+        total = len(all_metadata)
         start = (page - 1) * page_size
         end   = start + page_size
-        results = all_entries[start:end]
+        results_meta = all_metadata[start:end]
+
+        # Final processing: Fetch only the 25 full objects needed
+        final_results = []
+        for h_date, model_name, h_id in results_meta:
+            try:
+                HistModel = HISTORY_MODELS[model_name]()
+                h = HistModel.objects.select_related('history_user').get(history_id=h_id)
+                
+                try:
+                    obj_repr = str(h)
+                    if ' as of ' in obj_repr:
+                        obj_repr = obj_repr.split(' as of ')[0]
+                except Exception:
+                    obj_repr = f'{model_name} #{h_id}'
+
+                final_results.append({
+                    'id':           h.history_id,
+                    'model':        model_name,
+                    'object_id':    str(h.pk),
+                    'object_repr':  obj_repr,
+                    'action':       HISTORY_TYPE_MAP.get(h.history_type, h.history_type),
+                    'action_raw':   h.history_type,
+                    'user':         h.history_user.username if h.history_user else None,
+                    'date':         h.history_date.isoformat(),
+                    'changes':      _get_diff(h),
+                })
+            except Exception:
+                continue
 
         return Response({
             'count':    total,
             'page':     page,
             'pages':    (total + page_size - 1) // page_size if total else 1,
-            'results':  results,
+            'results':  final_results,
             'models':   list(HISTORY_MODELS.keys()),
         })

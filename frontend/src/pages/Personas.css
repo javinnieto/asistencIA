@@ -263,16 +263,33 @@
   ==============================================*/
 
 /* Layout del título y cantidad de personas */
+.personas-title-wrapper {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Layout del título y cantidad de personas */
 @media (max-width: 768px) {
   .personas-title-wrapper {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 4px !important;
+    gap: 8px 12px !important;
+  }
+  .as-title-bar-personas {
+    height: 32px !important;
+    align-self: flex-start;
+    margin-top: 4px;
+  }
+  .as-page-title {
+    line-height: 1.2;
+    flex: 0 0 auto;
   }
   .personas-count-badge {
     margin-left: 0 !important;
-    font-size: 0.65rem !important; /* Más chico en mobile */
+    font-size: 0.65rem !important;
     padding: 2px 8px !important;
+    width: fit-content;
   }
 }
 

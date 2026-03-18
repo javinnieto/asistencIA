@@ -626,7 +626,7 @@ const Asistencias: React.FC = () => {
                     {/* Fallback for other states */}
                     {!['Presente', 'Tardanza', 'Ausente', 'Se fue antes', 'No pasó a la salida'].includes(a.estado?.nombre) &&
                       <span className="as-badge">{a.estado?.nombre}</span>}
-                    {a.justificado && <span className="as-badge justificado" style={{ marginLeft: '4px' }}>✓ Justificado</span>}
+                    {a.justificado && <span className="as-badge justificado">✓ Justificado</span>}
                   </td>
                   <td>
                     {a.llegada_tarde_minutos > 0 && <span style={{ color: '#fbbf24' }}>+ {a.llegada_tarde_minutos} min</span>}

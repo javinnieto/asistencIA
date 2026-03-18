@@ -345,7 +345,7 @@ const Personas: React.FC = () => {
       {/* Header & Controls identical to Asistencias */}
       <div className="as-header-controls" style={{ marginBottom: isLoading ? '16px' : '0' }}>
         <div className="as-title-group" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-          <div className="personas-title-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="personas-title-wrapper">
             <div className="as-title-bar-personas"></div>
             <h3 className="as-page-title m-0">Personas</h3>
             <span className="as-count-badge personas-count-badge" style={{ marginLeft: '8px' }}>{totalRecords} PERSONAS REGISTRADAS</span>
