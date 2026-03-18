@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import './PersonasTable.css';
 import { normalizeString } from '../utils/normalize';
 import { useAuth } from '../context/AuthContext';
@@ -44,6 +44,9 @@ interface PersonasTableProps {
   onSearchChange: (value: string) => void;
   filterActivo: string;
   onFilterActivoChange: (value: string) => void;
+  // Extracted client filters
+  filterCategoria: string;
+  filterCurso: string;
 }
 
 const PersonasTable: React.FC<PersonasTableProps> = ({
@@ -65,12 +68,13 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   onSearchChange,
   filterActivo,
   onFilterActivoChange,
+  filterCategoria,
+  filterCurso,
 }) => {
   const { isAdmin, rol } = useAuth();
 
   // Filtros client-side de categoría y curso (dropdowns cargados desde API)
-  const [filterCategoria, setFilterCategoria] = useState('');
-  const [filterCurso, setFilterCurso] = useState('');
+
 
   // Modo selección (toggle)
   const [selectionMode, setSelectionMode] = useState(false);
@@ -104,32 +108,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
 
   // Filtros dinámicos depuis API
-  const [categorias, setCategorias] = useState<string[]>([]);
-  const [cursosDisponibles, setCursosDisponibles] = useState<string[]>([]);
 
-  React.useEffect(() => {
-    const fetchFiltros = async () => {
-      try {
-        const [catRes, curRes] = await Promise.all([
-          apiRequest('/tipos-persona/'),
-          apiRequest('/cursos/')
-        ]);
-        if (catRes.ok) {
-          const data = await catRes.json();
-          const nombresCats = (data.results || data || []).map((t: any) => t.nombre);
-          setCategorias(Array.from(new Set(nombresCats)).sort() as string[]);
-        }
-        if (curRes.ok) {
-          const data = await curRes.json();
-          const nombresCursos = (data.results || data || []).map((c: any) => c.nombre);
-          setCursosDisponibles(Array.from(new Set(nombresCursos)).sort() as string[]);
-        }
-      } catch (e) {
-        console.error('Error fetching filters', e);
-      }
-    };
-    fetchFiltros();
-  }, []);
 
   // Filtrado client-side sobre los datos YA paginados (solo categoría/curso ya que search y activo van al server)
   const filteredData = useMemo(() => {
@@ -252,105 +231,19 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 
   return (
     <div className="personas-table-container">
-      {/* Acciones Globales Superiores */}
-      <div className="table-global-actions">
-        <div className="table-global-actions-left">
-          <h2 className="table-global-title">Personas</h2>
-          <span className="results-count-badge">
-            {totalItems.toLocaleString()} registros totales
-          </span>
-        </div>
-
-        {isAdmin && onSyncDevice && (
+      {/* Batch actions */}
+      {selectionMode && selectedCount > 0 && isAdmin && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px 16px' }}>
           <button
-            onClick={onSyncDevice}
-            className="btn btn-primary btn-sm d-flex align-items-center gap-2"
-            title="Importar nuevas personas desde el lector MQTT"
+            onClick={() => setBatchConfirmOpen(true)}
+            className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2 fade-in"
+            title="Eliminar filas seleccionadas"
           >
-            <i className="bi bi-arrow-repeat"></i>
-            Sincronizar Lector
+            <i className="bi bi-trash-fill"></i>
+            Eliminar Seleccionados ({selectedCount})
           </button>
-        )}
-      </div>
-
-      {/* Barra de filtros */}
-      <div className="table-top-bar" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '24px 32px 32px 32px',
-        background: 'rgba(30, 41, 59, 0.4)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        gap: '16px',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1, flexWrap: 'wrap' }}>
-          {/* Búsqueda server-side */}
-          <div className="search-box" style={{ flex: '1 1 200px', minWidth: '200px' }}>
-            <i className="bi bi-search search-icon"></i>
-            <input
-              type="text"
-              placeholder="Buscar por nombre o ID..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="search-input"
-              style={{ height: '40px', fontSize: '0.9rem' }}
-            />
-          </div>
-
-          {/* Filtro activo/inactivo → server-side */}
-          <select
-            value={filterActivo}
-            onChange={(e) => onFilterActivoChange(e.target.value)}
-            className="custom-dark-select"
-            style={{ width: 'auto', minWidth: '150px' }}
-          >
-            <option value="">Todos los estados</option>
-            <option value="true">Solo activos</option>
-            <option value="false">Solo inactivos</option>
-          </select>
-
-          {/* Filtro categoría → client-side (sobre la página) */}
-          <select
-            value={filterCategoria}
-            onChange={(e) => setFilterCategoria(e.target.value)}
-            className="custom-dark-select"
-            style={{ width: 'auto', minWidth: '160px' }}
-          >
-            <option value="">Todas las Categorías</option>
-            {categorias.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-
-          {/* Filtro curso → client-side (sobre la página) */}
-          <select
-            value={filterCurso}
-            onChange={(e) => setFilterCurso(e.target.value)}
-            className="custom-dark-select"
-            style={{ width: 'auto', minWidth: '160px' }}
-          >
-            <option value="">Todos los Cursos</option>
-            {cursosDisponibles.map(curso => (
-              <option key={curso} value={curso}>{curso}</option>
-            ))}
-          </select>
         </div>
-
-        {/* Batch actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {selectionMode && selectedCount > 0 && isAdmin && (
-            <button
-              onClick={() => setBatchConfirmOpen(true)}
-              className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2 fade-in"
-              title="Eliminar filas seleccionadas"
-            >
-              <i className="bi bi-trash-fill"></i>
-              Eliminar Seleccionados ({selectedCount})
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Tabla */}
       <div className="table-wrapper table-responsive">

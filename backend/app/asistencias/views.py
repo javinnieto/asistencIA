@@ -160,102 +160,114 @@ def sync_editar_persona_lector(persona):
     Sincroniza los cambios de nombre (y foto si la hay) de una persona hacia el dispositivo Lector.
     Usa el endpoint /action/EditPerson del lector.
     """
-    try:
-        from asistencias.constants import LECTOR_CONFIG
-        import requests
-        from requests.auth import HTTPBasicAuth
-        import logging
-        
-        ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
-        user = LECTOR_CONFIG.get('API_USER', 'admin')
-        password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
-        device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
-        
-        payload_lib = {
-            "operator": "EditPerson",
-            "info": {
-                "DeviceID": device_id,
-                "IdType": 1,         # 1 = usar LibID (el ID interno asignado por el lector)
-                "LibID": persona.idPersona,
-                "Name": persona.nombre,
-            }
-        }
-        
-        # Opcional: si la API del lector espera foto, y el backend la tiene actualizada
-        if persona.foto:
-            payload_lib["picinfo"] = persona.foto
+    import threading
+    idPersona = persona.idPersona
+    nombre = persona.nombre
+    foto = persona.foto
+
+    def _task():
+        try:
+            from asistencias.constants import LECTOR_CONFIG
+            import requests
+            from requests.auth import HTTPBasicAuth
+            import logging
             
-        import json
-        requests.post(
-            f"http://{ip}/action/EditPerson",
-            data=json.dumps(payload_lib, ensure_ascii=False).encode('utf-8'),
-            headers={'Content-Type': 'application/json; charset=utf-8'},
-            auth=HTTPBasicAuth(user, password),
-            timeout=5
-        )
-        logging.getLogger(__name__).info(f"Nombre de {persona.idPersona} sincronizado al Lector.")
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Fallo editando persona {persona.idPersona} en dispositivo Lector: {e}")
+            ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
+            user = LECTOR_CONFIG.get('API_USER', 'admin')
+            password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
+            device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
+            
+            payload_lib = {
+                "operator": "EditPerson",
+                "info": {
+                    "DeviceID": device_id,
+                    "IdType": 1,         # 1 = usar LibID (el ID interno asignado por el lector)
+                    "LibID": idPersona,
+                    "Name": nombre,
+                }
+            }
+            
+            # Opcional: si la API del lector espera foto, y el backend la tiene actualizada
+            if foto:
+                payload_lib["picinfo"] = foto
+                
+            import json
+            requests.post(
+                f"http://{ip}/action/EditPerson",
+                data=json.dumps(payload_lib, ensure_ascii=False).encode('utf-8'),
+                headers={'Content-Type': 'application/json; charset=utf-8'},
+                auth=HTTPBasicAuth(user, password),
+                timeout=5
+            )
+            logging.getLogger(__name__).info(f"Nombre de {idPersona} sincronizado al Lector.")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Fallo editando persona {idPersona} en dispositivo Lector: {e}")
+
+    threading.Thread(target=_task).start()
 
 def sync_eliminar_persona_lector(persona_id):
     """
     Elimina una persona del dispositivo Lector.
     Usa el endpoint /action/DeletePerson del lector.
     """
-    try:
-        from asistencias.constants import LECTOR_CONFIG
-        import requests
-        from requests.auth import HTTPBasicAuth
-        import logging
-        
-        ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
-        user = LECTOR_CONFIG.get('API_USER', 'admin')
-        password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
-        device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
-        
-        # Eliminar usando LibID (IdType: 1)
-        payload_lib = {
-            "operator": "DeletePerson",
-            "info": {
-                "DeviceID": device_id,
-                "TotalNum": 1,
-                "IdType": 1,
-                "LibID": [persona_id]  # <- IMPORTANTE: debe ser una lista
+    import threading
+    def _task():
+        try:
+            from asistencias.constants import LECTOR_CONFIG
+            import requests
+            from requests.auth import HTTPBasicAuth
+            import logging
+            
+            ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
+            user = LECTOR_CONFIG.get('API_USER', 'admin')
+            password = LECTOR_CONFIG.get('API_PASSWORD', 'admin1234')
+            device_id = int(LECTOR_CONFIG.get('DEVICE_ID', 1379241))
+            
+            # Eliminar usando LibID (IdType: 1)
+            payload_lib = {
+                "operator": "DeletePerson",
+                "info": {
+                    "DeviceID": device_id,
+                    "TotalNum": 1,
+                    "IdType": 1,
+                    "LibID": [persona_id]  # <- IMPORTANTE: debe ser una lista
+                }
             }
-        }
-        
-        import json
-        requests.post(
-            f"http://{ip}/action/DeletePerson",
-            data=json.dumps(payload_lib, ensure_ascii=False).encode('utf-8'),
-            headers={'Content-Type': 'application/json; charset=utf-8'},
-            auth=HTTPBasicAuth(user, password),
-            timeout=5
-        )
-        
-        # Opcional: intentar por CustomizeID (IdType: 0) por compatibilidad
-        payload_cust = {
-            "operator": "DeletePerson",
-            "info": {
-                "DeviceID": device_id,
-                "TotalNum": 1,
-                "IdType": 0,
-                "CustomizeID": [persona_id]
+            
+            import json
+            requests.post(
+                f"http://{ip}/action/DeletePerson",
+                data=json.dumps(payload_lib, ensure_ascii=False).encode('utf-8'),
+                headers={'Content-Type': 'application/json; charset=utf-8'},
+                auth=HTTPBasicAuth(user, password),
+                timeout=5
+            )
+            
+            # Opcional: intentar por CustomizeID (IdType: 0) por compatibilidad
+            payload_cust = {
+                "operator": "DeletePerson",
+                "info": {
+                    "DeviceID": device_id,
+                    "TotalNum": 1,
+                    "IdType": 0,
+                    "CustomizeID": [persona_id]
+                }
             }
-        }
-        requests.post(
-            f"http://{ip}/action/DeletePerson",
-            data=json.dumps(payload_cust, ensure_ascii=False).encode('utf-8'),
-            headers={'Content-Type': 'application/json; charset=utf-8'},
-            auth=HTTPBasicAuth(user, password),
-            timeout=5
-        )
-        
-        logging.getLogger(__name__).info(f"Persona {persona_id} eliminada del Lector.")
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Fallo eliminando persona {persona_id} del dispositivo Lector: {e}")
+            requests.post(
+                f"http://{ip}/action/DeletePerson",
+                data=json.dumps(payload_cust, ensure_ascii=False).encode('utf-8'),
+                headers={'Content-Type': 'application/json; charset=utf-8'},
+                auth=HTTPBasicAuth(user, password),
+                timeout=5
+            )
+            
+            logging.getLogger(__name__).info(f"Persona {persona_id} eliminada del Lector.")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Fallo eliminando persona {persona_id} del dispositivo Lector: {e}")
+
+    threading.Thread(target=_task).start()
 
 
 
@@ -329,12 +341,18 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         
         # Sincronizar roles
         if roles_data:
+            seen_roles = set()
             for role in roles_data:
                 inst_id = role.get('institucion', {}).get('idInstitucion') if isinstance(role.get('institucion'), dict) else role.get('institucion')
                 tipo_id = role.get('tipo', {}).get('idTipoPersona') if isinstance(role.get('tipo'), dict) else role.get('tipo')
                 curso_id = role.get('curso', {}).get('idCurso') if isinstance(role.get('curso'), dict) else role.get('curso')
 
                 if inst_id and tipo_id:
+                    role_key = (inst_id, tipo_id, curso_id)
+                    if role_key in seen_roles:
+                        continue
+                    seen_roles.add(role_key)
+
                     pi = PersonaInstitucion.objects.create(
                         persona=instance,
                         institucion_id=inst_id,
@@ -375,9 +393,13 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         
         # Sincronizar roles si se proporcionan
         if roles_data is not None:
+            print("================ ROLES DATA ===================")
+            print(roles_data)
+            print("===============================================")
             # Eliminar roles actuales y recrear con los nuevos
             PersonaInstitucion.objects.filter(persona=instance).delete()
             
+            seen_roles = set()
             for role in roles_data:
                 # Extraer IDs, manejando tanto objetos anidados como IDs directos
                 inst_id = role.get('institucion', {}).get('idInstitucion') if isinstance(role.get('institucion'), dict) else role.get('institucion')
@@ -385,6 +407,11 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
                 curso_id = role.get('curso', {}).get('idCurso') if isinstance(role.get('curso'), dict) else role.get('curso')
 
                 if inst_id and tipo_id:
+                    role_key = (inst_id, tipo_id, curso_id)
+                    if role_key in seen_roles:
+                        continue
+                    seen_roles.add(role_key)
+
                     pi = PersonaInstitucion.objects.create(
                         persona=instance,
                         institucion_id=inst_id,
