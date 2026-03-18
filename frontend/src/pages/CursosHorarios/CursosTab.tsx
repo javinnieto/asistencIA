@@ -674,7 +674,6 @@ const CursosTab: React.FC = () => {
                                 )}
                             </React.Fragment>
                         ))}
-                        ))}
                         {sortedCursos.length === 0 && !loading && (
                             <tr><td colSpan={6} style={{ padding: 0 }}>
                                 <div className="ch-empty-state">
@@ -759,7 +758,7 @@ const CursosTab: React.FC = () => {
                                     <input className="ch-input" value={currentCurso.nombre || ''} onChange={e => setCurrentCurso({ ...currentCurso, nombre: e.target.value })} placeholder="Ej: 5to Año 'A'" required />
                                 </div>
 
-                                <div className="ch-form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div className="ch-form-group ch-dates-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                     <div>
                                         <label className="ch-label">Inicio</label>
                                         <input type="date" className="ch-input" style={{ colorScheme: 'dark' }} value={currentCurso.fecha_inicio || ''} onChange={e => setCurrentCurso({ ...currentCurso, fecha_inicio: e.target.value })} />
@@ -780,12 +779,12 @@ const CursosTab: React.FC = () => {
 
                             {/* Horarios Section */}
                             <div style={{ marginBottom: '24px', padding: '20px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '12px', border: '1px solid rgba(102, 126, 234, 0.2)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                    <h3 style={{ fontSize: '1rem', color: '#a5b4fc', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div className="horarios-section-header">
+                                    <h3 style={{ fontSize: '1rem', color: '#a5b4fc', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                         <i className="bi bi-clock"></i> Horarios <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
                                         <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'normal' }}>(mínimo 1)</span>
                                     </h3>
-                                    <button type="button" onClick={addHorario} className="btn-add-horario">
+                                    <button type="button" onClick={addHorario} className="btn-add-horario btn-add-horario-inline">
                                         <i className="bi bi-plus-lg"></i> Agregar Horario
                                     </button>
                                 </div>

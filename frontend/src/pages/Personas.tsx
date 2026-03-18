@@ -345,10 +345,10 @@ const Personas: React.FC = () => {
       {/* Header & Controls identical to Asistencias */}
       <div className="as-header-controls" style={{ marginBottom: isLoading ? '16px' : '0' }}>
         <div className="as-title-group" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="personas-title-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="as-title-bar-personas"></div>
             <h3 className="as-page-title m-0">Personas</h3>
-            <span className="as-count-badge" style={{ marginLeft: '8px' }}>{totalRecords} PERSONAS REGISTRADAS</span>
+            <span className="as-count-badge personas-count-badge" style={{ marginLeft: '8px' }}>{totalRecords} PERSONAS REGISTRADAS</span>
           </div>
           {isAdmin && (
              <button
@@ -362,9 +362,9 @@ const Personas: React.FC = () => {
           )}
         </div>
 
-        <div className="as-filters-container">
+        <div className="as-filters-container personas-filters-container">
           {/* Row 1: Search */}
-          <div className="as-filter-group search-group" style={{ flex: '2' }}>
+          <div className="as-filter-group search-group personas-search-group" style={{ flex: '2' }}>
             <div className="as-input-group w-100">
               <i className="bi bi-search as-input-icon"></i>
               <input
@@ -378,7 +378,7 @@ const Personas: React.FC = () => {
           </div>
 
           {/* Row 2: Select Filters */}
-          <div className="as-filter-group selects-group" style={{ flex: '3' }}>
+          <div className="as-filter-group selects-group personas-selects-group" style={{ flex: '3' }}>
             <select
               className="as-select"
               value={filterActivo}
