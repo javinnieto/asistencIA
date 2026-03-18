@@ -890,6 +890,21 @@
     cursor: not-allowed;
 }
 
+/* ─── Horarios section header (modal) ─────────────────── */
+.horarios-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+    flex-wrap: nowrap;
+}
+
+/* Botón "Agregar Horario" por defecto */
+.btn-add-horario-inline {
+    flex-shrink: 0;
+}
+
 /* Elements visible only on mobile — hidden by default on desktop */
 .hide-on-desktop,
 .ch-mobile-expand-indicator {
@@ -1099,8 +1114,24 @@
     /* Modal responsive */
     .ch-modal-content {
         max-width: 90vw;
-        padding: 24px;
-        margin: 20px;
+        padding: 16px;
+        margin: 16px;
+    }
+
+    /* Horarios section header en mobile: apilar titulo y botón */
+    .horarios-section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .btn-add-horario-inline {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Fechas: de 2 columnas a 1 columna en mobile */
+    .ch-dates-group {
+        grid-template-columns: 1fr !important;
     }
 
     /* Stats and grids */

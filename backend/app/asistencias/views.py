@@ -1316,23 +1316,29 @@ def _get_diff(h):
         return None
 
     changes = []
-    for field in h._meta.fields:
-        name = field.name
-        if name in SKIP_DIFF_FIELDS or name.startswith('history_'):
-            continue
-            
-        # Use field.attname (like 'horario_id' instead of 'horario') 
-        # to avoid triggering DB lookups for deleted foreign keys.
-        attname = field.attname
-        new_val = getattr(h, attname, None)
-        old_val = getattr(prev, attname, None)
-        
-        if old_val != new_val:
-            changes.append({
-                'field': name,
-                'old':   str(old_val) if old_val is not None else '',
-                'new':   str(new_val) if new_val is not None else '',
-            })
+    try:
+        for field in h._meta.fields:
+            name = field.name
+            if name in SKIP_DIFF_FIELDS or name.startswith('history_'):
+                continue
+
+            # Use field.attname (like 'horario_id' instead of 'horario')
+            # to avoid triggering DB lookups for deleted foreign keys.
+            attname = field.attname
+            try:
+                new_val = getattr(h, attname, None)
+                old_val = getattr(prev, attname, None)
+            except Exception:
+                continue  # skip fields that raise (e.g. deleted FKs)
+
+            if old_val != new_val:
+                changes.append({
+                    'field': name,
+                    'old':   str(old_val) if old_val is not None else '',
+                    'new':   str(new_val) if new_val is not None else '',
+                })
+    except Exception:
+        return None
     return changes if changes else None
 
 
@@ -1389,21 +1395,27 @@ class AuditLogView(APIView):
             for h in qs.select_related('history_user'):
                 # django-simple-history appends ' as of [timestamp]' to the string representation.
                 # We split it out to give the frontend a clean object name.
-                obj_repr = str(h)
-                if ' as of ' in obj_repr:
-                    obj_repr = obj_repr.split(' as of ')[0]
-                    
-                all_entries.append({
-                    'id':           h.history_id,
-                    'model':        model_name,
-                    'object_id':    str(h.pk),
-                    'object_repr':  obj_repr,
-                    'action':       HISTORY_TYPE_MAP.get(h.history_type, h.history_type),
-                    'action_raw':   h.history_type,
-                    'user':         h.history_user.username if h.history_user else None,
-                    'date':         h.history_date.isoformat(),
-                    'changes':      _get_diff(h),
-                })
+                try:
+                    obj_repr = str(h)
+                    if ' as of ' in obj_repr:
+                        obj_repr = obj_repr.split(' as of ')[0]
+                except Exception:
+                    obj_repr = f'{model_name} #{getattr(h, "history_id", "?")}'
+
+                try:
+                    all_entries.append({
+                        'id':           h.history_id,
+                        'model':        model_name,
+                        'object_id':    str(h.pk),
+                        'object_repr':  obj_repr,
+                        'action':       HISTORY_TYPE_MAP.get(h.history_type, h.history_type),
+                        'action_raw':   h.history_type,
+                        'user':         h.history_user.username if h.history_user else None,
+                        'date':         h.history_date.isoformat(),
+                        'changes':      _get_diff(h),
+                    })
+                except Exception:
+                    pass  # skip malformed history records
 
         # Sort all entries by date descending
         all_entries.sort(key=operator.itemgetter('date'), reverse=True)

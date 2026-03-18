@@ -257,3 +257,59 @@
   background: #22c55e;
   border-radius: 4px;
 }
+
+/*==============================================
+  Mejoras UI/UX para Mobile (Personas)
+  ==============================================*/
+
+/* Layout del título y cantidad de personas */
+@media (max-width: 768px) {
+  .personas-title-wrapper {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+  .personas-count-badge {
+    margin-left: 0 !important;
+    font-size: 0.65rem !important; /* Más chico en mobile */
+    padding: 2px 8px !important;
+  }
+}
+
+/* Layout de filtros */
+.personas-filters-container {
+  display: flex !important;
+  gap: 12px;
+}
+
+@media (max-width: 992px) {
+  /* En tablets/escritorios pequeños, el buscador arriba y los demás abajo en 2 por fila */
+  .personas-filters-container {
+    flex-direction: column;
+  }
+  .personas-search-group,
+  .personas-selects-group {
+    flex: unset !important;
+    width: 100%;
+  }
+  .personas-selects-group {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .personas-selects-group > select,
+  .personas-selects-group > button {
+    width: 100%;
+    margin: 0 !important;
+  }
+  .personas-selects-group > .as-btn-reset {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 576px) {
+  /* En móviles, 1 por fila en todos los elementos (4 filas para filtros) */
+  .personas-selects-group {
+    grid-template-columns: 1fr;
+  }
+}
