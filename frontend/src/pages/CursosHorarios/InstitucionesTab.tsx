@@ -4,6 +4,7 @@ import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useModalBackButton } from '../../hooks/useModalBackButton';
+import TablePagination from '../../components/TablePagination';
 import './CursosHorarios.css';
 
 
@@ -25,6 +26,11 @@ const InstitucionesTab: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentInst, setCurrentInst] = useState<Partial<Institucion>>({});
 
+    // Paginación server-side
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
+
     // Confirm Modal State
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
@@ -34,13 +40,16 @@ const InstitucionesTab: React.FC = () => {
     useModalBackButton(isModalOpen, () => setIsModalOpen(false));
 
     // Fetch Data
-    const fetchInstituciones = useCallback(async () => {
+    const fetchInstituciones = useCallback(async (page = currentPage, perPage = itemsPerPage, search = searchTerm) => {
         setLoading(true);
         try {
-            const res = await apiRequest('/instituciones/');
+            let url = `/instituciones/?page=${page}&page_size=${perPage}`;
+            if (search) url += `&search=${search}`;
+            const res = await apiRequest(url);
             if (res.ok) {
                 const data = await res.json();
                 setInstituciones(data.results || []);
+                setTotalRecords(data.count ?? 0);
             } else {
                 console.error('Error fetching instituciones:', res.status);
             }
@@ -50,11 +59,11 @@ const InstitucionesTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, []);
 
     useEffect(() => {
-        fetchInstituciones();
-    }, [fetchInstituciones]);
+        fetchInstituciones(currentPage, itemsPerPage, searchTerm);
+    }, [fetchInstituciones, currentPage, itemsPerPage, searchTerm]);
 
     // Save Handler
     const handleSave = async (e: React.FormEvent) => {
@@ -114,9 +123,8 @@ const InstitucionesTab: React.FC = () => {
         }
     };
 
-    const filteredInstituciones = instituciones.filter(inst =>
-        inst.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Quitamos filtro cliente
+    const displayedInstituciones = instituciones;
 
     return (
         <div className="ch-tab-wrapper">
@@ -129,7 +137,7 @@ const InstitucionesTab: React.FC = () => {
                             type="text"
                             placeholder="Buscar instituciones..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                             className="search-input-styled"
                         />
                     </div>
@@ -158,7 +166,7 @@ const InstitucionesTab: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredInstituciones.map((inst) => (
+                        {displayedInstituciones.map((inst) => (
                             <tr key={inst.idInstitucion} className="ch-tr">
                                 <td className="ch-td dimmed">#{inst.idInstitucion}</td>
                                 <td className="ch-td bold">{inst.nombre}</td>
@@ -199,10 +207,30 @@ const InstitucionesTab: React.FC = () => {
                         ))}
                     </tbody>
                 </table>
-                {filteredInstituciones.length === 0 && !loading && (
+                {displayedInstituciones.length === 0 && !loading && (
                     <div className="ch-empty-state">
                         <i className="bi bi-search ch-empty-icon"></i>
                         No se encontraron instituciones.
+                    </div>
+                )}
+                {loading && (
+                    <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>
+                        <i className="bi bi-arrow-repeat" style={{ display: 'inline-block', animation: 'spin 1s linear infinite', marginRight: '8px' }}></i> Cargando...
+                    </div>
+                )}
+                {!loading && instituciones.length > 0 && (
+                    <div className="ch-pagination" style={{ padding: '16px' }}>
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={Math.max(1, Math.ceil(totalRecords / itemsPerPage))}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={(newCount) => {
+                                setItemsPerPage(newCount);
+                                setCurrentPage(1);
+                            }}
+                            totalItems={totalRecords}
+                        />
                     </div>
                 )}
             </div>

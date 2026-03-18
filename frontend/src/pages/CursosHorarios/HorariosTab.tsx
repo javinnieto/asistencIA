@@ -75,8 +75,11 @@ const HorariosTab: React.FC = () => {
         if (!selectedCursoId) { setHorarios([]); return; }
         setLoading(true);
         try {
-            const res = await apiRequest(`/horarios/?curso=${selectedCursoId}`);
-            if (res.ok) setHorarios((await res.json()).results || []);
+            const res = await apiRequest(`/horarios/?curso=${selectedCursoId}&page_size=100`);
+            if (res.ok) {
+                const data = await res.json();
+                setHorarios(data.results || []);
+            }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     }, [selectedCursoId]);

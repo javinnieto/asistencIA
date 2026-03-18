@@ -7,6 +7,7 @@ import { apiRequest, getConflictos } from '../config/api';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import './Personas.css';
+import './Asistencias.css'; // Reusing layout classes
 
 interface Person {
   id: string;
@@ -21,13 +22,6 @@ interface Person {
   foto?: string;
   roles?: any[];
   requiere_salida?: boolean;
-}
-
-interface PersonasStats {
-  total: number;
-  activos: number;
-  inactivos: number;
-  por_tipo: { tipo__nombre: string; cantidad: number }[];
 }
 
 const Personas: React.FC = () => {
@@ -49,8 +43,11 @@ const Personas: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterActivo, setFilterActivo] = useState('');
 
-  // Stats for summary cards
-  const [stats, setStats] = useState<PersonasStats>({ total: 0, activos: 0, inactivos: 0, por_tipo: [] });
+  // Filters state (client-side for table)
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterCurso, setFilterCurso] = useState('');
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [cursosDisponibles, setCursosDisponibles] = useState<string[]>([]);
 
   // Conflicts State
   const [conflictos, setConflictos] = useState<any[]>([]);
@@ -60,7 +57,31 @@ const Personas: React.FC = () => {
   const [batchAssignIds, setBatchAssignIds] = useState<string[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
-  // Build query string for paginated listing
+  // Load category and courses filters dynamically
+  useEffect(() => {
+    const fetchFiltros = async () => {
+      try {
+        const [catRes, curRes] = await Promise.all([
+          apiRequest('/tipos-persona/'),
+          apiRequest('/cursos/')
+        ]);
+        if (catRes.ok) {
+          const data = await catRes.json();
+          const nombresCats = (data.results || data || []).map((t: any) => t.nombre);
+          setCategorias(Array.from(new Set(nombresCats)).sort() as string[]);
+        }
+        if (curRes.ok) {
+          const data = await curRes.json();
+          const nombresCursos = (data.results || data || []).map((c: any) => c.nombre);
+          setCursosDisponibles(Array.from(new Set(nombresCursos)).sort() as string[]);
+        }
+      } catch (e) {
+        console.error('Error fetching filters', e);
+      }
+    };
+    fetchFiltros();
+  }, []);
+
   const buildQueryString = useCallback((page: number, perPage: number, search: string, activo: string) => {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
@@ -107,20 +128,14 @@ const Personas: React.FC = () => {
     if (showLoader) setIsLoading(true);
     try {
       const qs = buildQueryString(page, perPage, search, activo);
-      const [response, confRes, statsRes] = await Promise.all([
+      const [response, confRes] = await Promise.all([
         apiRequest(`/personas/?${qs}`),
-        apiRequest(`/conflictos/?resuelto=false`),
-        apiRequest(`/personas/stats/?${new URLSearchParams({ ...(search ? { search } : {}), ...(activo ? { activo } : {}) }).toString()}`)
+        apiRequest(`/conflictos/?resuelto=false`)
       ]);
 
       if (confRes.ok) {
         const confData = await confRes.json();
         setConflictos(confData.results || confData || []);
-      }
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
       }
 
       if (response.ok) {
@@ -140,12 +155,10 @@ const Personas: React.FC = () => {
     }
   }, [currentPage, itemsPerPage, searchTerm, filterActivo, buildQueryString]);
 
-  // Reload when pagination/filter params change
   useEffect(() => {
     loadPersonas(currentPage, itemsPerPage, searchTerm, filterActivo);
   }, [currentPage, itemsPerPage, searchTerm, filterActivo]);
 
-  // Reset to page 1 when filters change
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
@@ -162,7 +175,6 @@ const Personas: React.FC = () => {
     setCurrentPage(1);
   };
 
-  // Listen for conflict resolution events from Navbar
   useEffect(() => {
     const handleConflictosUpdated = () => {
       loadPersonas(currentPage, itemsPerPage, searchTerm, filterActivo, false);
@@ -209,47 +221,11 @@ const Personas: React.FC = () => {
         const err = await response.json().catch(() => ({}));
         showToast('Error al eliminar el lote: ' + (err.error || response.statusText), 'error');
       }
-      // Go back to page 1 to avoid empty page
       setCurrentPage(1);
       loadPersonas(1, itemsPerPage, searchTerm, filterActivo, true);
     } catch (e) {
       console.error(e);
       showToast('Error de red al eliminar el lote.', 'error');
-    }
-  };
-
-  const handleAssignCourseBatch = (ids: string[]) => {
-    setBatchAssignIds(ids);
-    setIsAssignModalOpen(true);
-  };
-
-  const confirmAssignCourse = async (cursoId: string, tipoPersonaId: string, institucionId: string) => {
-    try {
-      const promises = batchAssignIds.map(async id => {
-        const payload = {
-          persona: parseInt(id),
-          curso: parseInt(cursoId),
-          tipo: parseInt(tipoPersonaId),
-          institucion: parseInt(institucionId),
-          activo: true
-        };
-        const res = await apiRequest('/persona_institucion/', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.detail || JSON.stringify(err) || 'Error desconocido');
-        }
-        return res.json();
-      });
-      await Promise.all(promises);
-      showToast(`Se asignaron ${batchAssignIds.length} personas al curso correctamente`, 'success');
-      setIsAssignModalOpen(false);
-      setBatchAssignIds([]);
-      loadPersonas(currentPage, itemsPerPage, searchTerm, filterActivo, false);
-    } catch (e: any) {
-      showToast('Error asignando personas: ' + e.message, 'error');
     }
   };
 
@@ -265,15 +241,11 @@ const Personas: React.FC = () => {
   };
 
   const handleDeletePerson = async (id: string) => {
-    if (!id) {
-      showToast('Error interno: ID de persona no válido', 'error');
-      return;
-    }
+    if (!id) return;
     try {
       const response = await apiRequest(`/personas/${id}/`, { method: 'DELETE' });
       if (response.ok) {
         showToast('Persona eliminada exitosamente', 'success');
-        // Reload (go to page 1 if current page had only 1 item)
         const newPage = personas.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
         setCurrentPage(newPage);
         loadPersonas(newPage, itemsPerPage, searchTerm, filterActivo, true);
@@ -308,8 +280,6 @@ const Personas: React.FC = () => {
           setPersonas(prev => prev.map(p => p.id === transformed.id ? transformed : p));
           setIsFormOpen(false);
           showToast('Cambios guardados exitosamente', 'success');
-          // Refresh stats
-          loadPersonas(currentPage, itemsPerPage, searchTerm, filterActivo, false);
         } else {
           const errorData = await response.json().catch(() => ({}));
           let errorMsg = 'Error al guardar los cambios';
@@ -320,9 +290,38 @@ const Personas: React.FC = () => {
           if (errorData.error) errorMsg = errorData.error;
           showToast(errorMsg, 'error');
         }
+      } else {
+        const payload = {
+          nombre: `${personData.nombre} ${personData.apellido}`.trim(),
+          email: personData.email,
+          telefono: personData.telefono,
+          activo: personData.estado === 'activo',
+          foto: personData.foto,
+          roles: personData.roles,
+          requiere_salida: personData.requiere_salida || false
+        };
+        const response = await apiRequest(`/personas/`, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+          showToast('Persona agregada exitosamente', 'success');
+          setIsFormOpen(false);
+          loadPersonas(1, itemsPerPage, searchTerm, filterActivo, true);
+          setCurrentPage(1);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          let errorMsg = 'Error al agregar persona';
+          if (errorData.nombre) errorMsg += ` - Nombre: ${errorData.nombre[0]}`;
+          if (errorData.idPersona) errorMsg += ` - ID: ${errorData.idPersona[0]}`;
+          if (errorData.roles) errorMsg += ` - Roles inválidos`;
+          if (errorData.detail) errorMsg += ` - ${errorData.detail}`;
+          if (errorData.error) errorMsg = errorData.error;
+          showToast(errorMsg, 'error');
+        }
       }
     } catch (error) {
-      showToast('Error de red al guardar la persona. Verificá tu conexión.', 'error');
+      showToast('Error de red al guardar la persona', 'error');
     }
   };
 
@@ -332,46 +331,124 @@ const Personas: React.FC = () => {
     setIsFormOpen(true);
   };
 
+  const limpiarFiltros = () => {
+    setSearchTerm('');
+    setFilterActivo('');
+    setFilterCategoria('');
+    setFilterCurso('');
+  };
+
   const totalPages = Math.max(1, Math.ceil(totalRecords / itemsPerPage));
 
-  if (isLoading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Cargando personas...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="personas-page">
-      <PersonasTable
-        personas={personas}
-        onEdit={handleEditPerson}
-        onDelete={handleDeletePerson}
-        onDeleteBatch={handleDeleteBatch}
-        onView={handleViewPerson}
-        onSyncDevice={handleSyncDevice}
-        conflictos={conflictos}
-        onResolveConflict={(person, conflictoId) => {
-          const conf = conflictos.find(c => c.idConflicto === conflictoId);
-          if (conf) setResolvingConflict(conf);
-        }}
-        // Server-side pagination props
-        currentPage={currentPage}
-        totalPages={totalPages}
-        itemsPerPage={itemsPerPage}
-        totalItems={totalRecords}
-        onPageChange={handlePageChange}
-        onItemsPerPageChange={handleItemsPerPageChange}
-        // Server-side filter props
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-        filterActivo={filterActivo}
-        onFilterActivoChange={handleFilterActivoChange}
-        // Stats cards
-        stats={stats}
-      />
+    <div className="as-main-container personas-page">
+      {/* Header & Controls identical to Asistencias */}
+      <div className="as-header-controls" style={{ marginBottom: isLoading ? '16px' : '0' }}>
+        <div className="as-title-group" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="as-title-bar-personas"></div>
+            <h3 className="as-page-title m-0">Personas</h3>
+            <span className="as-count-badge" style={{ marginLeft: '8px' }}>{totalRecords} PERSONAS REGISTRADAS</span>
+          </div>
+          {isAdmin && (
+             <button
+                onClick={handleSyncDevice}
+                className="btn btn-primary d-flex align-items-center gap-2 as-btn-primary"
+                title="Sincronizar Lector Espressif"
+             >
+                <i className="bi bi-cloud-download"></i>
+                <span className="d-none d-md-inline">Sincronizar Dispositivo</span>
+             </button>
+          )}
+        </div>
+
+        <div className="as-filters-container">
+          {/* Row 1: Search */}
+          <div className="as-filter-group search-group" style={{ flex: '2' }}>
+            <div className="as-input-group w-100">
+              <i className="bi bi-search as-input-icon"></i>
+              <input
+                type="text"
+                className="as-input"
+                placeholder="Buscar por nombre, ID, departamento..."
+                value={searchTerm}
+                onChange={e => handleSearchChange(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Select Filters */}
+          <div className="as-filter-group selects-group" style={{ flex: '3' }}>
+            <select
+              className="as-select"
+              value={filterActivo}
+              onChange={e => handleFilterActivoChange(e.target.value)}
+            >
+              <option value="">Cualquier estado</option>
+              <option value="true">Activos</option>
+              <option value="false">Inactivos</option>
+            </select>
+            <select
+              className="as-select"
+              value={filterCategoria}
+              onChange={e => setFilterCategoria(e.target.value)}
+            >
+              <option value="">Todas las Categorías</option>
+              {categorias.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+            <select
+              className="as-select"
+              value={filterCurso}
+              onChange={e => setFilterCurso(e.target.value)}
+            >
+              <option value="">Todos los Cursos</option>
+              {cursosDisponibles.map(curso => <option key={curso} value={curso}>{curso}</option>)}
+            </select>
+
+            {(searchTerm || filterActivo || filterCategoria || filterCurso) && (
+              <button className="as-btn-reset" title="Limpiar filtros" onClick={limpiarFiltros}>
+                <i className="bi bi-x-circle"></i>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+           <div className="as-no-data" style={{ width: '100%', margin: '0' }}>
+             <i className="bi bi-hourglass-split" style={{ fontSize: '2rem', display: 'block', marginBottom: '1rem', opacity: 0.5 }}></i>
+             Cargando personas...
+           </div>
+        </div>
+      ) : (
+        <div style={{ marginTop: '16px' }}>
+          <PersonasTable
+            personas={personas}
+            onEdit={handleEditPerson}
+            onDelete={handleDeletePerson}
+            onDeleteBatch={handleDeleteBatch}
+            onView={handleViewPerson}
+            conflictos={conflictos}
+            onResolveConflict={(person, conflictoId) => {
+              const conf = conflictos.find(c => c.idConflicto === conflictoId);
+              if (conf) setResolvingConflict(conf);
+            }}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalRecords}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            filterActivo={filterActivo}
+            onFilterActivoChange={handleFilterActivoChange}
+            filterCategoria={filterCategoria}
+            filterCurso={filterCurso}
+          />
+        </div>
+      )}
 
       {resolvingConflict && (
         <ConflictoModal

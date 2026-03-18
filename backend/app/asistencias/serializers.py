@@ -57,9 +57,13 @@ class CursoSerializer(serializers.ModelSerializer):
     institucion = InstitucionSerializer(read_only=True)
     horarios = HorarioSerializer(many=True, read_only=True)
     cantidad_alumnos = serializers.SerializerMethodField()
+    cantidad_horarios = serializers.SerializerMethodField()
     
     def get_cantidad_alumnos(self, obj):
         return obj.personainstitucion_set.filter(activo=True).count()
+        
+    def get_cantidad_horarios(self, obj):
+        return obj.horarios.filter(activo=True).count()
         
     class Meta:
         model = Curso
@@ -90,6 +94,43 @@ class EstadoAsistenciaSerializer(serializers.ModelSerializer):
     class Meta:
         model = EstadoAsistencia
         fields = '__all__'
+
+
+# --- Serializers "Light" (optimizados para vistas de lista) ---
+class CursoLightSerializer(serializers.ModelSerializer):
+    horarios = HorarioSerializer(many=True, read_only=True)
+    class Meta:
+        model = Curso
+        fields = ['idCurso', 'nombre', 'horarios']
+
+class TipoPersonaLightSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoPersona
+        fields = ['idTipoPersona', 'nombre']
+
+class PersonaInstitucionLightSerializer(serializers.ModelSerializer):
+    tipo = TipoPersonaLightSerializer(read_only=True)
+    curso = CursoLightSerializer(read_only=True)
+    class Meta:
+        model = PersonaInstitucion
+        fields = ['idPersonaInstitucion', 'tipo', 'curso']
+
+class PersonaLightSerializer(serializers.ModelSerializer):
+    roles = PersonaInstitucionLightSerializer(many=True, read_only=True)
+    class Meta:
+        model = Persona
+        fields = ['idPersona', 'nombre', 'email', 'telefono', 'foto', 'activo', 'roles', 'requiere_salida']
+        
+class AsistenciaListSerializer(serializers.ModelSerializer):
+    persona = PersonaLightSerializer(read_only=True)
+    estado = EstadoAsistenciaSerializer(read_only=True)
+    horario = HorarioSerializer(read_only=True)
+    institucion = InstitucionSerializer(read_only=True)
+    
+    class Meta:
+        model = Asistencia
+        fields = '__all__'
+# -----------------------------------------------------------------
 
 
 class AsistenciaSerializer(serializers.ModelSerializer):

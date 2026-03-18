@@ -25,7 +25,18 @@ export const apiRequest = async (endpoint: string, options: RequestInit = {}) =>
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
 
-  return fetch(url, config);
+  const response = await fetch(url, config);
+
+  // Si recibimos un 401 y estábamos intentando usar un token, significa que caducó o es inválido.
+  // Limpiamos el token viejo y redirigimos al login
+  if (response.status === 401 && token) {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    window.dispatchEvent(new Event('storage')); // trigger update for AuthContext
+    window.location.href = '/login';
+  }
+
+  return response;
 };
 
 // Función específica para login (sin token)

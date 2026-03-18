@@ -3,6 +3,7 @@ import { apiRequest } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { useModalBackButton } from '../hooks/useModalBackButton';
+import TablePagination from '../components/TablePagination';
 import './Usuarios.css';
 
 interface Usuario {
@@ -36,17 +37,23 @@ const Usuarios: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<Usuario | null>(null);
 
+    // Paginación server-side
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
+
     // Botón atrás: cierra el modal de editar/crear usuario
     useModalBackButton(modal.open, () => setModal(initModal()));
     // Botón atrás: cierra el modal de confirmar borrado de usuario
     useModalBackButton(confirmDelete !== null, () => setConfirmDelete(null));
 
-    const fetchUsuarios = async () => {
+    const fetchUsuarios = async (page = currentPage, perPage = itemsPerPage) => {
         try {
             setLoading(true);
-            const response = await apiRequest('/usuarios/');
+            const response = await apiRequest(`/usuarios/?page=${page}&page_size=${perPage}`);
             const data = await response.json();
-            setUsuarios(Array.isArray(data) ? data : (data.results ?? []));
+            setUsuarios(data.results || []);
+            setTotalRecords(data.count ?? 0);
         } catch {
             showToast('Error al cargar usuarios', 'error');
         } finally {
@@ -54,7 +61,7 @@ const Usuarios: React.FC = () => {
         }
     };
 
-    useEffect(() => { fetchUsuarios(); }, []);
+    useEffect(() => { fetchUsuarios(currentPage, itemsPerPage); }, [currentPage, itemsPerPage]);
 
     const openCrear = () => setModal({ ...initModal(), open: true });
     const openEditar = (u: Usuario) => setModal({
@@ -188,6 +195,23 @@ const Usuarios: React.FC = () => {
                             })}
                         </tbody>
                     </table>
+                )}
+
+                {/* Pagination */}
+                {!loading && usuarios.length > 0 && (
+                    <div className="usr-pagination-container">
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={Math.max(1, Math.ceil(totalRecords / itemsPerPage))}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={(newCount) => {
+                                setItemsPerPage(newCount);
+                                setCurrentPage(1);
+                            }}
+                            totalItems={totalRecords}
+                        />
+                    </div>
                 )}
             </div>
 

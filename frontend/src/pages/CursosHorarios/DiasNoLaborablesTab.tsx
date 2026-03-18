@@ -5,6 +5,7 @@ import { useToast } from '../../components/Toast';
 import ConfirmModal from '../../components/ConfirmModal';
 import { getLocalDateString } from '../../utils/dateUtils';
 import { useModalBackButton } from '../../hooks/useModalBackButton';
+import TablePagination from '../../components/TablePagination';
 import './CursosHorarios.css';
 
 interface Institucion {
@@ -158,6 +159,11 @@ const DiasNoLaborablesTab: React.FC = () => {
     const [selectedInstId, setSelectedInstId] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Paginación server-side
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
+
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState<DiaNoLaborable>({
@@ -186,22 +192,24 @@ const DiasNoLaborablesTab: React.FC = () => {
         });
     }, []);
 
-    const fetchDias = useCallback(async () => {
+    const fetchDias = useCallback(async (page = currentPage, perPage = itemsPerPage, inst = selectedInstId, search = searchTerm) => {
         setLoading(true);
         try {
-            let url = '/dias-no-laborables/';
-            if (selectedInstId) url += `?institucion=${selectedInstId}`;
+            let url = `/dias-no-laborables/?page=${page}&page_size=${perPage}`;
+            if (inst) url += `&institucion=${inst}`;
+            if (search) url += `&search=${search}`;
             const res = await apiRequest(url);
             if (res.ok) {
                 const data = await res.json();
-                setDias(data.results || data || []);
+                setDias(data.results || []);
+                setTotalRecords(data.count ?? 0);
             }
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
         }
-    }, [selectedInstId]);
+    }, []);
 
     // Fetch cursos, tipos, personas
     useEffect(() => {
@@ -226,7 +234,7 @@ const DiasNoLaborablesTab: React.FC = () => {
         fetchOptions();
     }, []);
 
-    useEffect(() => { fetchDias(); }, [fetchDias]);
+    useEffect(() => { fetchDias(currentPage, itemsPerPage, selectedInstId, searchTerm); }, [fetchDias, currentPage, itemsPerPage, selectedInstId, searchTerm]);
 
     const openModal = (dia?: DiaNoLaborable) => {
         if (dia) {
@@ -320,9 +328,7 @@ const DiasNoLaborablesTab: React.FC = () => {
         (typeof t.institucion === 'object' ? t.institucion.idInstitucion : (t as any).institucion) === modalInstId
     );
 
-    const filteredDias = dias.filter(d =>
-        d.motivo.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredDias = dias;
 
     // Build scope summary for table
     const getScopeSummary = (dia: DiaNoLaborable) => {
@@ -359,44 +365,32 @@ const DiasNoLaborablesTab: React.FC = () => {
 
     return (
         <div className="ch-tab-wrapper">
-            {/* Header - matches CursosTab pattern */}
-            <div className={`ch-header-controls column-layout`}>
-                <div className="ch-controls-row right" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <h1 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.5rem', fontWeight: 700 }}>
-                            Días No Laborables
-                        </h1>
-                        <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
-                            Feriados, jornadas y excepciones
-                        </p>
-                    </div>
-                    <button onClick={() => openModal()} className="btn-primary-action btn-fab-mobile">
-                        <i className="bi bi-plus-lg"></i> <span className="hide-on-mobile-fab">Nuevo Día</span>
-                    </button>
+            {/* Header */}
+            <div className="ch-header-controls" style={{ padding: '24px' }}>
+                <div className="search-container" style={{ flex: '1', minWidth: '200px' }}>
+                    <i className="bi bi-search search-icon-pos"></i>
+                    <input
+                        type="text"
+                        placeholder="Buscar por motivo..."
+                        value={searchTerm}
+                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                        className="search-input-styled"
+                    />
                 </div>
 
-                <div className="ch-controls-row nowrap">
-                    <div className="search-container" style={{ flex: '1' }}>
-                        <i className="bi bi-search search-icon-pos"></i>
-                        <input
-                            type="text"
-                            placeholder="Buscar por motivo..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="search-input-styled"
-                        />
-                    </div>
+                <select
+                    className="ch-select"
+                    style={{ minWidth: '180px', maxWidth: '300px', cursor: 'pointer', flexShrink: 0 }}
+                    value={selectedInstId}
+                    onChange={e => { setSelectedInstId(e.target.value); setCurrentPage(1); }}
+                >
+                    <option value="">Todas las Instituciones</option>
+                    {instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
+                </select>
 
-                    <select
-                        className="ch-select"
-                        style={{ minWidth: '180px', maxWidth: '300px', cursor: 'pointer', flexShrink: 0 }}
-                        value={selectedInstId}
-                        onChange={e => setSelectedInstId(e.target.value)}
-                    >
-                        <option value="">Todas las Instituciones</option>
-                        {instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
-                    </select>
-                </div>
+                <button onClick={() => openModal()} className="btn-primary-action btn-fab-mobile" style={{ flexShrink: 0 }}>
+                    <i className="bi bi-plus-lg"></i> <span className="hide-on-mobile-fab">Nuevo Día</span>
+                </button>
             </div>
 
             {/* Table */}
@@ -460,8 +454,29 @@ const DiasNoLaborablesTab: React.FC = () => {
                                 </div>
                             </td></tr>
                         )}
+                        {loading && (
+                            <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>
+                                <i className="bi bi-arrow-repeat" style={{ display: 'inline-block', animation: 'spin 1s linear infinite', marginRight: '8px' }}></i> Cargando...
+                            </td></tr>
+                        )}
                     </tbody>
                 </table>
+                {!loading && dias.length > 0 && (
+                    <div className="ch-pagination" style={{ padding: '16px' }}>
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={Math.max(1, Math.ceil(totalRecords / itemsPerPage))}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={(newCount) => {
+                                setItemsPerPage(newCount);
+                                setCurrentPage(1);
+                            }}
+                            totalItems={totalRecords}
+                            theme="orange"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Edit Modal - Rendered via Portal */}

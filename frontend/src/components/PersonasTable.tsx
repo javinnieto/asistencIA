@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import './PersonasTable.css';
 import { normalizeString } from '../utils/normalize';
 import { useAuth } from '../context/AuthContext';
@@ -19,13 +19,6 @@ interface Person {
   estado: 'activo' | 'inactivo';
   foto?: string;
   roles?: any[];
-}
-
-interface PersonasStats {
-  total: number;
-  activos: number;
-  inactivos: number;
-  por_tipo: { tipo__nombre: string; cantidad: number }[];
 }
 
 interface PersonasTableProps {
@@ -51,9 +44,9 @@ interface PersonasTableProps {
   onSearchChange: (value: string) => void;
   filterActivo: string;
   onFilterActivoChange: (value: string) => void;
-
-  // Stats cards
-  stats?: PersonasStats;
+  // Extracted client filters
+  filterCategoria: string;
+  filterCurso: string;
 }
 
 const PersonasTable: React.FC<PersonasTableProps> = ({
@@ -75,13 +68,13 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   onSearchChange,
   filterActivo,
   onFilterActivoChange,
-  stats,
+  filterCategoria,
+  filterCurso,
 }) => {
   const { isAdmin, rol } = useAuth();
 
   // Filtros client-side de categoría y curso (dropdowns cargados desde API)
-  const [filterCategoria, setFilterCategoria] = useState('');
-  const [filterCurso, setFilterCurso] = useState('');
+
 
   // Modo selección (toggle)
   const [selectionMode, setSelectionMode] = useState(false);
@@ -115,32 +108,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
 
   // Filtros dinámicos depuis API
-  const [categorias, setCategorias] = useState<string[]>([]);
-  const [cursosDisponibles, setCursosDisponibles] = useState<string[]>([]);
 
-  React.useEffect(() => {
-    const fetchFiltros = async () => {
-      try {
-        const [catRes, curRes] = await Promise.all([
-          apiRequest('/tipos-persona/'),
-          apiRequest('/cursos/')
-        ]);
-        if (catRes.ok) {
-          const data = await catRes.json();
-          const nombresCats = (data.results || data || []).map((t: any) => t.nombre);
-          setCategorias(Array.from(new Set(nombresCats)).sort() as string[]);
-        }
-        if (curRes.ok) {
-          const data = await curRes.json();
-          const nombresCursos = (data.results || data || []).map((c: any) => c.nombre);
-          setCursosDisponibles(Array.from(new Set(nombresCursos)).sort() as string[]);
-        }
-      } catch (e) {
-        console.error('Error fetching filters', e);
-      }
-    };
-    fetchFiltros();
-  }, []);
 
   // Filtrado client-side sobre los datos YA paginados (solo categoría/curso ya que search y activo van al server)
   const filteredData = useMemo(() => {
@@ -225,70 +193,6 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
     setSelectionMode(prev => !prev);
   };
 
-  // ── Stats cards (si se proveen) ──────────────────────────────────────────
-  const renderStatsCards = () => {
-    if (!stats) return null;
-    return (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: '12px',
-        padding: '20px 32px 0 32px',
-      }}>
-        {/* Total */}
-        <div style={{
-          background: 'rgba(99, 102, 241, 0.12)',
-          border: '1px solid rgba(99, 102, 241, 0.25)',
-          borderRadius: '10px',
-          padding: '14px 16px',
-          display: 'flex', flexDirection: 'column', gap: '4px'
-        }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#818cf8', fontWeight: 600 }}>Total</span>
-          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#e0e7ff', lineHeight: 1 }}>{stats.total.toLocaleString()}</span>
-        </div>
-
-        {/* Activos */}
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.10)',
-          border: '1px solid rgba(16, 185, 129, 0.22)',
-          borderRadius: '10px',
-          padding: '14px 16px',
-          display: 'flex', flexDirection: 'column', gap: '4px'
-        }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#34d399', fontWeight: 600 }}>Activos</span>
-          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#d1fae5', lineHeight: 1 }}>{stats.activos.toLocaleString()}</span>
-        </div>
-
-        {/* Inactivos */}
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.10)',
-          border: '1px solid rgba(239, 68, 68, 0.22)',
-          borderRadius: '10px',
-          padding: '14px 16px',
-          display: 'flex', flexDirection: 'column', gap: '4px'
-        }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#f87171', fontWeight: 600 }}>Inactivos</span>
-          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fee2e2', lineHeight: 1 }}>{stats.inactivos.toLocaleString()}</span>
-        </div>
-
-        {/* Por tipo (primeros 3) */}
-        {stats.por_tipo.slice(0, 3).map(tipo => (
-          <div key={tipo.tipo__nombre} style={{
-            background: 'rgba(245, 158, 11, 0.10)',
-            border: '1px solid rgba(245, 158, 11, 0.22)',
-            borderRadius: '10px',
-            padding: '14px 16px',
-            display: 'flex', flexDirection: 'column', gap: '4px'
-          }}>
-            <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#fbbf24', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {tipo.tipo__nombre || 'Sin tipo'}
-            </span>
-            <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fef3c7', lineHeight: 1 }}>{tipo.cantidad.toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   if (personas.length === 0 && !searchTerm && !filterCategoria && !filterCurso && !filterActivo) {
     return (
@@ -327,108 +231,19 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
 
   return (
     <div className="personas-table-container">
-      {/* Stats cards */}
-      {renderStatsCards()}
-
-      {/* Acciones Globales Superiores */}
-      <div className="table-global-actions">
-        <div className="table-global-actions-left">
-          <h2 className="table-global-title">Personas</h2>
-          <span className="results-count-badge">
-            {totalItems.toLocaleString()} registros totales
-          </span>
-        </div>
-
-        {isAdmin && onSyncDevice && (
+      {/* Batch actions */}
+      {selectionMode && selectedCount > 0 && isAdmin && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px 16px' }}>
           <button
-            onClick={onSyncDevice}
-            className="btn btn-primary btn-sm d-flex align-items-center gap-2"
-            title="Importar nuevas personas desde el lector MQTT"
+            onClick={() => setBatchConfirmOpen(true)}
+            className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2 fade-in"
+            title="Eliminar filas seleccionadas"
           >
-            <i className="bi bi-arrow-repeat"></i>
-            Sincronizar Lector
+            <i className="bi bi-trash-fill"></i>
+            Eliminar Seleccionados ({selectedCount})
           </button>
-        )}
-      </div>
-
-      {/* Barra de filtros */}
-      <div className="table-top-bar" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '24px 32px 32px 32px',
-        background: 'rgba(30, 41, 59, 0.4)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        gap: '16px',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1, flexWrap: 'wrap' }}>
-          {/* Búsqueda server-side */}
-          <div className="search-box" style={{ flex: '1 1 200px', minWidth: '200px' }}>
-            <i className="bi bi-search search-icon"></i>
-            <input
-              type="text"
-              placeholder="Buscar por nombre o ID..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="search-input"
-              style={{ height: '40px', fontSize: '0.9rem' }}
-            />
-          </div>
-
-          {/* Filtro activo/inactivo → server-side */}
-          <select
-            value={filterActivo}
-            onChange={(e) => onFilterActivoChange(e.target.value)}
-            className="custom-dark-select"
-            style={{ width: 'auto', minWidth: '150px' }}
-          >
-            <option value="">Todos los estados</option>
-            <option value="true">Solo activos</option>
-            <option value="false">Solo inactivos</option>
-          </select>
-
-          {/* Filtro categoría → client-side (sobre la página) */}
-          <select
-            value={filterCategoria}
-            onChange={(e) => setFilterCategoria(e.target.value)}
-            className="custom-dark-select"
-            style={{ width: 'auto', minWidth: '160px' }}
-          >
-            <option value="">Todas las Categorías</option>
-            {categorias.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-
-          {/* Filtro curso → client-side (sobre la página) */}
-          <select
-            value={filterCurso}
-            onChange={(e) => setFilterCurso(e.target.value)}
-            className="custom-dark-select"
-            style={{ width: 'auto', minWidth: '160px' }}
-          >
-            <option value="">Todos los Cursos</option>
-            {cursosDisponibles.map(curso => (
-              <option key={curso} value={curso}>{curso}</option>
-            ))}
-          </select>
         </div>
-
-        {/* Batch actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {selectionMode && selectedCount > 0 && isAdmin && (
-            <button
-              onClick={() => setBatchConfirmOpen(true)}
-              className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2 fade-in"
-              title="Eliminar filas seleccionadas"
-            >
-              <i className="bi bi-trash-fill"></i>
-              Eliminar Seleccionados ({selectedCount})
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Tabla */}
       <div className="table-wrapper table-responsive">

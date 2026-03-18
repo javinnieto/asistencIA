@@ -250,3 +250,10 @@
   white-space: nowrap;
   border: 0;
 }
+/* Sobreescribe color de barra para Personas */
+.as-title-bar-personas {
+  width: 4px;
+  height: 32px;
+  background: #22c55e;
+  border-radius: 4px;
+}
