@@ -5,6 +5,7 @@ import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/ConfirmModal';
 import AsignacionMasivaAlumnosModal from '../../components/AsignacionMasivaAlumnosModal';
+import TablePagination from '../../components/TablePagination';
 import { useModalBackButton } from '../../hooks/useModalBackButton';
 import './CursosHorarios.css';
 
@@ -46,6 +47,11 @@ const CursosTab: React.FC = () => {
     const [currentCurso, setCurrentCurso] = useState<Partial<Curso>>({});
     const [expandedCursoId, setExpandedCursoId] = useState<number | null>(null);
 
+    // Paginación server-side
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
+
     // Sorting
     const [sortField, setSortField] = useState<'idCurso'|'nombre'|'institucion'|'cantidad_alumnos'|'activo'>('nombre');
     const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
@@ -78,18 +84,25 @@ const CursosTab: React.FC = () => {
         });
     }, []);
 
-    const fetchCursos = useCallback(async () => {
+    const fetchCursos = useCallback(async (page = currentPage, perPage = itemsPerPage, search = searchTerm, inst = selectedInstId) => {
         setLoading(true);
-        let url = '/cursos/';
-        if (selectedInstId) url += `?institucion=${selectedInstId}`;
+        let url = `/cursos/?page=${page}&page_size=${perPage}`;
+        if (inst) url += `&institucion=${inst}`;
+        if (search) url += `&search=${search}`;
         try {
             const res = await apiRequest(url);
-            if (res.ok) setCursos((await res.json()).results || []);
+            if (res.ok) {
+                const data = await res.json();
+                setCursos(data.results || []);
+                setTotalRecords(data.count ?? 0);
+            }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    }, [selectedInstId]);
+    }, []);
 
-    useEffect(() => { fetchCursos(); }, [fetchCursos]);
+    useEffect(() => { 
+        fetchCursos(currentPage, itemsPerPage, searchTerm, selectedInstId); 
+    }, [fetchCursos, currentPage, itemsPerPage, searchTerm, selectedInstId]);
 
     const openModal = (curso?: Curso) => {
         if (curso) {
@@ -432,9 +445,8 @@ const CursosTab: React.FC = () => {
         else { setSortField(field); setSortDir('asc'); }
     };
 
-    const filteredCursos = cursos
-        .filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => {
+    // Si bien usamos API search, el sorting lo mantenemos en la página actual
+    const sortedCursos = [...cursos].sort((a, b) => {
             let valA: any = a[sortField];
             let valB: any = b[sortField];
             if (sortField === 'institucion') {
@@ -484,7 +496,7 @@ const CursosTab: React.FC = () => {
                             type="text"
                             placeholder="Buscar cursos..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                             className="search-input-styled"
                         />
                     </div>
@@ -493,7 +505,7 @@ const CursosTab: React.FC = () => {
                         className="ch-select"
                         style={{ minWidth: '180px', maxWidth: '300px', cursor: 'pointer', flexShrink: 0 }}
                         value={selectedInstId}
-                        onChange={e => setSelectedInstId(e.target.value)}
+                        onChange={e => { setSelectedInstId(e.target.value); setCurrentPage(1); }}
                     >
                         <option value="">Todas las Instituciones</option>
                         {instituciones.map(i => <option key={i.idInstitucion} value={i.idInstitucion}>{i.nombre}</option>)}
@@ -515,7 +527,7 @@ const CursosTab: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredCursos.map(curso => (
+                        {sortedCursos.map(curso => (
                             <React.Fragment key={curso.idCurso}>
                                 <tr 
                                     key={curso.idCurso} 
@@ -662,7 +674,8 @@ const CursosTab: React.FC = () => {
                                 )}
                             </React.Fragment>
                         ))}
-                        {filteredCursos.length === 0 && !loading && (
+                        ))}
+                        {sortedCursos.length === 0 && !loading && (
                             <tr><td colSpan={6} style={{ padding: 0 }}>
                                 <div className="ch-empty-state">
                                     <i className="bi bi-journal-x ch-empty-icon"></i>
@@ -670,8 +683,28 @@ const CursosTab: React.FC = () => {
                                 </div>
                             </td></tr>
                         )}
+                        {loading && (
+                            <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>
+                                <i className="bi bi-arrow-repeat" style={{ display: 'inline-block', animation: 'spin 1s linear infinite', marginRight: '8px' }}></i> Cargando cursos...
+                            </td></tr>
+                        )}
                     </tbody>
                 </table>
+                {!loading && cursos.length > 0 && (
+                    <div className="ch-pagination" style={{ padding: '16px' }}>
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={Math.max(1, Math.ceil(totalRecords / itemsPerPage))}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={(newCount) => {
+                                setItemsPerPage(newCount);
+                                setCurrentPage(1);
+                            }}
+                            totalItems={totalRecords}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Edit Modal - Rendered via Portal */}

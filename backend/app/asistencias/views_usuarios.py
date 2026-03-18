@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from .views import CustomPageNumberPagination
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -39,6 +40,7 @@ class UsuariosViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPageNumberPagination
 
     def destroy(self, request, *args, **kwargs):
         user = self.get_object()

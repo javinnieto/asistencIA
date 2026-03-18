@@ -57,9 +57,13 @@ class CursoSerializer(serializers.ModelSerializer):
     institucion = InstitucionSerializer(read_only=True)
     horarios = HorarioSerializer(many=True, read_only=True)
     cantidad_alumnos = serializers.SerializerMethodField()
+    cantidad_horarios = serializers.SerializerMethodField()
     
     def get_cantidad_alumnos(self, obj):
         return obj.personainstitucion_set.filter(activo=True).count()
+        
+    def get_cantidad_horarios(self, obj):
+        return obj.horarios.filter(activo=True).count()
         
     class Meta:
         model = Curso

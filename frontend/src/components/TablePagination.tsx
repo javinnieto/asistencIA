@@ -9,6 +9,7 @@ interface TablePaginationProps {
   onItemsPerPageChange: (newCount: number) => void;
   perPageOptions?: number[];
   totalItems: number;
+  theme?: 'default' | 'orange' | 'blue' | 'green';
 }
 
 const TablePagination: React.FC<TablePaginationProps> = ({
@@ -18,10 +19,11 @@ const TablePagination: React.FC<TablePaginationProps> = ({
   itemsPerPage,
   onItemsPerPageChange,
   perPageOptions = [10, 25, 50, 100],
-  totalItems
+  totalItems,
+  theme = 'default'
 }) => {
   return (
-    <div className="table-pagination-wrapper">
+    <div className={`table-pagination-wrapper theme-${theme}`}>
       {/* Izquierda: info de registros */}
       <span className="pagination-info-text">
         Mostrando {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}–{Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems}

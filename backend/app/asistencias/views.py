@@ -93,6 +93,7 @@ class InstitucionViewSet(AuditLogMixin, viewsets.ModelViewSet):
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [filters.SearchFilter]
     search_fields = ['nombre', 'descripcion']
+    pagination_class = CustomPageNumberPagination
 
 
 class TipoPersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
@@ -120,6 +121,7 @@ class CursoViewSet(AuditLogMixin, viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['institucion', 'activo']
     search_fields = ['nombre']
+    pagination_class = CustomPageNumberPagination
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -138,6 +140,7 @@ class HorarioViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Horario.objects.all()
     permission_classes = [EsAdminOGuardiaParaEscritura]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    pagination_class = CustomPageNumberPagination
     filterset_fields = ['curso', 'dia', 'activo']
     search_fields = ['materia', 'curso__nombre']
 
@@ -1234,6 +1237,7 @@ class DiaNoLaborableViewSet(AuditLogMixin, viewsets.ModelViewSet):
     """
     queryset = DiaNoLaborable.objects.all().order_by('-fecha_inicio')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    pagination_class = CustomPageNumberPagination
     filterset_fields = ['institucion', 'fecha_inicio', 'aplica_a_todos']
     search_fields = ['motivo']
 

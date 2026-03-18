@@ -129,8 +129,37 @@
     font-size: 0.75rem;
     min-width: 28px;
   }
-  
+
   .per-page-selector select {
     font-size: 0.75rem;
   }
+}
+
+/* Temas de color */
+.theme-orange .btn-page:hover:not(:disabled) {
+  background: rgba(249, 115, 22, 0.15); /* orange-500 tint */
+  border-color: rgba(249, 115, 22, 0.4);
+  color: #fed7aa; /* orange-200 */
+}
+.theme-orange .btn-page.active {
+  background: #f97316; /* orange-500 */
+  border-color: #f97316;
+}
+.theme-orange .per-page-selector select:hover,
+.theme-orange .per-page-selector select:focus {
+  border-color: rgba(249, 115, 22, 0.4);
+}
+
+.theme-blue .btn-page:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.15); /* blue-500 tint */
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #bfdbfe; /* blue-200 */
+}
+.theme-blue .btn-page.active {
+  background: #3b82f6; /* blue-500 */
+  border-color: #3b82f6;
+}
+.theme-blue .per-page-selector select:hover,
+.theme-blue .per-page-selector select:focus {
+  border-color: rgba(59, 130, 246, 0.4);
 }

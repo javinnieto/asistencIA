@@ -670,6 +670,7 @@ const Asistencias: React.FC = () => {
           itemsPerPage={itemsPerPage}
           onItemsPerPageChange={setItemsPerPage}
           totalItems={totalRecords}
+          theme="blue"
         />
       )}
 
