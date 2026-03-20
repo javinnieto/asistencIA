@@ -198,8 +198,11 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="persona-form-overlay" onClick={onClose}>
-      <div className="persona-form-modal" onClick={(e) => e.stopPropagation()}>
+    <div 
+      className="persona-form-overlay" 
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="persona-form-modal">
         <div className="persona-form-header">
           <h2>{mode === 'add' ? 'Agregar Persona' : 'Editar Persona'}</h2>
           <button type="button" className="close-button" onClick={onClose}>✕</button>
@@ -254,7 +257,14 @@ const PersonaForm: React.FC<PersonaFormProps> = ({
                     onChange={e => setFormData({ ...formData, estado: e.target.value as 'activo' | 'inactivo' })}
                   >
                     <option value="activo">✅ Activo</option>
+                    <option value="inactivo">🚫 Inactivo</option>
                   </select>
+                  {formData.estado === 'inactivo' && (
+                    <div style={{ marginTop: '6px', padding: '8px 10px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '6px', fontSize: '0.78rem', color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="bi bi-exclamation-triangle-fill"></i>
+                      La persona será puesta en <strong>Blacklist</strong> (se bloqueará el reconocimiento) y no podrá registrar asistencias.
+                    </div>
+                  )}
                 </div>
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '24px' }}>

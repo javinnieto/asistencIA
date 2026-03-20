@@ -199,8 +199,11 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
   const someFiltered = filteredPersonas.some(p => selectedIds.has(p.idPersona)) && !allFiltered;
 
   const modal = (
-    <div className="am-overlay" onClick={onClose}>
-      <div className="am-sheet" onClick={e => e.stopPropagation()}>
+    <div 
+      className="am-overlay" 
+      onMouseDown={(e) => { if(e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="am-sheet">
 
         {/* ── HEADER ── */}
         <div className="am-header">

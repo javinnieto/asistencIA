@@ -181,15 +181,43 @@
   border-radius: 16px;
   width: 100%;
   max-width: 440px;
-  padding: 28px;
+  max-height: 85vh; /* Prevents being too tall on small screens */
+  overflow: hidden; /* Container doesn't scroll, inner form does */
+  display: flex;
+  flex-direction: column;
+  padding: 0; /* Padding will be in header/form */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
 }
 
 .usr-modal-header {
+  padding: 24px 28px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+.usr-modal form {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px 28px;
+}
+
+.usr-modal form::-webkit-scrollbar,
+.usr-cursos-list::-webkit-scrollbar {
+  width: 6px;
+}
+.usr-modal form::-webkit-scrollbar-thumb,
+.usr-cursos-list::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+.usr-modal form::-webkit-scrollbar-track,
+.usr-cursos-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+
 
 .usr-modal-header h3 {
   margin: 0;
@@ -197,6 +225,7 @@
   font-weight: 700;
   color: #f1f5f9;
 }
+
 
 .usr-modal-header button {
   background: transparent;
@@ -304,6 +333,101 @@
   padding: 48px 24px;
   color: #475569;
 }
+
+/* Selector de Cursos */
+.usr-cursos-list {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 8px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.usr-curso-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  padding: 10px 14px !important;
+  border-radius: 10px !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 0 6px 0 !important; /* Forces no side margins and consistent bottom margin */
+  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+  background: rgba(255, 255, 255, 0.01) !important;
+  user-select: none;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+}
+
+.usr-curso-item:last-child {
+  margin-bottom: 0 !important;
+}
+
+.usr-curso-item:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+.usr-curso-item.selected {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(79, 70, 229, 0.05) 100%) !important;
+  border-color: #6366f1 !important;
+}
+
+.usr-curso-item input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  accent-color: #6366f1 !important;
+  cursor: pointer;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+}
+
+.usr-curso-name {
+  font-size: 0.82rem !important;
+  color: #e2e8f0 !important;
+  font-weight: 500 !important;
+  flex: 1 !important;
+  min-width: 0 !important; /* Critical for ellipsis and flex layout */
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.usr-curso-inst {
+  font-size: 0.65rem !important;
+  color: #a5b4fc !important;
+  background: rgba(99, 102, 241, 0.15) !important;
+  padding: 2px 7px !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.02em !important;
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+}
+
+.usr-curso-item.selected .usr-curso-name {
+  color: #ffffff !important;
+}
+
+.usr-curso-item.selected .usr-curso-inst {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+}
+
+
+
 
 /* Responsive */
 @media (max-width: 600px) {

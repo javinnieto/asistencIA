@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/ConfirmModal';
 import AsignacionMasivaAlumnosModal from '../../components/AsignacionMasivaAlumnosModal';
 import TablePagination from '../../components/TablePagination';
+import ExportButton from '../../components/ExportButton';
 import { useModalBackButton } from '../../hooks/useModalBackButton';
 import './CursosHorarios.css';
 
@@ -36,7 +37,7 @@ const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sáb
 
 const CursosTab: React.FC = () => {
     const { showToast } = useToast();
-    const { isAdmin } = useAuth();
+    const { isAdmin, rol, cursosProfesor } = useAuth();
 
     const [instituciones, setInstituciones] = useState<Institucion[]>([]);
     const [cursos, setCursos] = useState<Curso[]>([]);
@@ -71,6 +72,14 @@ const CursosTab: React.FC = () => {
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
 
     const [deleting, setDeleting] = useState(false);
+
+    // Ciclo Lectivo Confirmation Modals
+    const [confirmAvanzarOpen, setConfirmAvanzarOpen] = useState(false);
+    const [confirmRevertirOpen, setConfirmRevertirOpen] = useState(false);
+    const [loadingCiclo, setLoadingCiclo] = useState(false);
+
+    // Advanced options menu state
+    const [showAdvancedActions, setShowAdvancedActions] = useState(false);
 
     const [formError, setFormError] = useState<string | null>(null);
     const [horarioErrors, setHorarioErrors] = useState<Record<number, string>>({});
@@ -400,6 +409,46 @@ const CursosTab: React.FC = () => {
         }
     };
 
+    const handleAvanzarCiclo = async () => {
+        setLoadingCiclo(true);
+        try {
+            const res = await apiRequest('/sistema/avanzar-anio/', { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(`✅ ${data.mensaje} Procesados: ${data.stats.procesados}, Avanzaron: ${data.stats.avanzados}, Egresaron: ${data.stats.egresados}`, 'success');
+                fetchCursos();
+            } else {
+                showToast(`Error: ${data.error || 'No se pudo avanzar el año.'}`, 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Error de conexión', 'error');
+        } finally {
+            setLoadingCiclo(false);
+            setConfirmAvanzarOpen(false);
+        }
+    };
+
+    const handleRevertirCiclo = async () => {
+        setLoadingCiclo(true);
+        try {
+            const res = await apiRequest('/sistema/revertir-anio/', { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(`✅ ${data.mensaje} Restaurados: ${data.stats.restaurados}`, 'success');
+                fetchCursos();
+            } else {
+                showToast(`Error: ${data.error || 'No se pudo revertir el año.'}`, 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Error de conexión', 'error');
+        } finally {
+            setLoadingCiclo(false);
+            setConfirmRevertirOpen(false);
+        }
+    };
+
     const toggleExpand = async (cursoId: number) => {
         if (expandedCursoId === cursoId) {
             setExpandedCursoId(null);
@@ -479,12 +528,95 @@ const CursosTab: React.FC = () => {
                         </p>
                     </div>
                     {isAdmin && (
-                        <button
-                            onClick={() => openModal()}
-                            className="btn-primary-action btn-fab-mobile"
-                        >
-                            <i className="bi bi-plus-lg"></i> <span className="hide-on-mobile-fab">Nuevo Curso</span>
-                        </button>
+                        <div className="d-flex gap-2 flex-wrap justify-content-end align-items-center">
+                            
+                            {/* Opciones Avanzadas Dropdown */}
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setShowAdvancedActions(!showAdvancedActions)}
+                                    title="Opciones Avanzadas (Mantenimiento Anual)"
+                                    style={{ 
+                                        background: 'transparent', 
+                                        border: 'none', 
+                                        color: '#cbd5e1', 
+                                        padding: '0.4rem', 
+                                        cursor: 'pointer',
+                                        fontSize: '1.6rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.2s ease',
+                                        borderRadius: '50%'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.color = '#f8fafc';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.color = '#cbd5e1';
+                                        e.currentTarget.style.background = 'transparent';
+                                    }}
+                                >
+                                    <i className="bi bi-gear-fill"></i>
+                                </button>
+                                
+                                {showAdvancedActions && (
+                                    <>
+                                        {/* Overlay invisible para cerrar al hacer clic afuera */}
+                                        <div 
+                                            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
+                                            onClick={() => setShowAdvancedActions(false)}
+                                        ></div>
+                                        
+                                        <div 
+                                            style={{ 
+                                                position: 'absolute', 
+                                                right: 0, 
+                                                top: '100%', 
+                                                marginTop: '8px', 
+                                                background: '#1e293b', 
+                                                border: '1px solid rgba(148, 163, 184, 0.2)', 
+                                                borderRadius: '8px', 
+                                                zIndex: 10, 
+                                                display: 'flex', 
+                                                flexDirection: 'column', 
+                                                padding: '8px', 
+                                                gap: '8px', 
+                                                width: '240px', 
+                                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
+                                            }}
+                                        >
+                                            <div style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                                                Mantenimiento Anual
+                                            </div>
+                                            <button
+                                                onClick={() => { setShowAdvancedActions(false); setConfirmAvanzarOpen(true); }}
+                                                className="btn-secondary-action w-100 justify-content-start"
+                                                title="Avanzar a todos los estudiantes de ISAE al siguiente año"
+                                                style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: 'none', borderLeft: '3px solid #ef4444' }}
+                                            >
+                                                <i className="bi bi-calendar2-check-fill w-20px text-center me-2"></i> Cerrar Año Lectivo
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowAdvancedActions(false); setConfirmRevertirOpen(true); }}
+                                                className="btn-secondary-action w-100 justify-content-start"
+                                                title="Deshacer el último cambio de año lectivo"
+                                                style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24', border: 'none', borderLeft: '3px solid #f59e0b' }}
+                                            >
+                                                <i className="bi bi-arrow-counterclockwise w-20px text-center me-2"></i> Revertir Año
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => openModal()}
+                                className="btn-primary-action btn-fab-mobile"
+                            >
+                                <i className="bi bi-plus-lg"></i> <span className="hide-on-mobile-fab">Nuevo Curso</span>
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -580,30 +712,36 @@ const CursosTab: React.FC = () => {
                                     {/* Col 6: Acciones — also contains mobile expand indicator */}
                                     <td className="ch-td ch-mobile-actions" onClick={(e) => e.stopPropagation()}>
                                         <div className="btn-group gap-2 d-flex action-buttons">
-                                            <button
-                                                className="btn-icon text-success"
-                                                onClick={() => {
-                                                    setAsignacionCurso({ id: curso.idCurso, nombre: curso.nombre, institucion: curso.institucion?.idInstitucion });
-                                                    setIsAsignacionModalOpen(true);
-                                                }}
-                                                title="Asignación Masiva"
-                                            >
-                                                <i className="bi bi-people-fill"></i>
-                                            </button>
-                                            <button
-                                                className="btn-icon btn-edit"
-                                                onClick={() => openModal(curso)}
-                                                title="Editar"
-                                            >
-                                                <i className="bi bi-pencil-fill"></i>
-                                            </button>
-                                            <button
-                                                className="btn-icon btn-delete"
-                                                onClick={() => promptDelete(curso.idCurso)}
-                                                title="Eliminar"
-                                            >
-                                                <i className="bi bi-trash-fill"></i>
-                                            </button>
+                                            {(isAdmin || (rol === 'profesor' && cursosProfesor.includes(curso.idCurso))) && (
+                                                <>
+                                                    <button
+                                                        className="btn-icon text-success"
+                                                        onClick={() => {
+                                                            setAsignacionCurso({ id: curso.idCurso, nombre: curso.nombre, institucion: curso.institucion?.idInstitucion });
+                                                            setIsAsignacionModalOpen(true);
+                                                        }}
+                                                        title="Asignación Masiva"
+                                                    >
+                                                        <i className="bi bi-people-fill"></i>
+                                                    </button>
+                                                    <button
+                                                        className="btn-icon btn-edit"
+                                                        onClick={() => openModal(curso)}
+                                                        title="Editar"
+                                                    >
+                                                        <i className="bi bi-pencil-fill"></i>
+                                                    </button>
+                                                </>
+                                            )}
+                                            {isAdmin && (
+                                                <button
+                                                    className="btn-icon btn-delete"
+                                                    onClick={() => promptDelete(curso.idCurso)}
+                                                    title="Eliminar"
+                                                >
+                                                    <i className="bi bi-trash-fill"></i>
+                                                </button>
+                                            )}
                                         </div>
 
                                         {/* Mobile-only: "Ver/Ocultar Horarios" indicator — has its own click to bypass stopPropagation */}
@@ -626,6 +764,83 @@ const CursosTab: React.FC = () => {
                                     <tr className="expanded-row">
                                         <td colSpan={6} style={{ padding: 0, background: 'rgba(15, 23, 42, 0.8)' }}>
                                             <div className="horarios-expanded-container w-100">
+                                                <div style={{ padding: '10px 20px', display: 'flex', justifyContent: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                    <ExportButton 
+                                                        filename={`asistencias_curso_${curso.nombre.replace(/\s+/g, '_').toLowerCase()}`}
+                                                        onFetchData={async () => {
+                                                            try {
+                                                                const [resRecords, resInscritos] = await Promise.all([
+                                                                    apiRequest(`/asistencias/?horario__curso=${curso.idCurso}&page_size=10000`),
+                                                                    apiRequest(`/persona-institucion/?curso=${curso.idCurso}&activo=true&limit=5000`)
+                                                                ]);
+
+                                                                if (resRecords.ok && resInscritos.ok) {
+                                                                    const dataRecords = await resRecords.json();
+                                                                    const dataInscritos = await resInscritos.json();
+                                                                    
+                                                                    const allRecords = dataRecords.results || dataRecords || [];
+                                                                    const inscritos = dataInscritos.results || dataInscritos || [];
+                                                                    
+                                                                    const dict: any = {};
+                                                                    let globP = 0, globA = 0, globT = 0, globTot = 0;
+
+                                                                    // Inicializamos dict con todos los alumnos inscritos (para que salgan aunque tengan 0 asistencias)
+                                                                    inscritos.forEach((pi: any) => {
+                                                                        const p = typeof pi.persona === 'object' ? pi.persona : null;
+                                                                        if (p) {
+                                                                            dict[p.idPersona || p.id] = { persona: p, presentes: 0, ausentes: 0, tardanzas: 0, total: 0 };
+                                                                        }
+                                                                    });
+
+                                                                    // Computar los registros válidos
+                                                                    allRecords.forEach((r: any) => {
+                                                                        const estado = r.estado?.nombre;
+                                                                        if (['Presente', 'Ausente', 'Tardanza'].includes(estado)) {
+                                                                            const pId = r.persona?.id || r.persona?.idPersona;
+                                                                            if (!pId) return;
+                                                                            if (!dict[pId]) {
+                                                                                // Por las dudas, si un alumno tuvo asistencia pero ya no está inscrito
+                                                                                dict[pId] = { persona: r.persona, presentes: 0, ausentes: 0, tardanzas: 0, total: 0 };
+                                                                            }
+                                                                            dict[pId].total += 1;
+                                                                            globTot += 1;
+                                                                            if (estado === 'Presente') { dict[pId].presentes += 1; globP += 1; }
+                                                                            if (estado === 'Ausente') { dict[pId].ausentes += 1; globA += 1; }
+                                                                            if (estado === 'Tardanza') { dict[pId].tardanzas += 1; globT += 1; }
+                                                                        }
+                                                                    });
+
+                                                                    const records = Object.values(dict).map((s: any) => ({
+                                                                        _isAggregated: true, // skip normal format
+                                                                        'Alumno': `${s.persona?.nombre || ''} ${s.persona?.apellido || ''}`.trim() || 'Desconocido',
+                                                                        'Presentes': s.presentes,
+                                                                        'Ausentes': s.ausentes,
+                                                                        'Tardanzas': s.tardanzas,
+                                                                        'Veces que debió venir': s.total,
+                                                                        'Porcentaje Asistencia': s.total > 0 ? `${Math.round(((s.presentes + s.tardanzas) / s.total) * 100)}%` : '0%'
+                                                                    }));
+
+                                                                    // Sort alphabetical by student name
+                                                                    records.sort((a, b) => a.Alumno.localeCompare(b.Alumno));
+
+                                                                    // Siempre retornar al menos el summary, incluso si records está vacío (si no hay inscriptos)
+                                                                    const summary = [{
+                                                                       'Total de alumnos asignados': records.length,
+                                                                       'Porcentaje Global de Presentes': globTot > 0 ? `${Math.round((globP / globTot)*100)}%` : '0%',
+                                                                       'Porcentaje Global de Ausentes': globTot > 0 ? `${Math.round((globA / globTot)*100)}%` : '0%',
+                                                                       'Porcentaje Global de Tardanzas': globTot > 0 ? `${Math.round((globT / globTot)*100)}%` : '0%',
+                                                                    }];
+
+                                                                    return { records: records.length > 0 ? records : [{ _isAggregated: true, 'Aviso': 'Sin alumnos' }], summary };
+                                                                }
+                                                                return { records: [{ _isAggregated: true, 'Aviso': 'Sin alumnos' }], summary: [] };
+                                                            } catch (err) {
+                                                                console.error(err);
+                                                                return { records: [], summary: [] };
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
                                                 {curso.horarios && curso.horarios.length > 0 ? (
                                                     <div className="horarios-by-day">
                                                         {(() => {
@@ -864,15 +1079,40 @@ const CursosTab: React.FC = () => {
                 document.body
             )}
 
+            {/* Confirm modals for actions */}
             <ConfirmModal
                 isOpen={confirmOpen}
-                onClose={() => setConfirmOpen(false)}
+                title="Eliminar Curso"
+                message="¿Estás seguro de que deseas eliminar este curso? Se perderán todos sus horarios asociados."
                 onConfirm={handleConfirmDelete}
-                title="¿Eliminar Curso?"
-                message="Se eliminará el curso y toda la información asociada (horarios, asignaciones, etc). Esta acción no se puede deshacer."
-                confirmText="Sí, Eliminar Curso"
+                onClose={() => setConfirmOpen(false)}
                 isLoading={deleting}
             />
+
+            <ConfirmModal
+                isOpen={confirmAvanzarOpen}
+                title="Cerrar Año Lectivo (Alerta Crítica)"
+                message="¿Estás completamente seguro de que deseas avanzar a TODO el colegio ISAE al siguiente grado/año? Esto cambiará de curso a todos los estudiantes de manera masiva. Úsalo solo cuando haya terminado el ciclo lectivo y las mesas de exámenes."
+                onConfirm={handleAvanzarCiclo}
+                onClose={() => setConfirmAvanzarOpen(false)}
+                isLoading={loadingCiclo}
+                confirmText="SÍ, AVANZAR A TODOS"
+                type="danger"
+                requireDoubleConfirmText="CERRAR CICLO"
+            />
+
+            <ConfirmModal
+                isOpen={confirmRevertirOpen}
+                title="Revertir Cambio de Año"
+                message="¿Te mandaste un moco? Esto restaurará a los estudiantes a sus cursos EXACTOS antes del último 'Cierre de Año Lectivo' que hayas hecho. ¿Continuar?"
+                onConfirm={handleRevertirCiclo}
+                onClose={() => setConfirmRevertirOpen(false)}
+                isLoading={loadingCiclo}
+                confirmText="SÍ, DESHACER"
+                type="warning"
+                requireDoubleConfirmText="R"
+            />
+
             {/* Assignment Modal */}
             {isAsignacionModalOpen && asignacionCurso && (
                 <AsignacionMasivaAlumnosModal

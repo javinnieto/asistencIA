@@ -71,7 +71,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   filterCategoria,
   filterCurso,
 }) => {
-  const { isAdmin, rol } = useAuth();
+  const { isAdmin, rol, cursosProfesor } = useAuth();
 
   // Filtros client-side de categoría y curso (dropdowns cargados desde API)
 
@@ -433,7 +433,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                             <i className="bi bi-exclamation-triangle-fill"></i>
                           </button>
                         )}
-                        {(isAdmin || rol === 'guardia') && (
+                        {(isAdmin || rol === 'guardia' || (rol === 'profesor' && person.roles?.some((r: any) => r.curso?.idCurso && cursosProfesor.includes(r.curso.idCurso)))) && (
                           <button
                             className="btn-icon btn-edit action-btn"
                             onClick={(e) => {

@@ -73,8 +73,12 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         type === 'warning' ? 'btn-confirm-warning' : 'btn-confirm-info';
 
     const modalContent = (
-        <div className={`confirm-modal-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} style={{ pointerEvents: 'auto' }}>
-            <div className={`confirm-modal-content ${isOpen ? 'open' : ''}`} onClick={e => e.stopPropagation()}>
+        <div 
+            className={`confirm-modal-overlay ${isOpen ? 'open' : ''}`} 
+            style={{ pointerEvents: 'auto' }}
+            onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div className={`confirm-modal-content ${isOpen ? 'open' : ''}`}>
                 <div className="confirm-modal-icon-wrapper">
                     {getIcon()}
                 </div>

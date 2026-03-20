@@ -23,8 +23,12 @@ router.register(r'dias-no-laborables', DiaNoLaborableViewSet)
 router.register(r'configuracion-semana', ConfiguracionSemanaViewSet)
 router.register(r'usuarios', UsuariosViewSet)
 
+from .views_ciclo_lectivo import CicloLectivoView, RevertirCicloLectivoView
+
 # URLs de la API
 urlpatterns = [
     path('api/', include(router.urls)),
     path('api/audit-log/', AuditLogView.as_view(), name='audit-log'),
+    path('api/sistema/avanzar-anio/', CicloLectivoView.as_view(), name='avanzar-anio'),
+    path('api/sistema/revertir-anio/', RevertirCicloLectivoView.as_view(), name='revertir-anio'),
 ]

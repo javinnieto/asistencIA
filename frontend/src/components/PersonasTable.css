@@ -456,19 +456,20 @@
     font-size: 1.8rem;
   }
 
-  /* ID Lector Absoluto */
-  .personas-table td[data-label="ID LECTOR"] {
+  /* ID Absoluto */
+  .personas-table td[data-label="ID"] {
     position: absolute;
     top: 20px;
     right: 20px;
     font-size: 0.75rem;
     font-weight: 700;
     color: #94a3b8 !important;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 4px 10px !important;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 8px !important;
+    border-radius: 8px;
     width: auto;
     justify-content: flex-end;
+    z-index: 5;
   }
 
   /* Nombre Combinado */

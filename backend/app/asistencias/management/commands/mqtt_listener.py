@@ -138,7 +138,7 @@ class Command(BaseCommand):
             if operator == 'RecPush':
                 # El evento de asistencia viene en el tópico específico del dispositivo
                 if DEVICE_ID in msg.topic:
-                    self.procesar_asistencia(info, client, msg.topic)
+                    self.procesar_asistencia(info, client, msg.topic, message_id)
             
             elif operator == 'Online':
                 if device_msg_id == DEVICE_ID:
@@ -180,7 +180,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(error_msg))
             logger.error(f'{error_msg} - Payload: {msg.payload}')
 
-    def procesar_asistencia(self, info, client=None, topic=None):
+    def procesar_asistencia(self, info, client=None, topic=None, message_id=None):
         """Procesa una asistencia recibida por MQTT con lógica flexible"""
         try:
             # Asegurar que la conexión a la base de datos esté activa
@@ -206,6 +206,7 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f'⚠️ Persona no reconocida (ID: {person_id}) - VerifyStatus: {verify_status}'))
                     return
 
+
                 # ═══════════════════════════════════════════════
                 # 2. OBTENER FECHA/HORA
                 # ═══════════════════════════════════════════════
@@ -217,7 +218,7 @@ class Command(BaseCommand):
                         return timezone.localtime(dt)
                     except Exception as e:
                         logger.error(f'Error obteniendo hora NTP: {e}')
-                        return timezone.now()
+                        return timezone.localtime(timezone.now())
 
                 time_str = info.get('time')
                 if time_str:
@@ -299,174 +300,212 @@ class Command(BaseCommand):
                     persona=persona, 
                     activo=True,
                     curso__isnull=False,
-                    curso__activo=True
+                    curso__activo=True,
+                    curso__institucion__activa=True
                 ).values_list('curso_id', flat=True)
 
                 # Buscar roles activos de la persona
                 roles_ids = PersonaInstitucion.objects.filter(
                     persona=persona,
-                    activo=True
+                    activo=True,
+                    institucion__activa=True
                 ).values_list('idPersonaInstitucion', flat=True)
 
                 # Buscar horarios candidatos para hoy
                 from django.db.models import Q
-                from asistencias.models import ConfiguracionSemana
+                from asistencias.models import ConfiguracionSemana, DiaNoLaborable
                 semana_actual = ConfiguracionSemana.get_semana_actual(fecha_hora.date())
                 self.stdout.write(f'📅 Semana actual: {semana_actual}')
                 
-                horarios_candidatos = Horario.objects.filter(
+                horarios_crudos = Horario.objects.filter(
                     Q(curso_id__in=cursos_ids) | Q(persona_institucion_id__in=roles_ids),
                     Q(semana=semana_actual) | Q(semana='Todas'),
                     dia=dia_actual,
                     activo=True
                 )
                 
-                horario_valido = None
-                minutos_tarde = 0
-                minutos_temprano = 0
-                estado_nombre = None
+                # FILTRO DE FERIADOS / DIAS NO LABORABLES
+                fecha_hoy = fecha_hora.date()
+                feriados_hoy = DiaNoLaborable.objects.filter(
+                    fecha_inicio__lte=fecha_hoy
+                ).filter(
+                    Q(fecha_fin__gte=fecha_hoy) | Q(fecha_fin__isnull=True)
+                ).prefetch_related('cursos_afectados', 'tipos_persona_afectados', 'personas_afectadas')
+                
+                horarios_candidatos = []
+                for h in horarios_crudos:
+                    inscripcion = None
+                    if h.curso:
+                        institucion = h.curso.institucion
+                        inscripcion = PersonaInstitucion.objects.filter(persona=persona, curso=h.curso, activo=True).first()
+                        id_filtro_feriado = {'curso_id': h.curso.idCurso}
+                    else:
+                        institucion = h.persona_institucion.institucion
+                        inscripcion = h.persona_institucion
+                        id_filtro_feriado = None
+                        
+                    if not inscripcion:
+                        continue
+                        
+                    es_feriado = False
+                    for feriado in feriados_hoy:
+                        if feriado.institucion_id != institucion.idInstitucion:
+                            continue
+                        
+                        if feriado.aplica_a_todos:
+                            es_feriado = True
+                            break
+                        if id_filtro_feriado and feriado.cursos_afectados.filter(**id_filtro_feriado).exists():
+                            es_feriado = True
+                            break
+                        if feriado.tipos_persona_afectados.filter(idTipoPersona=inscripcion.tipo.idTipoPersona).exists():
+                            es_feriado = True
+                            break
+                        if feriado.personas_afectadas.filter(idPersona=persona.idPersona).exists():
+                            es_feriado = True
+                            break
+                            
+                    if not es_feriado:
+                        horarios_candidatos.append(h)
+                
+                # ═══════════════════════════════════════════════
+                # 4 & 5. EVALUACIÓN Y MATCH MÚLTIPLE (Soporta transiciones entre clases)
+                # ═══════════════════════════════════════════════
+                # COOLDOWN GLOBAL DE 15 MINUTOS PARA EVITAR DOBLE SCAN DEL LECTOR
+                limite_cooldown = fecha_hora - timedelta(minutes=15)
+                reciente = Asistencia.objects.filter(
+                    persona=persona,
+                    fechaHora__gte=limite_cooldown,
+                    fechaHora__lte=fecha_hora
+                ).exists()
 
+                if reciente:
+                    self.stdout.write(self.style.WARNING(f'⚠️ Asistencia reciente (< 15 min) para {persona.nombre}. Ignorada globalmente (cooldown).'))
+                    return
+                
+                inicio_dia = fecha_hora.replace(hour=0, minute=0, second=0, microsecond=0)
+                fin_dia = inicio_dia + timedelta(days=1)
+                
+                acciones_a_guardar = []
+                
                 for h in horarios_candidatos:
-                    # Rango válido: [Inicio - 1 hora, Fin]
                     start_dt = datetime.combine(fecha_hora.date(), h.hora_inicio)
                     start_dt_aware = timezone.make_aware(start_dt)
                     
                     end_dt = datetime.combine(fecha_hora.date(), h.hora_fin)
                     end_dt_aware = timezone.make_aware(end_dt)
                     
-                    valid_start = start_dt_aware - timedelta(hours=1)
-                    valid_end = end_dt_aware
-
-                    if valid_start <= fecha_hora <= valid_end:
-                        horario_valido = h
-                        
-                        # Calcular tardanza (tolerancia de 1 minuto)
-                        if fecha_hora > start_dt_aware:
-                            diff = fecha_hora - start_dt_aware
-                            minutos_tarde = int(diff.total_seconds() / 60)
-                            
-                            if minutos_tarde >= 1:
+                    # 1. Chequear si falta entrada REAL (excluimos ausentes generados automáticamente)
+                    tiene_entrada = Asistencia.objects.filter(
+                        persona=persona, horario=h, tipo='Entrada',
+                        fechaHora__gte=inicio_dia, fechaHora__lt=fin_dia
+                    ).exists()  # tipo='Entrada' ya excluye los Ausentes (tipo=None)
+                    
+                    if not tiene_entrada:
+                        # Rango válido para ENTRAR: [Inicio - 1 hora, Fin]
+                        valid_start_entrada = start_dt_aware - timedelta(hours=1)
+                        if valid_start_entrada <= fecha_hora <= end_dt_aware:
+                            minutos_tarde = 0
+                            # Tardanza: a partir de START + 5 minutos
+                            if fecha_hora > (start_dt_aware + timedelta(minutes=5)):
+                                diff = fecha_hora - start_dt_aware
+                                minutos_tarde = int(diff.total_seconds() / 60)
                                 estado_nombre = ESTADOS_ASISTENCIA['TARDANZA']
                             else:
-                                minutos_tarde = 0
                                 estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
-                        else:
-                            minutos_tarde = 0
-                            estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
-                        
-                        break
-
-                # Si no hay horario válido → Fuera de Horario
-                if not horario_valido:
-                    estado_nombre = ESTADOS_ASISTENCIA['FUERA_DE_HORARIO']
-                    self.stdout.write(f'🕐 Sin horario válido para {persona.nombre} a las {fecha_hora.time()} → Fuera de Horario')
-
-                # ═══════════════════════════════════════════════
-                # 5. CONTROL DE DUPLICADOS Y SALIDAS
-                # ═══════════════════════════════════════════════
-                inicio_dia = fecha_hora.replace(hour=0, minute=0, second=0, microsecond=0)
-                fin_dia = inicio_dia + timedelta(days=1)
-                
-                tipo_asistencia = 'Entrada'
-                
-                if horario_valido:
-                    entradas_hoy = Asistencia.objects.filter(
-                        persona=persona, 
-                        horario=horario_valido,
-                        tipo='Entrada',
-                        fechaHora__gte=inicio_dia,
-                        fechaHora__lt=fin_dia
-                    )
-
-                    if entradas_hoy.exists():
-                        if not persona.requiere_salida:
-                            self.stdout.write(self.style.WARNING(f'⚠️ Asistencia DUPLICADA (Entrada) para {persona.nombre} en horario {horario_valido}. Ignorada.'))
-                            return
-                        else:
-                            salidas_hoy = Asistencia.objects.filter(
-                                persona=persona, 
-                                horario=horario_valido,
-                                tipo='Salida',
-                                fechaHora__gte=inicio_dia,
-                                fechaHora__lt=fin_dia
-                            )
-                            if salidas_hoy.exists():
-                                self.stdout.write(self.style.WARNING(f'⚠️ Asistencia DUPLICADA (Salida) para {persona.nombre} en horario {horario_valido}. Ignorada.'))
-                                return
-                            
-                            tipo_asistencia = 'Salida'
-                            minutos_tarde = 0 # No hay tardanza de entrada en una salida
-                            end_dt = datetime.combine(fecha_hora.date(), horario_valido.hora_fin)
-                            end_dt_aware = timezone.make_aware(end_dt)
-                            limite_temprano = end_dt_aware - timedelta(minutes=5)
-                            limite_tarde = end_dt_aware + timedelta(hours=3)
-                            
-                            if fecha_hora < limite_temprano:
-                                estado_nombre = ESTADOS_ASISTENCIA['SE_FUE_ANTES']
-                                diff_temprano = end_dt_aware - fecha_hora
-                                minutos_temprano = int(diff_temprano.total_seconds() / 60)
-                            elif fecha_hora <= limite_tarde:
-                                estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
-                            else:
-                                estado_nombre = ESTADOS_ASISTENCIA['FUERA_DE_HORARIO']
-                else:
-                    # SIN HORARIO (Fuera de Horario): cooldown de 15 minutos
-                    limite_cooldown = fecha_hora - timedelta(minutes=15)
-                    
-                    reciente = Asistencia.objects.filter(
-                        persona=persona,
-                        fechaHora__gte=limite_cooldown,
-                        fechaHora__lte=fecha_hora
-                    ).exists()
-
-                    if reciente:
-                        self.stdout.write(self.style.WARNING(f'⚠️ Asistencia reciente (< 15 min) para {persona.nombre}. Ignorada (cooldown).'))
-                        return
-
-                # ═══════════════════════════════════════════════
-                # 6. GUARDAR ASISTENCIA
-                # ═══════════════════════════════════════════════
-                estado_obj, _ = EstadoAsistencia.objects.get_or_create(nombre=estado_nombre)
-                
-                # Determinar institución
-                institucion = None
-                if horario_valido:
-                    if horario_valido.curso:
-                        institucion = horario_valido.curso.institucion
-                    elif horario_valido.persona_institucion:
-                        institucion = horario_valido.persona_institucion.institucion
-                else:
-                    # Si no hay horario, intentar obtener la institución del primer rol activo
-                    rol = PersonaInstitucion.objects.filter(persona=persona, activo=True).first()
-                    if rol:
-                        institucion = rol.institucion
-                
-                asistencia = Asistencia.objects.create(
-                    persona=persona,
-                    fechaHora=fecha_hora,
-                    temperatura=temperatura,
-                    estado=estado_obj,
-                    horario=horario_valido,  # None si es fuera de horario
-                    llegada_tarde_minutos=minutos_tarde,
-                    salida_temprano_minutos=minutos_temprano,
-                    institucion=institucion,
-                    tipo=tipo_asistencia,
-                    foto=foto_base64 if foto_base64 and foto_base64.strip() else None
-                )
-                
-                # Log del resultado
-                if horario_valido:
-                    tarde_msg = f" (Tarde {minutos_tarde} min)" if minutos_tarde > 0 and tipo_asistencia == 'Entrada' else ""
-                    if horario_valido.curso:
-                        ctx_nombre = horario_valido.curso.nombre
+                                
+                            acciones_a_guardar.append({
+                                'horario': h,
+                                'tipo': 'Entrada',
+                                'estado': estado_nombre,
+                                'llegada_tarde_minutos': minutos_tarde,
+                                'salida_temprano_minutos': 0
+                            })
                     else:
-                        ctx_nombre = f"Rol {horario_valido.persona_institucion.tipo.nombre}"
-                    log_msg = f'✅ Asistencia GUARDADA ({tipo_asistencia}): {persona.nombre} - {ctx_nombre}{tarde_msg} [{estado_nombre}]'
-                else:
-                    log_msg = f'✅ Asistencia GUARDADA ({tipo_asistencia}): {persona.nombre} - FUERA DE HORARIO ({fecha_hora.strftime("%H:%M")})'
+                        # Tiene entrada. ¿Falta salida?
+                        if persona.requiere_salida:
+                            # Chequear si falta salida REAL (excluimos 'No pasó a la salida' automáticos)
+                            tiene_salida = Asistencia.objects.filter(
+                                persona=persona, horario=h, tipo='Salida',
+                                fechaHora__gte=inicio_dia, fechaHora__lt=fin_dia
+                            ).exists()  # tipo='Salida' ya excluye los No pasó salida (tipo=None)
+                            
+                            if not tiene_salida:
+                                # Rango para SALIR: Una vez pasen 5 minutos del inicio de la clase en adelante (hasta 23:59)
+                                if fecha_hora > (start_dt_aware + timedelta(minutes=5)) and fecha_hora < fin_dia:
+                                    minutos_temprano = 0
+                                    # Límite para irse antes permitido es FIN - 15 minutos
+                                    limite_temprano = end_dt_aware - timedelta(minutes=15)
+                                    
+                                    if fecha_hora < limite_temprano:
+                                        estado_nombre = ESTADOS_ASISTENCIA['SE_FUE_ANTES']
+                                        diff_temprano = end_dt_aware - fecha_hora
+                                        minutos_temprano = int(diff_temprano.total_seconds() / 60)
+                                    else:
+                                        estado_nombre = ESTADOS_ASISTENCIA['PRESENTE']
+                                        
+                                    acciones_a_guardar.append({
+                                        'horario': h,
+                                        'tipo': 'Salida',
+                                        'estado': estado_nombre,
+                                        'llegada_tarde_minutos': 0,
+                                        'salida_temprano_minutos': minutos_temprano
+                                    })
                 
-                self.stdout.write(self.style.SUCCESS(log_msg))
-                logger.info(log_msg)
+                # Si no se encontró ninguna acción válida para ningún horario, entonces Fuera de Horario
+                if not acciones_a_guardar:
+                    acciones_a_guardar.append({
+                        'horario': None,
+                        'tipo': 'Entrada',
+                        'estado': ESTADOS_ASISTENCIA['FUERA_DE_HORARIO'],
+                        'llegada_tarde_minutos': 0,
+                        'salida_temprano_minutos': 0
+                    })
+                    
+                # ═══════════════════════════════════════════════
+                # 6. GUARDAR ASISTENCIAS
+                # ═══════════════════════════════════════════════
+                for idx, accion in enumerate(acciones_a_guardar):
+                    estado_obj, _ = EstadoAsistencia.objects.get_or_create(nombre=accion['estado'])
+                    
+                    institucion = None
+                    if accion['horario']:
+                        if accion['horario'].curso:
+                            institucion = accion['horario'].curso.institucion
+                        elif accion['horario'].persona_institucion:
+                            institucion = accion['horario'].persona_institucion.institucion
+                    else:
+                        rol = PersonaInstitucion.objects.filter(persona=persona, activo=True).first()
+                        if rol:
+                            institucion = rol.institucion
+                            
+                    asistencia = Asistencia.objects.create(
+                        persona=persona,
+                        fechaHora=fecha_hora,
+                        temperatura=temperatura,
+                        estado=estado_obj,
+                        horario=accion['horario'],
+                        llegada_tarde_minutos=accion['llegada_tarde_minutos'],
+                        salida_temprano_minutos=accion['salida_temprano_minutos'],
+                        institucion=institucion,
+                        tipo=accion['tipo'],
+                        # Solo asignamos la foto codificada en la primera ejecución si existen dos registros simultáneos (superposición)
+                        foto=foto_base64 if (idx == 0 and foto_base64 and foto_base64.strip()) else None
+                    )
+                    
+                    if accion['horario']:
+                        tarde_msg = f" (Tarde {accion['llegada_tarde_minutos']} min)" if accion['llegada_tarde_minutos'] > 0 and accion['tipo'] == 'Entrada' else ""
+                        if accion['horario'].curso:
+                            ctx_nombre = accion['horario'].curso.nombre
+                        else:
+                            ctx_nombre = f"Rol {accion['horario'].persona_institucion.tipo.nombre}"
+                        log_msg = f"✅ Asistencia GUARDADA ({accion['tipo']}): {persona.nombre} - {ctx_nombre}{tarde_msg} [{accion['estado']}]"
+                    else:
+                        log_msg = f"✅ Asistencia GUARDADA (Entrada): {persona.nombre} - FUERA DE HORARIO ({fecha_hora.strftime('%H:%M')})"
+                    
+                    self.stdout.write(self.style.SUCCESS(log_msg))
+                    logger.info(log_msg)
+
 
         except Exception as e:
             error_msg = f'❌ Error procesando asistencia: {e}'
