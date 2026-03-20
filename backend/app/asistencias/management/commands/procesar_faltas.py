@@ -84,6 +84,7 @@ class Command(BaseCommand):
             ahora_local = timezone.localtime(timezone.now())
             if fecha_procesamiento.date() == ahora_local.date():
                 if ahora_local.time() < horario.hora_fin:
+                    self.stdout.write(f'  [SKIPPING] {nombre_contexto} (clase aún no termina: {horario.hora_fin})')
                     continue
             
             # Obtener feriados para esta institución que cubran la fecha dada
@@ -141,8 +142,9 @@ class Command(BaseCommand):
                     ).exists()
 
                     if not ausente_existente:
+                        # Marcamos la falta al FINAL de la clase (como pidió el usuario)
                         fechaHora_ausente = timezone.make_aware(
-                            datetime.combine(fecha_procesamiento.date(), horario.hora_inicio)
+                            datetime.combine(fecha_procesamiento.date(), horario.hora_fin)
                         )
                         Asistencia.objects.create(
                             persona=persona,
