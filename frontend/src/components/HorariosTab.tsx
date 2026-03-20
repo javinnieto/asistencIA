@@ -10,7 +10,6 @@ interface Horario {
     dia: string;
     hora_inicio: string;
     hora_fin: string;
-    materia: string;
     activo: boolean;
 }
 interface Persona { idPersona: number; nombre: string; horarios: Horario[]; }
@@ -257,7 +256,6 @@ const HorariosTab: React.FC = () => {
                                 <div className="text-2xl font-light text-blue-400 mt-1">
                                     {h.hora_inicio.slice(0, 5)} - {h.hora_fin.slice(0, 5)}
                                 </div>
-                                <div className="text-sm text-gray-400 mt-2 font-medium uppercase tracking-wider">{h.materia || 'Sin materia'}</div>
                             </div>
                             <div className="p-4 bg-slate-800/50 flex-grow flex flex-col justify-end">
                                 <button
@@ -313,14 +311,6 @@ const HorariosTab: React.FC = () => {
                                             onChange={e => setCurrentHorario({ ...currentHorario, hora_fin: e.target.value })} required
                                         />
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="text-gray-400 text-sm">Materia / Asignatura</label>
-                                    <input className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
-                                        value={currentHorario.materia || ''}
-                                        onChange={e => setCurrentHorario({ ...currentHorario, materia: e.target.value })}
-                                        placeholder="Ej: Matemática"
-                                    />
                                 </div>
                             </div>
                             <div className="mt-6 flex justify-end gap-2">

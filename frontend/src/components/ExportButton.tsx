@@ -1,28 +1,49 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface ExportButtonProps {
-  data: any[];
+  data?: any[];
+  onFetchData?: () => Promise<any[] | { records: any[], summary: any[] }>;
+  summaryData?: any[]; // optional summary array of objects to show on top
   filename?: string;
   onExport?: (type: string) => void;
 }
 
-const ExportButton: React.FC<ExportButtonProps> = ({ data, filename = 'asistencias', onExport }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const ExportButton: React.FC<ExportButtonProps> = ({ data, onFetchData, summaryData, filename = 'asistencias', onExport }) => {
+  const [loading, setLoading] = useState(false);
 
-  const exportToExcel = () => {
+  // Normaliza las propiedades del item, ya que a veces vienen diferentes.
+  const formatItem = (item: any) => {
+    if (item._isAggregated) {
+      const { _isAggregated, ...rest } = item;
+      return rest;
+    }
+    return {
+      'Persona': item.persona?.nombre || item.persona || '-',
+      'Tipo': item.persona?.curso ? 'Alumno' : item.persona?.nombre?.includes('Prof') ? 'Profesor' : 'Personal',
+      'Curso': item.persona?.curso?.nombre || item.horario?.curso?.nombre || '-',
+      'Fecha y Hora': item.estado?.nombre === 'Ausente' ? '-' : new Date(item.fechaHora || item.fecha_hora).toLocaleString('es-ES', { hour12: false }),
+      'Temperatura': item.estado?.nombre === 'Ausente' ? '-' : `${item.temperatura}°C`,
+      'Estado': item.estado?.nombre || '-'
+    };
+  };
+
+  const exportToExcel = (exportData: any[], exportSummary?: any[]) => {
     try {
-      const ws = XLSX.utils.json_to_sheet(data.map(item => ({
-        'Persona': item.persona.nombre,
-        'Tipo': item.persona.curso ? 'Alumno' : item.persona.nombre.includes('Prof') ? 'Profesor' : 'Personal',
-        'Curso': item.persona.curso?.nombre || '-',
-        'Fecha y Hora': item.estado.nombre === 'Ausente' ? '-' : new Date(item.fecha_hora).toLocaleString('es-ES'),
-        'Temperatura': item.estado.nombre === 'Ausente' ? '-' : `${item.temperatura}°C`,
-        'Estado': item.estado.nombre
-      })));
+      const ws = XLSX.utils.json_to_sheet([]);
+      
+      const finalSummary = exportSummary || summaryData;
+
+      if (finalSummary && finalSummary.length > 0) {
+        // Add summary table at A1
+        XLSX.utils.sheet_add_json(ws, finalSummary, { origin: 'A1' });
+        // Add one blank row before the records
+        const recordsOrigin = finalSummary.length + 2;
+        XLSX.utils.sheet_add_json(ws, exportData.map(formatItem), { origin: `A${recordsOrigin}` });
+      } else {
+        XLSX.utils.sheet_add_json(ws, exportData.map(formatItem), { origin: 'A1' });
+      }
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Asistencias');
@@ -38,124 +59,73 @@ const ExportButton: React.FC<ExportButtonProps> = ({ data, filename = 'asistenci
     }
   };
 
-  const exportToCSV = () => {
+  const handleExportClick = async () => {
+    setLoading(true);
     try {
-      const csvData = data.map(item => ({
-        'Persona': item.persona.nombre,
-        'Tipo': item.persona.curso ? 'Alumno' : item.persona.nombre.includes('Prof') ? 'Profesor' : 'Personal',
-        'Curso': item.persona.curso?.nombre || '-',
-        'Fecha y Hora': item.estado.nombre === 'Ausente' ? '-' : new Date(item.fecha_hora).toLocaleString('es-ES'),
-        'Temperatura': item.estado.nombre === 'Ausente' ? '-' : `${item.temperatura}°C`,
-        'Estado': item.estado.nombre
-      }));
+      let exportRecords = data || [];
+      let exportSummary: any[] | undefined = undefined;
 
-      const ws = XLSX.utils.json_to_sheet(csvData);
-      const csv = XLSX.utils.sheet_to_csv(ws);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      saveAs(blob, `${filename}.csv`);
-      
-      onExport?.('csv');
-    } catch (error) {
-      console.error('Error al exportar a CSV:', error);
+      if (onFetchData) {
+        const fetched = await onFetchData();
+        if (Array.isArray(fetched)) {
+          exportRecords = fetched;
+        } else {
+          exportRecords = fetched.records || [];
+          exportSummary = fetched.summary;
+        }
+      }
+
+      if (exportRecords.length === 0) {
+        alert('No hay datos para exportar.');
+        onExport?.('error');
+        setLoading(false);
+        return;
+      }
+
+      exportToExcel(exportRecords, exportSummary);
+    } catch (e) {
+      console.error(e);
       onExport?.('error');
-    }
-  };
-
-  const exportToPDF = () => {
-    try {
-      const doc = new jsPDF();
-      
-      // Título
-      doc.setFontSize(18);
-      doc.text('Reporte de Asistencias', 14, 22);
-      
-      // Fecha de generación
-      doc.setFontSize(10);
-      doc.text(`Generado el: ${new Date().toLocaleString('es-ES')}`, 14, 30);
-      
-      // Tabla
-      const tableData = data.map(item => [
-        item.persona.nombre,
-        item.persona.curso ? 'Alumno' : item.persona.nombre.includes('Prof') ? 'Profesor' : 'Personal',
-        item.persona.curso?.nombre || '-',
-        item.estado.nombre === 'Ausente' ? '-' : new Date(item.fecha_hora).toLocaleDateString('es-ES'),
-        item.estado.nombre === 'Ausente' ? '-' : `${item.temperatura}°C`,
-        item.estado.nombre
-      ]);
-
-      autoTable(doc, {
-        head: [['Persona', 'Tipo', 'Curso', 'Fecha', 'Temperatura', 'Estado']],
-        body: tableData,
-        startY: 40,
-        styles: {
-          fontSize: 8,
-          cellPadding: 2,
-        },
-        headStyles: {
-          fillColor: [66, 139, 202],
-          textColor: 255,
-          fontStyle: 'bold',
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-        margin: { top: 40 },
-      });
-      
-      doc.save(`${filename}.pdf`);
-      
-      onExport?.('pdf');
-    } catch (error) {
-      console.error('Error al exportar a PDF:', error);
-      onExport?.('error');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="dropdown">
-      <button
-        className="btn btn-outline-primary btn-sm dropdown-toggle"
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-      >
-        <i className="bi bi-download me-1"></i>Exportar
-      </button>
-      {isOpen && (
-        <div className="dropdown-menu show" style={{ position: 'absolute', zIndex: 1000 }}>
-          <button
-            className="dropdown-item"
-            onClick={() => {
-              exportToExcel();
-              setIsOpen(false);
-            }}
-          >
-            <i className="bi bi-file-earmark-excel me-2 text-success"></i>
-            Exportar a Excel (.xlsx)
-          </button>
-          <button
-            className="dropdown-item"
-            onClick={() => {
-              exportToCSV();
-              setIsOpen(false);
-            }}
-          >
-            <i className="bi bi-file-earmark-text me-2 text-info"></i>
-            Exportar a CSV (.csv)
-          </button>
-          <button
-            className="dropdown-item"
-            onClick={() => {
-              exportToPDF();
-              setIsOpen(false);
-            }}
-          >
-            <i className="bi bi-file-earmark-pdf me-2 text-danger"></i>
-            Exportar a PDF (.pdf)
-          </button>
-        </div>
+    <button
+      className="btn btn-sm d-flex align-items-center gap-2 ExportButton"
+      style={{
+        borderRadius: '6px',
+        fontWeight: 500,
+        backgroundColor: '#10b981',
+        border: '1px solid rgba(16, 185, 129, 0.5)',
+        color: '#fff',
+        boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
+        padding: '6px 14px',
+        transition: 'all 0.2s',
+      }}
+      type="button"
+      onClick={handleExportClick}
+      disabled={loading}
+      onMouseOver={(e) => {
+        if (!loading) {
+          e.currentTarget.style.backgroundColor = '#059669';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }
+      }}
+      onMouseOut={(e) => {
+        if (!loading) {
+          e.currentTarget.style.backgroundColor = '#10b981';
+          e.currentTarget.style.transform = 'translateY(0px)';
+        }
+      }}
+    >
+      {loading ? (
+        <><i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite' }}></i> Preparando...</>
+      ) : (
+        <><i className="bi bi-file-earmark-excel-fill"></i> Descargar Excel</>
       )}
-    </div>
+    </button>
   );
 };
 

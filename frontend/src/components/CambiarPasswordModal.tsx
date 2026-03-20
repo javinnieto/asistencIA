@@ -77,7 +77,10 @@ const CambiarPasswordModal: React.FC<CambiarPasswordModalProps> = ({ isOpen, onC
     };
 
     return (
-        <div className="cpw-modal-overlay">
+        <div 
+            className="cpw-modal-overlay"
+            onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
             <div className="cpw-modal-content">
                 <div className="cpw-modal-header">
                     <h5 className="cpw-modal-title">

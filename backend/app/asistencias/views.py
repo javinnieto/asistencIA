@@ -43,6 +43,97 @@ class EsAdminOGuardiaParaEscritura(BasePermission):
             return True
         return request.user.is_staff
 
+
+class EsAdminGuardiaOProfesorParaEscritura(BasePermission):
+    """
+    Permite GET.
+    Para POST/PUT/PATCH/DELETE requiere is_staff=True o tener cursos_profesor.
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        if request.user.is_staff:
+            return True
+        if request.user.cursos_profesor.exists():
+            return True
+        return False
+
+class PermisoCurso(EsAdminGuardiaOProfesorParaEscritura):
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view): return False
+        if request.method == 'POST' and not request.user.is_staff:
+            return False
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS or request.user.is_staff:
+            return True
+        if request.method in ['PUT', 'PATCH']:
+            return request.user.cursos_profesor.filter(pk=obj.pk).exists()
+        return False
+
+class PermisoHorario(EsAdminGuardiaOProfesorParaEscritura):
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view): return False
+        if request.method == 'POST' and not request.user.is_staff:
+            curso_id = request.data.get('curso')
+            if curso_id:
+                return request.user.cursos_profesor.filter(pk=curso_id).exists()
+            return False
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS or request.user.is_staff:
+            return True
+        if request.method in ['PUT', 'PATCH', 'DELETE']:
+            return request.user.cursos_profesor.filter(pk=obj.curso_id).exists()
+        return False
+
+class PermisoPersonaInstitucion(EsAdminGuardiaOProfesorParaEscritura):
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view): return False
+        if request.method == 'POST' and not request.user.is_staff:
+            curso_id = request.data.get('curso')
+            if not curso_id: return False
+            return request.user.cursos_profesor.filter(pk=curso_id).exists()
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS or request.user.is_staff:
+            return True
+        if request.method in ['PUT', 'PATCH', 'DELETE']:
+            if not obj.curso_id: return False
+            return request.user.cursos_profesor.filter(pk=obj.curso_id).exists()
+        return False
+
+class PermisoPersona(EsAdminGuardiaOProfesorParaEscritura):
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view): return False
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS or request.user.is_staff:
+            return True
+        if request.method in ['PUT', 'PATCH', 'DELETE']:
+            cursos_persona = obj.instituciones.values_list('curso_id', flat=True)
+            return request.user.cursos_profesor.filter(pk__in=cursos_persona).exists()
+        return False
+
+class PermisoAsistencia(EsAdminGuardiaOProfesorParaEscritura):
+    def has_permission(self, request, view):
+        return super().has_permission(request, view)
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS or request.user.is_staff:
+            return True
+        if request.method in ['PUT', 'PATCH']:
+            # Profesores: pueden editar si la persona pertenece a uno de sus cursos
+            cursos_persona = obj.persona.instituciones.values_list('curso_id', flat=True)
+            return request.user.cursos_profesor.filter(pk__in=cursos_persona).exists()
+        return False
+
 class SoloAdminPuedeBorrar(BasePermission):
     def has_permission(self, request, view):
         if request.method == 'DELETE':
@@ -117,7 +208,7 @@ class TipoPersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
 
 class CursoViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Curso.objects.all()
-    permission_classes = [EsAdminOGuardiaParaEscritura]
+    permission_classes = [PermisoCurso]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['institucion', 'activo']
     search_fields = ['nombre']
@@ -138,11 +229,11 @@ class CursoViewSet(AuditLogMixin, viewsets.ModelViewSet):
 
 class HorarioViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Horario.objects.all()
-    permission_classes = [EsAdminOGuardiaParaEscritura]
+    permission_classes = [PermisoHorario]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     pagination_class = CustomPageNumberPagination
     filterset_fields = ['curso', 'dia', 'activo']
-    search_fields = ['materia', 'curso__nombre']
+    search_fields = ['curso__nombre']
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -158,15 +249,19 @@ class HorarioViewSet(AuditLogMixin, viewsets.ModelViewSet):
     # Propagate logic removed: Schedules are now strictly linked to Cursos.
 
 
-def sync_editar_persona_lector(persona):
+def sync_editar_persona_lector(persona, blacklist: bool = False):
     """
-    Sincroniza los cambios de nombre (y foto si la hay) de una persona hacia el dispositivo Lector.
+    Sincroniza los cambios de nombre/foto de una persona hacia el dispositivo Lector.
+    Si blacklist=True, PersonType=1 (blacklist) → el lector bloquea el reconocimiento.
+    Si blacklist=False, PersonType=0 (whitelist) → reconocimiento habilitado.
     Usa el endpoint /action/EditPerson del lector.
     """
     import threading
     idPersona = persona.idPersona
     nombre = persona.nombre
     foto = persona.foto
+    # 0 = whitelist (default), 1 = blacklist
+    person_type = 1 if blacklist else 0
 
     def _task():
         try:
@@ -174,6 +269,7 @@ def sync_editar_persona_lector(persona):
             import requests
             from requests.auth import HTTPBasicAuth
             import logging
+            import json
             
             ip = LECTOR_CONFIG.get('DEVICE_IP', '192.168.210.101')
             user = LECTOR_CONFIG.get('API_USER', 'admin')
@@ -184,30 +280,34 @@ def sync_editar_persona_lector(persona):
                 "operator": "EditPerson",
                 "info": {
                     "DeviceID": device_id,
-                    "IdType": 1,         # 1 = usar LibID (el ID interno asignado por el lector)
+                    "IdType": 1,         # 1 = usar LibID (ID interno)
                     "LibID": idPersona,
                     "Name": nombre,
+                    "PersonType": person_type, # 0=Whitelist, 1=Blacklist
                 }
             }
             
-            # Opcional: si la API del lector espera foto, y el backend la tiene actualizada
+            # picinfo suele ir al root del JSON y ser minúscula (comprobado en versiones previas)
             if foto:
                 payload_lib["picinfo"] = foto
                 
-            import json
-            requests.post(
+            resp = requests.post(
                 f"http://{ip}/action/EditPerson",
-                data=json.dumps(payload_lib, ensure_ascii=False).encode('utf-8'),
-                headers={'Content-Type': 'application/json; charset=utf-8'},
+                json=payload_lib,
                 auth=HTTPBasicAuth(user, password),
                 timeout=5
             )
-            logging.getLogger(__name__).info(f"Nombre de {idPersona} sincronizado al Lector.")
+            
+            lista = 'BLACKLIST' if blacklist else 'WHITELIST'
+            log_msg = f"Persona {idPersona} sincronizada al Lector [{lista}]. Status: {resp.status_code}. Rta: {resp.text[:100]}"
+            logging.getLogger(__name__).info(log_msg)
+            
         except Exception as e:
             import logging
             logging.getLogger(__name__).error(f"Fallo editando persona {idPersona} en dispositivo Lector: {e}")
 
-    threading.Thread(target=_task).start()
+    threading.Thread(target=_task, daemon=True).start()
+
 
 def sync_eliminar_persona_lector(persona_id):
     """
@@ -276,7 +376,7 @@ def sync_eliminar_persona_lector(persona_id):
 
 class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Persona.objects.all()
-    permission_classes = [EsAdminOGuardiaParaEscritura]
+    permission_classes = [PermisoPersona]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo']
     search_fields = ['nombre', 'idPersona']
@@ -370,7 +470,6 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
                             dia=h_data.get('dia'),
                             hora_inicio=h_data.get('hora_inicio'),
                             hora_fin=h_data.get('hora_fin'),
-                            materia=h_data.get('materia', 'Personalizado'),
                             activo=h_data.get('activo', True)
                         )
                         
@@ -396,9 +495,6 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         
         # Sincronizar roles si se proporcionan
         if roles_data is not None:
-            print("================ ROLES DATA ===================")
-            print(roles_data)
-            print("===============================================")
             # Eliminar roles actuales y recrear con los nuevos
             PersonaInstitucion.objects.filter(persona=instance).delete()
             
@@ -429,7 +525,6 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
                             dia=h_data.get('dia'),
                             hora_inicio=h_data.get('hora_inicio'),
                             hora_fin=h_data.get('hora_fin'),
-                            materia=h_data.get('materia', 'Personalizado'),
                             activo=h_data.get('activo', True)
                         )
         
@@ -437,12 +532,26 @@ class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         return Response(PersonaSerializer(instance).data)
 
     def perform_update(self, serializer):
+        # Guardar estado previo de activo ANTES del save (buscando en BD)
+        instance_before = serializer.instance
+        persona_db = Persona.objects.filter(idPersona=instance_before.idPersona).first()
+        estaba_activo = persona_db.activo if persona_db else True
+        
         instance = serializer.save()
         instance._history_user = self.request.user
         instance.save()
         self._log_action(instance, CHANGE)
-        # Sincronizar el nombre al lector
-        sync_editar_persona_lector(instance)
+        
+        # Sincronizar al lector según cambio de estado
+        if estaba_activo and not instance.activo:
+            # Se acaba de DESACTIVAR → mover a blacklist en el lector
+            sync_editar_persona_lector(instance, blacklist=True)
+        elif not estaba_activo and instance.activo:
+            # Se acaba de REACTIVAR → volver a whitelist en el lector
+            sync_editar_persona_lector(instance, blacklist=False)
+        else:
+            # Sin cambio de estado → sincronizar nombre/foto normalmente (mantiene blacklist=True si ya estaba así)
+            sync_editar_persona_lector(instance, blacklist=bool(not instance.activo))
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -811,7 +920,7 @@ def sync_device_background(full_sync=False):
 
 class PersonaInstitucionViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = PersonaInstitucion.objects.all()
-    permission_classes = [EsAdminOGuardiaParaEscritura]
+    permission_classes = [PermisoPersonaInstitucion]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['persona', 'institucion', 'tipo', 'curso', 'activo']
     search_fields = ['persona__nombre', 'institucion__nombre', 'tipo__nombre', 'curso__nombre']
@@ -832,7 +941,7 @@ class EstadoAsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
 
 class AsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Asistencia.objects.all()
-    permission_classes = [EsAdminOGuardiaParaEscritura]
+    permission_classes = [PermisoAsistencia]
 
     def get_queryset(self):
         # We use select_related for immediate foreign keys 
@@ -851,6 +960,7 @@ class AsistenciaViewSet(AuditLogMixin, viewsets.ModelViewSet):
         'estado__nombre': ['exact'],
         'horario': ['isnull'],
         'horario__curso': ['exact'],
+        'horario__persona_institucion': ['exact'],
         'institucion': ['exact'],
         'temperatura': ['gte', 'lte'],
         'justificado': ['exact'],
@@ -1369,7 +1479,7 @@ class AuditLogView(APIView):
         # Only admins see all logs; staff/guardia only see their own
         is_admin = request.user.is_superuser
 
-        all_entries = []
+        all_metadata = []
 
         models_to_query = {filter_model: HISTORY_MODELS[filter_model]} if filter_model and filter_model in HISTORY_MODELS else HISTORY_MODELS
 
@@ -1392,35 +1502,14 @@ class AuditLogView(APIView):
             if date_to:
                 qs = qs.filter(history_date__date__lte=date_to)
 
-            for h in qs.select_related('history_user'):
-                # django-simple-history appends ' as of [timestamp]' to the string representation.
-                # We split it out to give the frontend a clean object name.
-                try:
-                    obj_repr = str(h)
-                    if ' as of ' in obj_repr:
-                        obj_repr = obj_repr.split(' as of ')[0]
-                except Exception:
-                    obj_repr = f'{model_name} #{getattr(h, "history_id", "?")}'
+            # Optimization: only fetch date and ID to sort globally
+            for h_date, h_id in qs.values_list('history_date', 'history_id'):
+                all_metadata.append((h_date, model_name, h_id))
 
-                try:
-                    all_entries.append({
-                        'id':           h.history_id,
-                        'model':        model_name,
-                        'object_id':    str(h.pk),
-                        'object_repr':  obj_repr,
-                        'action':       HISTORY_TYPE_MAP.get(h.history_type, h.history_type),
-                        'action_raw':   h.history_type,
-                        'user':         h.history_user.username if h.history_user else None,
-                        'date':         h.history_date.isoformat(),
-                        'changes':      _get_diff(h),
-                    })
-                except Exception:
-                    pass  # skip malformed history records
+        # Sort all by date descending
+        all_metadata.sort(key=operator.itemgetter(0), reverse=True)
 
-        # Sort all entries by date descending
-        all_entries.sort(key=operator.itemgetter('date'), reverse=True)
-
-        # Manual pagination
+        # Pagination
         try:
             page_size = min(int(request.query_params.get('page_size', 50)), 200)
         except (ValueError, TypeError):
@@ -1430,15 +1519,43 @@ class AuditLogView(APIView):
         except (ValueError, TypeError):
             page = 1
 
-        total = len(all_entries)
+        total = len(all_metadata)
         start = (page - 1) * page_size
         end   = start + page_size
-        results = all_entries[start:end]
+        results_meta = all_metadata[start:end]
+
+        # Final processing: Fetch only the 25 full objects needed
+        final_results = []
+        for h_date, model_name, h_id in results_meta:
+            try:
+                HistModel = HISTORY_MODELS[model_name]()
+                h = HistModel.objects.select_related('history_user').get(history_id=h_id)
+                
+                try:
+                    obj_repr = str(h)
+                    if ' as of ' in obj_repr:
+                        obj_repr = obj_repr.split(' as of ')[0]
+                except Exception:
+                    obj_repr = f'{model_name} #{h_id}'
+
+                final_results.append({
+                    'id':           h.history_id,
+                    'model':        model_name,
+                    'object_id':    str(h.pk),
+                    'object_repr':  obj_repr,
+                    'action':       HISTORY_TYPE_MAP.get(h.history_type, h.history_type),
+                    'action_raw':   h.history_type,
+                    'user':         h.history_user.username if h.history_user else None,
+                    'date':         h.history_date.isoformat(),
+                    'changes':      _get_diff(h),
+                })
+            except Exception:
+                continue
 
         return Response({
             'count':    total,
             'page':     page,
             'pages':    (total + page_size - 1) // page_size if total else 1,
-            'results':  results,
+            'results':  final_results,
             'models':   list(HISTORY_MODELS.keys()),
         })

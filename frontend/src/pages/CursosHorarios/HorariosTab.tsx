@@ -20,6 +20,7 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', '
 
 const HorariosTab: React.FC = () => {
     const { showToast } = useToast();
+    const { isAdmin, rol, cursosProfesor } = useAuth();
     const [instituciones, setInstituciones] = useState<Institucion[]>([]);
     const [cursos, setCursos] = useState<Curso[]>([]);
     const [horarios, setHorarios] = useState<Horario[]>([]);
@@ -214,22 +215,24 @@ const HorariosTab: React.FC = () => {
                             }}>
                                 Semana Actual: {semanaActual}
                             </span>
-                            <button
-                                onClick={() => setIsConfigModalOpen(true)}
-                                style={{
-                                    marginLeft: '8px',
-                                    background: 'none',
-                                    border: '1px solid #475569',
-                                    color: '#94a3b8',
-                                    borderRadius: '6px',
-                                    padding: '4px 8px',
-                                    fontSize: '0.75rem',
-                                    cursor: 'pointer'
-                                }}
-                                title="Configurar Semana A/B"
-                            >
-                                <i className="bi bi-gear-fill"></i>
-                            </button>
+                            {isAdmin && (
+                                <button
+                                    onClick={() => setIsConfigModalOpen(true)}
+                                    style={{
+                                        marginLeft: '8px',
+                                        background: 'none',
+                                        border: '1px solid #475569',
+                                        color: '#94a3b8',
+                                        borderRadius: '6px',
+                                        padding: '4px 8px',
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer'
+                                    }}
+                                    title="Configurar Semana A/B"
+                                >
+                                    <i className="bi bi-gear-fill"></i>
+                                </button>
+                            )}
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <select
@@ -242,12 +245,14 @@ const HorariosTab: React.FC = () => {
                                 <option value="A">Semana A</option>
                                 <option value="B">Semana B</option>
                             </select>
-                            <button
-                                onClick={() => { setCurrentHorario({ dia: 'Lunes', semana: 'Todas' } as Partial<Horario>); setIsModalOpen(true); }}
-                                className="btn-primary-action"
-                            >
-                                <i className="bi bi-clock-fill"></i> Agregar Horario
-                            </button>
+                            {(isAdmin || (rol === 'profesor' && cursosProfesor.includes(Number(selectedCursoId)))) && (
+                                <button
+                                    onClick={() => { setCurrentHorario({ dia: 'Lunes', semana: 'Todas' } as Partial<Horario>); setIsModalOpen(true); }}
+                                    className="btn-primary-action"
+                                >
+                                    <i className="bi bi-clock-fill"></i> Agregar Horario
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -278,22 +283,24 @@ const HorariosTab: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="action-buttons">
-                                                    <button
-                                                        onClick={() => { setCurrentHorario(h); setIsModalOpen(true); }}
-                                                        className="btn-icon btn-edit"
-                                                        title="Editar"
-                                                    >
-                                                        <i className="bi bi-pencil-fill"></i>
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); promptDelete(h.idHorario); }}
-                                                        className="btn-icon btn-delete"
-                                                        title="Eliminar"
-                                                    >
-                                                        <i className="bi bi-trash-fill"></i>
-                                                    </button>
-                                                </div>
+                                                {(isAdmin || (rol === 'profesor' && cursosProfesor.includes(Number(selectedCursoId)))) && (
+                                                    <div className="action-buttons">
+                                                        <button
+                                                            onClick={() => { setCurrentHorario(h); setIsModalOpen(true); }}
+                                                            className="btn-icon btn-edit"
+                                                            title="Editar"
+                                                        >
+                                                            <i className="bi bi-pencil-fill"></i>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); promptDelete(h.idHorario); }}
+                                                            className="btn-icon btn-delete"
+                                                            title="Eliminar"
+                                                        >
+                                                            <i className="bi bi-trash-fill"></i>
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>

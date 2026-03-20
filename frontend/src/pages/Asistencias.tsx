@@ -114,7 +114,7 @@ function getNextCourseForAsistencia(a: Asistencia): string | null {
 
 const Asistencias: React.FC = () => {
   const { showToast } = useToast();
-  const { isAdmin, rol } = useAuth();
+  const { isAdmin, rol, cursosProfesor } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
 
@@ -328,7 +328,7 @@ const Asistencias: React.FC = () => {
         justificado: editingAsistencia.justificado || false
       };
 
-      if (rol !== 'guardia') {
+      if (isAdmin) {
         payload.fechaHora = editingAsistencia.fechaHora;
         payload.temperatura = editingAsistencia.temperatura;
       }
@@ -607,8 +607,10 @@ const Asistencias: React.FC = () => {
                   <td>
                     {a.tipo === 'Salida' ? (
                       <span className="as-badge as-badge-salida"><i className="bi bi-box-arrow-right"></i> Salida</span>
-                    ) : (
+                    ) : a.tipo === 'Entrada' ? (
                       <span className="as-badge as-badge-entrada"><i className="bi bi-box-arrow-in-right"></i> Entrada</span>
+                    ) : (
+                      <span className="as-badge" style={{ background: 'rgba(100,116,139,0.2)', color: '#94a3b8' }}><i className="bi bi-robot"></i> Auto</span>
                     )}
                   </td>
                   <td>
@@ -626,7 +628,7 @@ const Asistencias: React.FC = () => {
                     {/* Fallback for other states */}
                     {!['Presente', 'Tardanza', 'Ausente', 'Se fue antes', 'No pasó a la salida'].includes(a.estado?.nombre) &&
                       <span className="as-badge">{a.estado?.nombre}</span>}
-                    {a.justificado && <span className="as-badge justificado" style={{ marginLeft: '4px' }}>✓ Justificado</span>}
+                    {a.justificado && <span className="as-badge justificado">✓ Justificado</span>}
                   </td>
                   <td>
                     {a.llegada_tarde_minutos > 0 && <span style={{ color: '#fbbf24' }}>+ {a.llegada_tarde_minutos} min</span>}
@@ -634,8 +636,8 @@ const Asistencias: React.FC = () => {
                   </td>
                   <td>
                     <div className="as-actions">
-                      {(isAdmin || rol === 'guardia') && (
-                        <button className="as-btn-action as-btn-edit" onClick={() => handleEdit(a)}><i className="bi bi-pencil"></i></button>
+                      {(isAdmin || rol === 'guardia' || (rol === 'profesor' && a.persona?.roles?.some((r: any) => cursosProfesor.includes(r.curso?.idCurso)))) && (
+                        <button className="as-btn-action as-btn-edit" onClick={() => handleEdit(a)} title="Editar/Justificar"><i className="bi bi-pencil"></i></button>
                       )}
                       {(isAdmin || rol === 'guardia') && (deleteConfirm === a.idAsistencia ? (
                         <>
@@ -676,7 +678,7 @@ const Asistencias: React.FC = () => {
 
       {/* Edit Modal (Preserved as is mostly) */}
       {showEditModal && editingAsistencia && (
-        <div className="as-modal-overlay" onClick={() => setShowEditModal(false)}>
+        <div className="as-modal-overlay" onMouseDown={(e) => { if(e.target === e.currentTarget) setShowEditModal(false); }}>
           <div className="as-modal" onClick={e => e.stopPropagation()}>
             <div className="as-modal-header">
               <h3>Editar Asistencia</h3>
@@ -695,7 +697,7 @@ const Asistencias: React.FC = () => {
                     type="datetime-local"
                     value={toLocalDatetimeInput(editingAsistencia.fechaHora)}
                     onChange={e => setEditingAsistencia({ ...editingAsistencia, fechaHora: new Date(e.target.value).toISOString() })}
-                    disabled={rol === 'guardia'}
+                    disabled={rol !== 'admin' && isAdmin === false}
                   />
                 </div>
                 <div className="as-form-group">
@@ -705,7 +707,7 @@ const Asistencias: React.FC = () => {
                     step="0.1" 
                     value={editingAsistencia.temperatura} 
                     onChange={e => setEditingAsistencia({ ...editingAsistencia, temperatura: parseFloat(e.target.value) })}
-                    disabled={rol === 'guardia'}
+                    disabled={rol !== 'admin' && isAdmin === false}
                   />
                 </div>
                 <div className="as-form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

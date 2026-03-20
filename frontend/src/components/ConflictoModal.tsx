@@ -245,7 +245,7 @@ const ConflictoModal: React.FC<ConflictoModalProps> = ({ conflict, onClose, onRe
         zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '12px',
       }}
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         style={{

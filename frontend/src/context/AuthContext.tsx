@@ -6,7 +6,8 @@ interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
     isAdmin: boolean;
-    rol: 'admin' | 'guardia' | 'lectura' | null;
+    rol: 'admin' | 'guardia' | 'profesor' | 'lectura' | null;
+    cursosProfesor: number[];
     currentUser: string;
     login: (token: string, refreshToken?: string) => void;
     logout: () => void;
@@ -28,8 +29,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const payload = token ? decodeJwtPayload(token) : {};
     const isAdmin: boolean = payload.rol === 'admin';
-    const rol: 'admin' | 'guardia' | 'lectura' | null = payload.rol || null;
+    const rol: 'admin' | 'guardia' | 'profesor' | 'lectura' | null = payload.rol || null;
     const currentUser: string = payload.username || '';
+    const cursosProfesor: number[] = payload.cursos_profesor || [];
 
     useEffect(() => {
         const syncToken = () => {
@@ -54,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isAuthenticated = !!token;
 
     return (
-        <AuthContext.Provider value={{ token, isAuthenticated, isAdmin, rol, currentUser, login, logout }}>
+        <AuthContext.Provider value={{ token, isAuthenticated, isAdmin, rol, currentUser, cursosProfesor, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

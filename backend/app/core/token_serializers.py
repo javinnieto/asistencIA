@@ -11,8 +11,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             token['rol'] = 'admin'
         elif user.is_staff:
             token['rol'] = 'guardia'
+        elif user.cursos_profesor.exists():
+            token['rol'] = 'profesor'
         else:
             token['rol'] = 'lectura'
+            
+        token['cursos_profesor'] = list(user.cursos_profesor.values_list('pk', flat=True))
             
         token['is_staff'] = user.is_staff
         token['email'] = user.email or ''

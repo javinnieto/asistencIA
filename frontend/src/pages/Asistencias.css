@@ -287,9 +287,16 @@
   object-fit: cover;
 }
 
+.as-user-info {
+  min-width: 0;
+}
+
 .as-user-info div:first-child {
   font-weight: 500;
   color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .as-user-info div:last-child {
@@ -683,7 +690,7 @@
 
   .as-table tr {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: 
       "user status"
       "date type"
@@ -695,7 +702,7 @@
     margin-bottom: 16px;
     padding: 16px;
     gap: 12px;
-    align-items: center;
+    align-items: flex-start;
   }
 
   .as-table td {
@@ -744,6 +751,9 @@
   .as-table td:nth-of-type(6) {
     grid-area: status;
     justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-content: flex-start;
   }
 
   /* 7: Detalle */

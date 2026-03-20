@@ -14,6 +14,7 @@ interface Usuario {
     is_superuser: boolean;
     is_active: boolean;
     date_joined: string;
+    cursos_profesor?: number[];
 }
 
 interface ModalState {
@@ -25,7 +26,7 @@ interface ModalState {
 const initModal = (): ModalState => ({
     open: false,
     mode: 'crear',
-    user: { username: '', email: '', is_staff: false, is_superuser: false, is_active: true, password: '' },
+    user: { username: '', email: '', is_staff: false, is_superuser: false, is_active: true, password: '', cursos_profesor: [] },
 });
 
 const Usuarios: React.FC = () => {
@@ -36,6 +37,7 @@ const Usuarios: React.FC = () => {
     const [modal, setModal] = useState<ModalState>(initModal());
     const [saving, setSaving] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<Usuario | null>(null);
+    const [cursosDisponibles, setCursosDisponibles] = useState<any[]>([]);
 
     // Paginación server-side
     const [currentPage, setCurrentPage] = useState(1);
@@ -62,6 +64,20 @@ const Usuarios: React.FC = () => {
     };
 
     useEffect(() => { fetchUsuarios(currentPage, itemsPerPage); }, [currentPage, itemsPerPage]);
+    
+    useEffect(() => {
+        const loadCursos = async () => {
+            try {
+                // Fetch all courses (may need pagination bypass if too many, but typically ok)
+                const res = await apiRequest('/cursos/?page_size=100');
+                const data = await res.json();
+                setCursosDisponibles(data.results || []);
+            } catch (err) {
+                console.error("Error al cargar cursos disp", err);
+            }
+        };
+        loadCursos();
+    }, []);
 
     const openCrear = () => setModal({ ...initModal(), open: true });
     const openEditar = (u: Usuario) => setModal({
@@ -160,10 +176,17 @@ const Usuarios: React.FC = () => {
                                             )}
                                         </td>
                                         <td>
-                                            <span className={`usr-badge ${u.is_staff ? 'admin' : 'lectura'}`}>
-                                                <i className={`bi ${u.is_staff ? 'bi-shield-fill' : 'bi-eye-fill'}`} />
-                                                {u.is_staff ? 'Administrador' : 'Solo Lectura'}
-                                            </span>
+                                            {u.is_superuser ? (
+                                                <span className="usr-badge admin"><i className="bi bi-shield-lock-fill" /> Administrador</span>
+                                            ) : u.is_staff ? (
+                                                <span className="usr-badge guardia"><i className="bi bi-person-badge-fill" /> Guardia</span>
+                                            ) : (u.cursos_profesor && u.cursos_profesor.length > 0) ? (
+                                                <span className="usr-badge" style={{ backgroundColor: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
+                                                    <i className="bi bi-person-workspace" /> Profesor
+                                                </span>
+                                            ) : (
+                                                <span className="usr-badge lectura"><i className="bi bi-eye-fill" /> Solo Lectura</span>
+                                            )}
                                         </td>
                                         <td>
                                             <span className={`usr-badge ${u.is_active ? 'activo' : 'inactivo'}`}>
@@ -217,7 +240,7 @@ const Usuarios: React.FC = () => {
 
             {/* Modal crear/editar */}
             {modal.open && (
-                <div className="usr-modal-overlay" onClick={() => setModal(initModal())}>
+                <div className="usr-modal-overlay" onMouseDown={(e) => { if(e.target === e.currentTarget) setModal(initModal()); }}>
                     <div className="usr-modal" onClick={e => e.stopPropagation()}>
                         <form onSubmit={handleSave}>
                             <div className="usr-modal-header">
@@ -269,25 +292,80 @@ const Usuarios: React.FC = () => {
                             <div className="usr-form-group">
                                 <label>Rol</label>
                                 <select
-                                    value={modal.user.is_superuser ? 'admin' : (modal.user.is_staff ? 'guardia' : 'lectura')}
+                                    value={modal.user.is_superuser ? 'admin' : (modal.user.is_staff ? 'guardia' : ((modal.user.cursos_profesor && modal.user.cursos_profesor.length > 0) ? 'profesor' : 'lectura'))}
                                     onChange={e => {
-                                        const admin = e.target.value === 'admin';
-                                        const guardia = e.target.value === 'guardia';
+                                        const val = e.target.value;
+                                        const admin = val === 'admin';
+                                        const guardia = val === 'guardia';
                                         setModal(m => ({
                                             ...m,
                                             user: { 
                                                 ...m.user, 
                                                 is_superuser: admin, 
-                                                is_staff: admin || guardia 
+                                                is_staff: admin || guardia,
+                                                cursos_profesor: (admin || guardia || val === 'lectura') ? [] : m.user.cursos_profesor 
                                             }
                                         }))
                                     }}
                                 >
                                     <option value="lectura">Solo Lectura (Ver info solamente)</option>
+                                    <option value="profesor">Profesor (Lectura + Editar cursos asignados)</option>
                                     <option value="guardia">Guardia (Carga de Asistencias y ABM Básico)</option>
                                     <option value="admin">Administrador (Acceso total)</option>
                                 </select>
                             </div>
+
+                            {!modal.user.is_superuser && !modal.user.is_staff && (
+                                <div className="usr-form-group">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                        <label style={{ margin: 0 }}>Cursos Asignados</label>
+                                        <span style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 600 }}>
+                                            {modal.user.cursos_profesor?.length || 0} seleccionados
+                                        </span>
+                                    </div>
+                                    <div className="usr-cursos-list">
+                                        {cursosDisponibles.map(c => {
+                                            const isSelected = modal.user.cursos_profesor?.includes(c.idCurso);
+                                            return (
+                                                <label key={c.idCurso} className={`usr-curso-item ${isSelected ? 'selected' : ''}`}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={isSelected || false}
+                                                        onChange={(e) => {
+                                                            const isChecked = e.target.checked;
+                                                            setModal(m => {
+                                                                const current = m.user.cursos_profesor || [];
+                                                                return {
+                                                                    ...m,
+                                                                    user: {
+                                                                        ...m.user,
+                                                                        cursos_profesor: isChecked 
+                                                                            ? [...current, c.idCurso]
+                                                                            : current.filter(id => id !== c.idCurso)
+                                                                    }
+                                                                };
+                                                            });
+                                                        }}
+                                                    />
+                                                    <span className="usr-curso-name">{c.nombre}</span>
+                                                    {(c.institucion?.siglas || c.institucion?.nombre) && (
+                                                        <span className="usr-curso-inst">{c.institucion.siglas || c.institucion.nombre}</span>
+                                                    )}
+                                                </label>
+                                            );
+                                        })}
+                                        {cursosDisponibles.length === 0 && (
+                                            <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                                                <i className="bi bi-info-circle" style={{ display: 'block', marginBottom: '8px', fontSize: '1.2rem' }}></i>
+                                                No hay cursos disponibles para asignar.
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="usr-hint" style={{ marginTop: '0.6rem' }}>
+                                        Marcá los cursos para otorgar permisos de edición sobre ellos.
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="usr-form-group">
                                 <label>Estado</label>
@@ -315,7 +393,7 @@ const Usuarios: React.FC = () => {
 
             {/* Confirm delete */}
             {confirmDelete && (
-                <div className="usr-modal-overlay" onClick={() => setConfirmDelete(null)}>
+                <div className="usr-modal-overlay" onMouseDown={(e) => { if(e.target === e.currentTarget) setConfirmDelete(null); }}>
                     <div className="usr-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
                         <div className="usr-modal-header">
                             <h3 style={{ color: '#f87171' }}>

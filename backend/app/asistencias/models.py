@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+from django.contrib.auth.models import User
 from simple_history.models import HistoricalRecords
 
 
@@ -33,6 +35,7 @@ class Curso(models.Model):
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin = models.DateField(null=True, blank=True)
     activo = models.BooleanField(default=True)
+    profesores = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='cursos_profesor', blank=True)
     history = HistoricalRecords()
     
     class Meta:
@@ -162,7 +165,15 @@ class Asistencia(models.Model):
     idAsistencia = models.AutoField(primary_key=True)
     persona = models.ForeignKey(Persona, on_delete=models.CASCADE)
     fechaHora = models.DateTimeField()
-    tipo = models.CharField(max_length=10, choices=[('Entrada', 'Entrada'), ('Salida', 'Salida')], default='Entrada')
+    tipo = models.CharField(
+        max_length=20,
+        choices=[
+            ('Entrada', 'Entrada'),
+            ('Salida', 'Salida'),
+        ],
+        null=True, blank=True,
+        help_text="Entrada/Salida si fue un scan real del lector. Null si fue generado automáticamente (ausente, no pasó salida)."
+    )
     temperatura = models.FloatField()
     estado = models.ForeignKey(EstadoAsistencia, on_delete=models.PROTECT)
     # Opcional: especificar para qué institución/contexto es la asistencia
@@ -213,6 +224,26 @@ class DiaNoLaborable(models.Model):
             rango += f" → {self.fecha_fin}"
         return f"{rango} - {self.motivo} ({self.institucion.nombre})"
 
+
+class TransicionAnioLectivo(models.Model):
+    """
+    Guarda el histórico del estado de los estudiantes ANTES de avanzar de año.
+    Permite revertir la operación ("Ctrl+Z" masivo del colegio).
+    """
+    fecha = models.DateTimeField(auto_now_add=True)
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    revertido = models.BooleanField(default=False)
+    datos_reversion = models.JSONField(
+        help_text="Lista de objetos con: idRol, idCursoAnterior"
+    )
+
+    class Meta:
+        verbose_name_plural = "Transiciones de Año Lectivo"
+        ordering = ['-fecha']
+
+    def __str__(self):
+        estado = "[REVERTIDO] " if self.revertido else ""
+        return f"{estado}Avance de año - {self.fecha.strftime('%d/%m/%Y %H:%M')}"
 
 class ConfiguracionSemana(models.Model):
     """Singleton: define qué semana (A/B) está vigente basado en una fecha de referencia"""
