@@ -8,9 +8,10 @@ interface ExportButtonProps {
   summaryData?: any[]; // optional summary array of objects to show on top
   filename?: string;
   onExport?: (type: string) => void;
+  iconOnly?: boolean;
 }
 
-const ExportButton: React.FC<ExportButtonProps> = ({ data, onFetchData, summaryData, filename = 'asistencias', onExport }) => {
+const ExportButton: React.FC<ExportButtonProps> = ({ data, onFetchData, summaryData, filename = 'asistencias', onExport, iconOnly = false }) => {
   const [loading, setLoading] = useState(false);
 
   // Normaliza las propiedades del item, ya que a veces vienen diferentes.
@@ -93,8 +94,16 @@ const ExportButton: React.FC<ExportButtonProps> = ({ data, onFetchData, summaryD
 
   return (
     <button
-      className="btn btn-sm d-flex align-items-center gap-2 ExportButton"
-      style={{
+      className={iconOnly ? "btn-icon" : "btn btn-sm d-flex align-items-center gap-2 ExportButton"}
+      style={iconOnly ? { 
+        color: '#10b981', 
+        opacity: loading ? 0.7 : 1, 
+        padding:'0',
+        minWidth: '24px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      } : {
         borderRadius: '6px',
         fontWeight: 500,
         backgroundColor: '#10b981',
@@ -105,26 +114,33 @@ const ExportButton: React.FC<ExportButtonProps> = ({ data, onFetchData, summaryD
         transition: 'all 0.2s',
       }}
       type="button"
-      onClick={handleExportClick}
+      title={iconOnly ? "Descargar Excel" : undefined}
+      onClick={(e) => { e.stopPropagation(); handleExportClick(); }}
       disabled={loading}
       onMouseOver={(e) => {
-        if (!loading) {
+        if (!loading && !iconOnly) {
           e.currentTarget.style.backgroundColor = '#059669';
           e.currentTarget.style.transform = 'translateY(-1px)';
+        } else if (!loading && iconOnly) {
+          e.currentTarget.style.transform = 'scale(1.1)';
         }
       }}
       onMouseOut={(e) => {
-        if (!loading) {
+        if (!loading && !iconOnly) {
           e.currentTarget.style.backgroundColor = '#10b981';
           e.currentTarget.style.transform = 'translateY(0px)';
+        } else if (!loading && iconOnly) {
+          e.currentTarget.style.transform = 'scale(1)';
         }
       }}
     >
       {loading ? (
-        <><i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite' }}></i> Preparando...</>
+         <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite' }}></i>
       ) : (
-        <><i className="bi bi-file-earmark-excel-fill"></i> Descargar Excel</>
+         <i className="bi bi-file-earmark-excel-fill"></i>
       )}
+      {!iconOnly && !loading && " Descargar Excel"}
+      {!iconOnly && loading && " Preparando..."}
     </button>
   );
 };

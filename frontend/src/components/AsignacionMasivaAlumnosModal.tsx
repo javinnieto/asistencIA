@@ -49,35 +49,49 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
     }
   }, [isOpen]);
 
+  const fetchAllPages = async (url: string) => {
+    let allResults: any[] = [];
+    let nextUrl: string | null = url;
+    while (nextUrl) {
+      const res = await apiRequest(nextUrl);
+      if (!res.ok) break;
+      const data = await res.json();
+      if (data.results) {
+        allResults = allResults.concat(data.results);
+        nextUrl = data.next;
+      } else {
+        allResults = allResults.concat(Array.isArray(data) ? data : [data]);
+        nextUrl = null;
+      }
+    }
+    return allResults;
+  };
+
   const fetchPersonas = async () => {
     setLoading(true);
     try {
-      const [resPersonas, resInscritos] = await Promise.all([
-        apiRequest('/personas/?limit=500'),
-        apiRequest(`/persona-institucion/?curso=${cursoId}&limit=500`)
+      const [listPersonas, listInscritos] = await Promise.all([
+        fetchAllPages('/personas/?page_size=500'),
+        fetchAllPages(`/persona-institucion/?curso=${cursoId}&page_size=500`)
       ]);
       
-      if (resPersonas.ok && resInscritos.ok) {
-        const dataPersonas = await resPersonas.json();
-        const dataInscritos = await resInscritos.json();
+      const inscritosList = listInscritos;
+      const initialSet = new Set<number>();
+      const piMap: Record<number, number> = {};
 
-        const inscritosList = dataInscritos.results || dataInscritos;
-        const initialSet = new Set<number>();
-        const piMap: Record<number, number> = {};
+      inscritosList.forEach((pi: any) => {
+        const pId = typeof pi.persona === 'object' ? pi.persona.idPersona : pi.persona;
+        initialSet.add(pId);
+        piMap[pId] = pi.idPersonaInstitucion;
+      });
 
-        inscritosList.forEach((pi: any) => {
-          const pId = typeof pi.persona === 'object' ? pi.persona.idPersona : pi.persona;
-          initialSet.add(pId);
-          piMap[pId] = pi.idPersonaInstitucion;
-        });
-
-        const list = (dataPersonas.results || dataPersonas).map((p: any) => ({
-          idPersona: p.idPersona || p.id,
-          nombre: p.nombre,
-          apellido: p.apellido || '',
-          departamento: p.departamento || '',
-          foto: p.foto || null
-        }));
+      const list = listPersonas.map((p: any) => ({
+        idPersona: p.idPersona || p.id,
+        nombre: p.nombre,
+        apellido: p.apellido || '',
+        departamento: p.departamento || '',
+        foto: p.foto || null
+      }));
 
         list.sort((a: any, b: any) => {
           const aInscrito = initialSet.has(a.idPersona);
@@ -87,11 +101,10 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
           return a.nombre.localeCompare(b.nombre);
         });
 
-        setPersonas(list);
-        setSelectedIds(new Set(initialSet));
-        setInitialSelectedIds(new Set(initialSet));
-        setPersonInstitutions(piMap);
-      }
+      setPersonas(list);
+      setSelectedIds(new Set(initialSet));
+      setInitialSelectedIds(new Set(initialSet));
+      setPersonInstitutions(piMap);
     } catch (e) {
       showToast('Error cargando la lista de personas', 'error');
     } finally {

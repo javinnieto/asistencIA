@@ -10,7 +10,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
   const location = useLocation();
-  const { isAdmin, currentUser } = useAuth();
+  const { isAdmin, rol, currentUser } = useAuth();
 
   const menuItems = [
     { path: '/dashboard', icon: 'bi-grid-1x2-fill', label: 'Dashboard' },
@@ -38,8 +38,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
             </Link>
           </li>
         ))}
-        {/* Instituciones — solo admins */}
-        {isAdmin && (
+        {/* Instituciones — admin y guardia */}
+        {(isAdmin || rol === 'guardia') && (
           <li className={location.pathname === '/instituciones' ? 'active' : ''}>
             <Link to="/instituciones" title={collapsed ? 'Instituciones' : ''}>
               <i className="bi bi-building"></i>
@@ -62,11 +62,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
           gap: 7,
         }}>
           <i
-            className={`bi ${isAdmin ? 'bi-shield-fill' : 'bi-eye-fill'}`}
-            style={{ color: isAdmin ? '#a5b4fc' : '#64748b' }}
+            className={`bi ${(isAdmin || rol === 'guardia') ? 'bi-shield-fill' : (rol === 'profesor' ? 'bi-person-workspace' : 'bi-eye-fill')}`}
+            style={{ color: (isAdmin || rol === 'guardia') ? '#a5b4fc' : '#64748b' }}
           />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {currentUser} &mdash; {isAdmin ? 'Admin' : 'Lectura'}
+            {currentUser} &mdash; {isAdmin ? 'Admin' : (rol === 'guardia' ? 'Guardia' : (rol === 'profesor' ? 'Profesor' : 'Lectura'))}
           </span>
         </div>
       )}

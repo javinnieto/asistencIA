@@ -330,35 +330,44 @@ const DiasNoLaborablesTab: React.FC = () => {
 
     const filteredDias = dias;
 
+    // Helper para renderizar listas truncadas y evitar que se desborde el diseño
+    const renderTruncatedList = (items: any[], icon: string, maxItems: number = 2) => {
+        if (!items || items.length === 0) return null;
+        
+        const names = items.map(item => item.nombre || item);
+        const displayedNames = names.slice(0, maxItems).join(', ');
+        const remainingCount = names.length - maxItems;
+
+        return (
+            <div key={icon} style={{ color: '#94a3b8', fontSize: '0.85rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                <i className={`bi bi-${icon}`}></i>
+                <span title={names.join(', ')} style={{ cursor: remainingCount > 0 ? 'help' : 'default', display: 'flex', alignItems: 'center' }}>
+                    {displayedNames}
+                    {remainingCount > 0 && (
+                        <span className="badge bg-secondary ms-1" style={{ fontSize: '0.7rem', padding: '0.25em 0.4em' }}>
+                            +{remainingCount}
+                        </span>
+                    )}
+                </span>
+            </div>
+        );
+    };
+
     // Build scope summary for table
     const getScopeSummary = (dia: DiaNoLaborable) => {
         if (dia.aplica_a_todos) return <span className="ch-badge bg-success text-white">General</span>;
 
         const parts: React.ReactNode[] = [];
-        if (dia.cursos_afectados && dia.cursos_afectados.length > 0) {
-            parts.push(
-                <div key="cursos" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                    <i className="bi bi-book me-1"></i>
-                    {dia.cursos_afectados.map((c: any) => c.nombre || c).join(', ')}
-                </div>
-            );
-        }
-        if (dia.tipos_persona_afectados && dia.tipos_persona_afectados.length > 0) {
-            parts.push(
-                <div key="roles" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                    <i className="bi bi-people me-1"></i>
-                    {dia.tipos_persona_afectados.map((t: any) => t.nombre || t).join(', ')}
-                </div>
-            );
-        }
-        if (dia.personas_afectadas && dia.personas_afectadas.length > 0) {
-            parts.push(
-                <div key="personas" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                    <i className="bi bi-person me-1"></i>
-                    {dia.personas_afectadas.map((p: any) => p.nombre || p).join(', ')}
-                </div>
-            );
-        }
+        
+        const cs = renderTruncatedList(dia.cursos_afectados || [], 'book', 2);
+        if (cs) parts.push(cs);
+
+        const rs = renderTruncatedList(dia.tipos_persona_afectados || [], 'people', 2);
+        if (rs) parts.push(rs);
+
+        const ps = renderTruncatedList(dia.personas_afectadas || [], 'person', 2);
+        if (ps) parts.push(ps);
+
         if (parts.length === 0) return <span className="ch-badge inactive">SIN ASIGNAR</span>;
         return <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>{parts}</div>;
     };

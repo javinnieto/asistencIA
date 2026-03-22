@@ -18,7 +18,7 @@ interface Institucion {
 
 const InstitucionesTab: React.FC = () => {
     const { showToast } = useToast();
-    const { isAdmin } = useAuth();
+    const { isAdmin, rol } = useAuth();
 
     const [instituciones, setInstituciones] = useState<Institucion[]>([]);
     const [loading, setLoading] = useState(false);
@@ -141,7 +141,7 @@ const InstitucionesTab: React.FC = () => {
                             className="search-input-styled"
                         />
                     </div>
-                    {isAdmin && (
+                    {(isAdmin || rol === 'guardia') && (
                         <button
                             onClick={() => { setCurrentInst({ activa: true }); setIsModalOpen(true); }}
                             className="btn-primary-action"
@@ -178,7 +178,7 @@ const InstitucionesTab: React.FC = () => {
                                 </td>
                                 <td className="ch-td text-right">
                                     <div className="action-buttons">
-                                        {isAdmin && (
+                                        {(isAdmin || rol === 'guardia') && (
                                             <button
                                                 type="button"
                                                 onClick={() => { setCurrentInst(inst); setIsModalOpen(true); }}
@@ -188,7 +188,7 @@ const InstitucionesTab: React.FC = () => {
                                                 <i className="bi bi-pencil-fill"></i>
                                             </button>
                                         )}
-                                        {isAdmin && (
+                                        {(isAdmin || rol === 'guardia') && (
                                             <button
                                                 type="button"
                                                 onClick={(e) => {

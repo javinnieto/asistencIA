@@ -350,7 +350,7 @@ const Personas: React.FC = () => {
             <h3 className="as-page-title m-0">Personas</h3>
             <span className="as-count-badge personas-count-badge" style={{ marginLeft: '8px' }}>{totalRecords} PERSONAS REGISTRADAS</span>
           </div>
-          {isAdmin && (
+          {(isAdmin || rol === 'guardia') && (
              <button
                 onClick={handleSyncDevice}
                 className="btn btn-primary d-flex align-items-center gap-2 as-btn-primary"
