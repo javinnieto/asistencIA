@@ -232,7 +232,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
   return (
     <div className="personas-table-container">
       {/* Batch actions */}
-      {selectionMode && selectedCount > 0 && isAdmin && (
+      {selectionMode && selectedCount > 0 && (isAdmin || rol === 'guardia') && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px 16px' }}>
           <button
             onClick={() => setBatchConfirmOpen(true)}
@@ -250,7 +250,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
         <table className="personas-table">
           <thead>
             <tr>
-              {isAdmin && (
+              {(isAdmin || rol === 'guardia') && (
                 <th style={{ width: '40px', padding: '12px 10px', verticalAlign: 'middle', textAlign: 'center' }}>
                   {selectionMode ? (
                     <input
@@ -347,7 +347,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       borderLeft: hasConflict ? '4px solid #ef4444' : undefined,
                     }}
                   >
-                    {isAdmin && (
+                    {(isAdmin || rol === 'guardia') && (
                       <td className="select-checkbox-cell" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', verticalAlign: 'middle', padding: '0 6px' }}>
                         {selectionMode && (
                           <input
@@ -446,7 +446,7 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                             <i className="bi bi-pencil-fill"></i>
                           </button>
                         )}
-                        {isAdmin && (
+                        {(isAdmin || rol === 'guardia') && (
                           <button
                             className="btn-icon btn-delete action-btn"
                             onClick={(e) => {

@@ -566,7 +566,7 @@ const PersonaDetails: React.FC<PersonaDetailsProps> = ({ person, onClose, onEdit
 
 
           <div className="details-actions">
-            {(isAdmin || (rol === 'profesor' && person.roles?.some((r: any) => cursosProfesor.includes(r.curso?.idCurso)))) && (
+            {(isAdmin || rol === 'guardia' || (rol === 'profesor' && person.roles?.some((r: any) => cursosProfesor.includes(r.curso?.idCurso)))) && (
               <button className="btn-edit-details" onClick={handleEdit}>
                 ✏️ Editar Información
               </button>

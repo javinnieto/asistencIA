@@ -58,7 +58,7 @@ const CursosTab: React.FC = () => {
     const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
     
     // Highlight
-    const [highlightedHorarioIndex, setHighlightedHorarioIndex] = useState<number | null>(null);
+    const [highlightedHorarioIndices, setHighlightedHorarioIndices] = useState<number[]>([]);
 
     // Asignacion Masiva Modal State
     const [isAsignacionModalOpen, setIsAsignacionModalOpen] = useState(false);
@@ -66,6 +66,8 @@ const CursosTab: React.FC = () => {
 
     // Horarios management in modal
     const [horarios, setHorarios] = useState<Horario[]>([]);
+    const [diasMultiples, setDiasMultiples] = useState<string[]>(['Lunes']);
+    const [bloqueDraft, setBloqueDraft] = useState({ hora_inicio: '08:00', hora_fin: '09:00', semana: 'Todas' });
 
     // Confirm Modal
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -131,6 +133,7 @@ const CursosTab: React.FC = () => {
         }
         setFormError(null);
         setHorarioErrors({});
+        setHighlightedHorarioIndices([]);
         setIsModalOpen(true);
     };
 
@@ -335,8 +338,34 @@ const CursosTab: React.FC = () => {
 
     const addHorario = () => {
         setFormError(null);
-        const newHorario = getNextAvailableSlot(horarios);
-        setHorarios([...horarios, newHorario]);
+        if (diasMultiples.length === 0) {
+            showToast('Seleccione al menos un día', 'error');
+            return;
+        }
+        const updatedHorarios = [...horarios];
+        const newIndices: number[] = [];
+        
+        for (const dia of diasMultiples) {
+            newIndices.push(updatedHorarios.length);
+            updatedHorarios.push({ ...bloqueDraft, dia, activo: true } as Horario);
+        }
+        setHorarios(updatedHorarios);
+        
+        const firstNewIndex = newIndices[0];
+        setHighlightedHorarioIndices(newIndices);
+        setTimeout(() => {
+            const firstEl = document.getElementById(`horario-item-${firstNewIndex}`);
+            if (firstEl) {
+                firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            newIndices.forEach(idx => {
+                const el = document.getElementById(`horario-item-${idx}`);
+                if (el) {
+                    el.classList.add('highlight-flash');
+                    setTimeout(() => el.classList.remove('highlight-flash'), 2000);
+                }
+            });
+        }, 100);
     };
 
     const removeHorario = (index: number) => {
@@ -477,7 +506,7 @@ const CursosTab: React.FC = () => {
         setHorarios(curso.horarios || []);
         setFormError(null);
         setIsModalOpen(true);
-        setHighlightedHorarioIndex(index);
+        setHighlightedHorarioIndices([index]);
         
         setTimeout(() => {
             const el = document.getElementById(`horario-item-${index}`);
@@ -527,7 +556,7 @@ const CursosTab: React.FC = () => {
                             Administración académica
                         </p>
                     </div>
-                    {isAdmin && (
+                    {(isAdmin || rol === 'guardia') && (
                         <div className="d-flex gap-2 flex-wrap justify-content-end align-items-center">
                             
                             {/* Opciones Avanzadas Dropdown */}
@@ -712,7 +741,7 @@ const CursosTab: React.FC = () => {
                                     {/* Col 6: Acciones — also contains mobile expand indicator */}
                                     <td className="ch-td ch-mobile-actions" onClick={(e) => e.stopPropagation()}>
                                         <div className="btn-group gap-2 d-flex action-buttons">
-                                            {(isAdmin || (rol === 'profesor' && cursosProfesor.includes(curso.idCurso))) && (
+                                            {(isAdmin || rol === 'guardia' || (rol === 'profesor' && cursosProfesor.includes(curso.idCurso))) && (
                                                 <>
                                                     <button
                                                         className="btn-icon text-success"
@@ -733,7 +762,7 @@ const CursosTab: React.FC = () => {
                                                     </button>
                                                 </>
                                             )}
-                                            {isAdmin && (
+                                            {(isAdmin || rol === 'guardia') && (
                                                 <button
                                                     className="btn-icon btn-delete"
                                                     onClick={() => promptDelete(curso.idCurso)}
@@ -742,6 +771,82 @@ const CursosTab: React.FC = () => {
                                                     <i className="bi bi-trash-fill"></i>
                                                 </button>
                                             )}
+                                            {curso.horarios && curso.horarios.length > 0 && (isAdmin || rol === 'guardia' || (rol === 'profesor' && cursosProfesor.includes(curso.idCurso))) && (
+                                                <ExportButton 
+                                                    iconOnly
+                                                    filename={`asistencias_curso_${curso.nombre.replace(/\s+/g, '_').toLowerCase()}`}
+                                                    onFetchData={async () => {
+                                                        try {
+                                                            const [resRecords, resInscritos] = await Promise.all([
+                                                                apiRequest(`/asistencias/?horario__curso=${curso.idCurso}&page_size=10000`),
+                                                                apiRequest(`/persona-institucion/?curso=${curso.idCurso}&activo=true&limit=5000`)
+                                                            ]);
+
+                                                            if (resRecords.ok && resInscritos.ok) {
+                                                                const dataRecords = await resRecords.json();
+                                                                const dataInscritos = await resInscritos.json();
+                                                                
+                                                                const allRecords = dataRecords.results || dataRecords || [];
+                                                                const inscritos = dataInscritos.results || dataInscritos || [];
+                                                                
+                                                                const dict: any = {};
+                                                                let globP = 0, globA = 0, globT = 0, globTot = 0;
+
+                                                                // Inicializamos dict con todos los alumnos inscritos
+                                                                inscritos.forEach((pi: any) => {
+                                                                    const p = typeof pi.persona === 'object' ? pi.persona : null;
+                                                                    if (p) {
+                                                                        dict[p.idPersona || p.id] = { persona: p, presentes: 0, ausentes: 0, tardanzas: 0, total: 0 };
+                                                                    }
+                                                                });
+
+                                                                // Computar los registros válidos
+                                                                allRecords.forEach((r: any) => {
+                                                                    const estado = r.estado?.nombre;
+                                                                    if (['Presente', 'Ausente', 'Tardanza'].includes(estado)) {
+                                                                        const pId = r.persona?.id || r.persona?.idPersona;
+                                                                        if (!pId) return;
+                                                                        if (!dict[pId]) {
+                                                                            dict[pId] = { persona: r.persona, presentes: 0, ausentes: 0, tardanzas: 0, total: 0 };
+                                                                        }
+                                                                        dict[pId].total += 1;
+                                                                        globTot += 1;
+                                                                        if (estado === 'Presente') { dict[pId].presentes += 1; globP += 1; }
+                                                                        if (estado === 'Ausente') { dict[pId].ausentes += 1; globA += 1; }
+                                                                        if (estado === 'Tardanza') { dict[pId].tardanzas += 1; globT += 1; }
+                                                                    }
+                                                                });
+
+                                                                const records = Object.values(dict).map((s: any) => ({
+                                                                    _isAggregated: true,
+                                                                    'Alumno': `${s.persona?.nombre || ''} ${s.persona?.apellido || ''}`.trim() || 'Desconocido',
+                                                                    'Presentes': s.presentes,
+                                                                    'Ausentes': s.ausentes,
+                                                                    'Tardanzas': s.tardanzas,
+                                                                    'Veces que debió venir': s.total,
+                                                                    'Porcentaje Asistencia': s.total > 0 ? `${Math.round(((s.presentes + s.tardanzas) / s.total) * 100)}%` : '0%'
+                                                                }));
+
+                                                                records.sort((a, b) => a.Alumno.localeCompare(b.Alumno));
+
+                                                                const summary = [{
+                                                                   'Total de alumnos asignados': records.length,
+                                                                   'Porcentaje Global de Presentes': globTot > 0 ? `${Math.round((globP / globTot)*100)}%` : '0%',
+                                                                   'Porcentaje Global de Ausentes': globTot > 0 ? `${Math.round((globA / globTot)*100)}%` : '0%',
+                                                                   'Porcentaje Global de Tardanzas': globTot > 0 ? `${Math.round((globT / globTot)*100)}%` : '0%',
+                                                                }];
+
+                                                                return { records: records.length > 0 ? records : [{ _isAggregated: true, 'Aviso': 'Sin alumnos' }], summary };
+                                                            }
+                                                            return { records: [{ _isAggregated: true, 'Aviso': 'Sin alumnos' }], summary: [] };
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            return { records: [], summary: [] };
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+
                                         </div>
 
                                         {/* Mobile-only: "Ver/Ocultar Horarios" indicator — has its own click to bypass stopPropagation */}
@@ -764,86 +869,12 @@ const CursosTab: React.FC = () => {
                                     <tr className="expanded-row">
                                         <td colSpan={6} style={{ padding: 0, background: 'rgba(15, 23, 42, 0.8)' }}>
                                             <div className="horarios-expanded-container w-100">
-                                                <div style={{ padding: '10px 20px', display: 'flex', justifyContent: 'flex-end', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                    <ExportButton 
-                                                        filename={`asistencias_curso_${curso.nombre.replace(/\s+/g, '_').toLowerCase()}`}
-                                                        onFetchData={async () => {
-                                                            try {
-                                                                const [resRecords, resInscritos] = await Promise.all([
-                                                                    apiRequest(`/asistencias/?horario__curso=${curso.idCurso}&page_size=10000`),
-                                                                    apiRequest(`/persona-institucion/?curso=${curso.idCurso}&activo=true&limit=5000`)
-                                                                ]);
-
-                                                                if (resRecords.ok && resInscritos.ok) {
-                                                                    const dataRecords = await resRecords.json();
-                                                                    const dataInscritos = await resInscritos.json();
-                                                                    
-                                                                    const allRecords = dataRecords.results || dataRecords || [];
-                                                                    const inscritos = dataInscritos.results || dataInscritos || [];
-                                                                    
-                                                                    const dict: any = {};
-                                                                    let globP = 0, globA = 0, globT = 0, globTot = 0;
-
-                                                                    // Inicializamos dict con todos los alumnos inscritos (para que salgan aunque tengan 0 asistencias)
-                                                                    inscritos.forEach((pi: any) => {
-                                                                        const p = typeof pi.persona === 'object' ? pi.persona : null;
-                                                                        if (p) {
-                                                                            dict[p.idPersona || p.id] = { persona: p, presentes: 0, ausentes: 0, tardanzas: 0, total: 0 };
-                                                                        }
-                                                                    });
-
-                                                                    // Computar los registros válidos
-                                                                    allRecords.forEach((r: any) => {
-                                                                        const estado = r.estado?.nombre;
-                                                                        if (['Presente', 'Ausente', 'Tardanza'].includes(estado)) {
-                                                                            const pId = r.persona?.id || r.persona?.idPersona;
-                                                                            if (!pId) return;
-                                                                            if (!dict[pId]) {
-                                                                                // Por las dudas, si un alumno tuvo asistencia pero ya no está inscrito
-                                                                                dict[pId] = { persona: r.persona, presentes: 0, ausentes: 0, tardanzas: 0, total: 0 };
-                                                                            }
-                                                                            dict[pId].total += 1;
-                                                                            globTot += 1;
-                                                                            if (estado === 'Presente') { dict[pId].presentes += 1; globP += 1; }
-                                                                            if (estado === 'Ausente') { dict[pId].ausentes += 1; globA += 1; }
-                                                                            if (estado === 'Tardanza') { dict[pId].tardanzas += 1; globT += 1; }
-                                                                        }
-                                                                    });
-
-                                                                    const records = Object.values(dict).map((s: any) => ({
-                                                                        _isAggregated: true, // skip normal format
-                                                                        'Alumno': `${s.persona?.nombre || ''} ${s.persona?.apellido || ''}`.trim() || 'Desconocido',
-                                                                        'Presentes': s.presentes,
-                                                                        'Ausentes': s.ausentes,
-                                                                        'Tardanzas': s.tardanzas,
-                                                                        'Veces que debió venir': s.total,
-                                                                        'Porcentaje Asistencia': s.total > 0 ? `${Math.round(((s.presentes + s.tardanzas) / s.total) * 100)}%` : '0%'
-                                                                    }));
-
-                                                                    // Sort alphabetical by student name
-                                                                    records.sort((a, b) => a.Alumno.localeCompare(b.Alumno));
-
-                                                                    // Siempre retornar al menos el summary, incluso si records está vacío (si no hay inscriptos)
-                                                                    const summary = [{
-                                                                       'Total de alumnos asignados': records.length,
-                                                                       'Porcentaje Global de Presentes': globTot > 0 ? `${Math.round((globP / globTot)*100)}%` : '0%',
-                                                                       'Porcentaje Global de Ausentes': globTot > 0 ? `${Math.round((globA / globTot)*100)}%` : '0%',
-                                                                       'Porcentaje Global de Tardanzas': globTot > 0 ? `${Math.round((globT / globTot)*100)}%` : '0%',
-                                                                    }];
-
-                                                                    return { records: records.length > 0 ? records : [{ _isAggregated: true, 'Aviso': 'Sin alumnos' }], summary };
-                                                                }
-                                                                return { records: [{ _isAggregated: true, 'Aviso': 'Sin alumnos' }], summary: [] };
-                                                            } catch (err) {
-                                                                console.error(err);
-                                                                return { records: [], summary: [] };
-                                                            }
-                                                        }}
-                                                    />
+                                                <div style={{ padding: '0px', display: 'flex', justifyContent: 'flex-end', borderBottom: '0px' }}>
                                                 </div>
                                                 {curso.horarios && curso.horarios.length > 0 ? (
                                                     <div className="horarios-by-day">
                                                         {(() => {
+                                                            const canEditCurso = isAdmin || rol === 'guardia' || (rol === 'profesor' && cursosProfesor.includes(curso.idCurso));
                                                             const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
                                                             const sortedHorarios = [...curso.horarios].sort((a: any, b: any) => {
                                                                 if (a.dia !== b.dia) {
@@ -858,18 +889,18 @@ const CursosTab: React.FC = () => {
                                                                         return (
                                                                             <div
                                                                                 key={absIdx}
-                                                                                className={`horario-slot ${isAdmin ? 'horario-card-clickable' : ''}`}
+                                                                                className={`horario-slot ${canEditCurso ? 'horario-card-clickable' : ''}`}
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
-                                                                                    isAdmin && handleEditHorario(curso, h, absIdx);
+                                                                                    canEditCurso && handleEditHorario(curso, h, absIdx);
                                                                                 }}
-                                                                                title={isAdmin ? "Click para editar este horario" : ""}
-                                                                                style={{ cursor: isAdmin ? 'pointer' : 'default' }}
+                                                                                title={canEditCurso ? "Click para editar este horario" : ""}
+                                                                                style={{ cursor: canEditCurso ? 'pointer' : 'default' }}
                                                                             >
                                                                                 <div className="horario-time-compact">
                                                                                     <strong>{h.dia.slice(0, 3)}.</strong> {h.hora_inicio.slice(0, 5)} - {h.hora_fin.slice(0, 5)} {h.semana && h.semana !== 'Todas' ? `[S. ${h.semana}]` : ''}
                                                                                 </div>
-                                                                                {isAdmin && <div className="horario-edit-hint-compact"><i className="bi bi-pencil"></i></div>}
+                                                                                {canEditCurso && <div className="horario-edit-hint-compact"><i className="bi bi-pencil"></i></div>}
                                                                             </div>
                                                                         );
                                                                     })}
@@ -994,19 +1025,50 @@ const CursosTab: React.FC = () => {
 
                             {/* Horarios Section */}
                             <div style={{ marginBottom: '24px', padding: '20px', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '12px', border: '1px solid rgba(102, 126, 234, 0.2)' }}>
-                                <div className="horarios-section-header">
+                                <div className="horarios-section-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
                                     <h3 style={{ fontSize: '1rem', color: '#a5b4fc', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                         <i className="bi bi-clock"></i> Horarios <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
                                         <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'normal' }}>(mínimo 1)</span>
                                     </h3>
-                                    <button type="button" onClick={addHorario} className="btn-add-horario btn-add-horario-inline">
-                                        <i className="bi bi-plus-lg"></i> Agregar Horario
-                                    </button>
+                                    
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', background: 'rgba(51, 65, 85, 0.4)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.2)', width: '100%' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Inicio</span>
+                                            <input type="time" value={bloqueDraft.hora_inicio} onChange={e => setBloqueDraft({...bloqueDraft, hora_inicio: e.target.value})} className="ch-input" style={{ width: '90px', padding: '4px', fontSize: '0.85rem' }} lang="en-GB" />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Fin</span>
+                                            <input type="time" value={bloqueDraft.hora_fin} onChange={e => setBloqueDraft({...bloqueDraft, hora_fin: e.target.value})} className="ch-input" style={{ width: '90px', padding: '4px', fontSize: '0.85rem' }} lang="en-GB" />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Semana</span>
+                                            <select value={bloqueDraft.semana} onChange={e => setBloqueDraft({...bloqueDraft, semana: e.target.value})} className="ch-input" style={{ minWidth: '90px', padding: '4px', fontSize: '0.85rem' }}>
+                                                <option value="Todas">Todas</option>
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', alignContent: 'center', gap: '4px', flexWrap: 'wrap', flex: 1, minWidth: 'max-content' }}>
+                                            {DIAS_SEMANA.map(d => (
+                                                <label key={d} title={d} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: '4px 6px', borderRadius: '4px', border: diasMultiples.includes(d) ? '1px solid #a5b4fc' : '1px solid transparent', fontSize: '0.8rem' }}>
+                                                    <input type="checkbox" checked={diasMultiples.includes(d)} onChange={(e) => {
+                                                        if (e.target.checked) setDiasMultiples([...diasMultiples, d]);
+                                                        else setDiasMultiples(diasMultiples.filter(day => day !== d));
+                                                    }} style={{ cursor: 'pointer', margin: 0, padding: 0 }} />
+                                                    <span style={{ color: diasMultiples.includes(d) ? '#a5b4fc' : '#f1f5f9' }}>{d.slice(0, 3)}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <button type="button" onClick={addHorario} className="btn-add-horario btn-add-horario-inline">
+                                            <i className="bi bi-plus-lg"></i> Agregar {diasMultiples.length}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="horarios-list-modal">
                                     {horarios.map((h, idx) => (
-                                        <div key={idx} id={`horario-item-${idx}`} className={`horario-item-modal ${highlightedHorarioIndex === idx ? 'highlighted-item' : ''}`}>
+                                        <div key={idx} id={`horario-item-${idx}`} className={`horario-item-modal ${highlightedHorarioIndices.includes(idx) ? 'highlighted-item' : ''}`}>
                                             <div className="horario-item-number">{idx + 1}</div>
                                             <div style={{ flex: 1 }}>
                                                 <div className="horario-item-fields">

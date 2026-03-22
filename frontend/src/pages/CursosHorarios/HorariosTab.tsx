@@ -30,6 +30,7 @@ const HorariosTab: React.FC = () => {
     const [selectedCursoId, setSelectedCursoId] = useState<string>('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentHorario, setCurrentHorario] = useState<Partial<Horario>>({});
+    const [selectedDays, setSelectedDays] = useState<string[]>(['Lunes']);
 
     // Semana A/B
     const [semanaActual, setSemanaActual] = useState<string>('A');
@@ -92,17 +93,39 @@ const HorariosTab: React.FC = () => {
         e.preventDefault();
         try {
             const isEdit = !!currentHorario.idHorario;
-            const url = isEdit ? `/horarios/${currentHorario.idHorario}/` : '/horarios/';
-            const method = isEdit ? 'PUT' : 'POST';
-            const payload = { ...currentHorario, curso: selectedCursoId, activo: true, semana: currentHorario.semana || 'Todas' };
-            const res = await apiRequest(url, { method, body: JSON.stringify(payload) });
-            if (res.ok) {
-                showToast(isEdit ? 'Horario actualizado' : 'Horario creado', 'success');
-                setIsModalOpen(false);
-                fetchHorarios();
+            if (isEdit) {
+                const payload = { ...currentHorario, curso: selectedCursoId, activo: true, semana: currentHorario.semana || 'Todas' };
+                const res = await apiRequest(`/horarios/${currentHorario.idHorario}/`, { method: 'PUT', body: JSON.stringify(payload) });
+                if (res.ok) {
+                    showToast('Horario actualizado', 'success');
+                    setIsModalOpen(false);
+                    fetchHorarios();
+                } else {
+                    const err = await res.json();
+                    showToast('Error: ' + (err.detail || JSON.stringify(err)), 'error');
+                }
             } else {
-                const err = await res.json();
-                showToast('Error: ' + (err.detail || JSON.stringify(err)), 'error');
+                if (selectedDays.length === 0) {
+                    showToast('Seleccione al menos un día', 'error');
+                    return;
+                }
+                let hasError = false;
+                for (const d of selectedDays) {
+                    const payload = { ...currentHorario, dia: d, curso: selectedCursoId, activo: true, semana: currentHorario.semana || 'Todas' };
+                    const res = await apiRequest('/horarios/', { method: 'POST', body: JSON.stringify(payload) });
+                    if (!res.ok) {
+                        hasError = true;
+                        const err = await res.json();
+                        showToast(`Error al crear horario en ${d}: ` + (err.detail || JSON.stringify(err)), 'error');
+                    }
+                }
+                if (!hasError) {
+                    showToast('Horario(s) creado(s)', 'success');
+                    setIsModalOpen(false);
+                    fetchHorarios();
+                } else {
+                    fetchHorarios(); // Refrescar en caso de creación parcial
+                }
             }
         } catch (e) { showToast('Error de conexión', 'error'); }
     };
@@ -216,7 +239,7 @@ const HorariosTab: React.FC = () => {
                             }}>
                                 Semana Actual: {semanaActual}
                             </span>
-                            {isAdmin && (
+                            {(isAdmin || rol === 'guardia') && (
                                 <button
                                     onClick={() => setIsConfigModalOpen(true)}
                                     style={{
@@ -246,9 +269,9 @@ const HorariosTab: React.FC = () => {
                                 <option value="A">Semana A</option>
                                 <option value="B">Semana B</option>
                             </select>
-                            {(isAdmin || (rol === 'profesor' && cursosProfesor.includes(Number(selectedCursoId)))) && (
+                            {(isAdmin || rol === 'guardia' || (rol === 'profesor' && cursosProfesor.includes(Number(selectedCursoId)))) && (
                                 <button
-                                    onClick={() => { setCurrentHorario({ dia: 'Lunes', semana: 'Todas' } as Partial<Horario>); setIsModalOpen(true); }}
+                                    onClick={() => { setCurrentHorario({ semana: 'Todas' } as Partial<Horario>); setSelectedDays(['Lunes']); setIsModalOpen(true); }}
                                     className="btn-primary-action"
                                 >
                                     <i className="bi bi-clock-fill"></i> Agregar Horario
@@ -284,7 +307,7 @@ const HorariosTab: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                {(isAdmin || (rol === 'profesor' && cursosProfesor.includes(Number(selectedCursoId)))) && (
+                                                {(isAdmin || rol === 'guardia' || (rol === 'profesor' && cursosProfesor.includes(Number(selectedCursoId)))) && (
                                                     <div className="action-buttons">
                                                         <button
                                                             onClick={() => { setCurrentHorario(h); setIsModalOpen(true); }}
@@ -329,9 +352,28 @@ const HorariosTab: React.FC = () => {
                         <form onSubmit={handleSave}>
                             <div className="ch-form-group">
                                 <label className="ch-label">Día de la semana</label>
-                                <select className="ch-select" value={currentHorario.dia || 'Lunes'} onChange={e => setCurrentHorario({ ...currentHorario, dia: e.target.value })}>
-                                    {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
+                                {currentHorario.idHorario ? (
+                                    <select className="ch-select" value={currentHorario.dia || 'Lunes'} onChange={e => setCurrentHorario({ ...currentHorario, dia: e.target.value })}>
+                                        {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                ) : (
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                        {DIAS.map(d => (
+                                            <label key={d} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '4px', border: selectedDays.includes(d) ? '1px solid #a5b4fc' : '1px solid transparent' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    style={{ cursor: 'pointer' }}
+                                                    checked={selectedDays.includes(d)} 
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setSelectedDays([...selectedDays, d]);
+                                                        else setSelectedDays(selectedDays.filter(day => day !== d));
+                                                    }}
+                                                />
+                                                <span style={{ color: selectedDays.includes(d) ? '#a5b4fc' : '#f1f5f9' }}>{d.slice(0, 3)}.</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="ch-form-group">
                                 <label className="ch-label">Semana</label>
