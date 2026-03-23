@@ -112,6 +112,17 @@ function getNextCourseForAsistencia(a: Asistencia): string | null {
   return best ? best.nombre : (roles[0]?.curso?.nombre || null);
 }
 
+const getMondayOfCurrentWeek = () => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.getFullYear(), d.getMonth(), diff);
+    const year = monday.getFullYear();
+    const month = ('0' + (monday.getMonth() + 1)).slice(-2);
+    const date = ('0' + monday.getDate()).slice(-2);
+    return `${year}-${month}-${date}`;
+};
+
 const Asistencias: React.FC = () => {
   const { showToast } = useToast();
   const { isAdmin, rol, cursosProfesor } = useAuth();
@@ -125,7 +136,7 @@ const Asistencias: React.FC = () => {
 
   // Filter states initialized from URL params
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-  const [fechaInicio, setFechaInicio] = useState(searchParams.get('fechaInicio') || '');
+  const [fechaInicio, setFechaInicio] = useState(searchParams.get('fechaInicio') || getMondayOfCurrentWeek());
   const [fechaFin, setFechaFin] = useState(searchParams.get('fechaFin') || '');
   const [cursoFiltro, setCursoFiltro] = useState(searchParams.get('curso') || '');
   const [estadoFiltro, setEstadoFiltro] = useState(searchParams.get('estado') || '');
