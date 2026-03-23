@@ -12,6 +12,7 @@ interface Person {
   nombre: string;
   apellido: string;
   email: string;
+  
   telefono: string;
   departamento: string;
   cargo: string;
@@ -332,8 +333,17 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
               </tr>
             ) : (
               filteredData.map((person) => {
-                const cursos = person.roles?.map(r => r.curso?.nombre).filter(Boolean) || [];
-                const cursosText = cursos.length > 0 ? cursos.join(', ') : '-';
+                const cursos = Array.from(new Set(person.roles?.map(r => r.curso?.nombre).filter(Boolean))) || [];
+                
+                let cursosText = '-';
+                if (cursos.length > 0) {
+                  cursosText = cursos.length > 2 
+                    ? `${cursos.slice(0, 2).join(', ')} ... (+${cursos.length - 2})`
+                    : cursos.join(', ');
+                }
+
+                const uniqueCategories = Array.from(new Set(person.roles?.map(r => r.tipo?.nombre).filter(Boolean))) || [];
+
                 const conflictoId = person.id ? conflictosMap.get(String(person.id)) : null;
                 const hasConflict = !!conflictoId;
 
@@ -401,23 +411,33 @@ const PersonasTable: React.FC<PersonasTableProps> = ({
                       )}
                     </td>
                     <td data-label="Categoría">
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {(person.roles && person.roles.length > 0) ? person.roles.map((role, idx) => (
+                      <div 
+                        style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }} 
+                        title={uniqueCategories.join(', ')}
+                      >
+                        {uniqueCategories.length > 0 ? uniqueCategories.slice(0, 2).map((catName, idx) => (
                           <span key={idx} className="department-badge" style={{
                             padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600',
-                            background: role.tipo?.nombre === 'Estudiante' ? '#dbeafe' :
-                              role.tipo?.nombre === 'Docente' ? '#fef3c7' : '#f3e8ff',
-                            color: role.tipo?.nombre === 'Estudiante' ? '#1e40af' :
-                              role.tipo?.nombre === 'Docente' ? '#92400e' : '#6b21a8'
+                            background: catName === 'Estudiante' ? '#dbeafe' :
+                              catName === 'Docente' ? '#fef3c7' : '#f3e8ff',
+                            color: catName === 'Estudiante' ? '#1e40af' :
+                              catName === 'Docente' ? '#92400e' : '#6b21a8'
                           }}>
-                            {role.tipo?.nombre}
+                            {String(catName)}
                           </span>
                         )) : (
                           <span className="department-badge">-</span>
                         )}
+                        {uniqueCategories.length > 2 && (
+                          <span className="department-badge" style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600', background: 'rgba(255,255,255,0.1)', color: '#94a3b8' }}>
+                            +{uniqueCategories.length - 2}
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td data-label="Cursos" style={{ fontSize: '0.85rem', color: '#64748b' }}>{cursosText}</td>
+                    <td data-label="Cursos" style={{ fontSize: '0.85rem', color: '#64748b' }} title={cursos.join(', ')}>
+                      {cursosText}
+                    </td>
                     <td data-label="Acciones">
                       <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                         {hasConflict && onResolveConflict && (

@@ -10,6 +10,7 @@
 @media (min-width: 768px) {
   .table-pagination-wrapper {
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
   }
@@ -27,13 +28,13 @@
 .pagination-controls {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 0.35rem;
   background: rgba(255, 255, 255, 0.05);
   padding: 0.4rem 0.6rem;
   border-radius: 10px;
-  overflow-x: auto;
   max-width: 100%;
-  flex-shrink: 1;
 }
 
 .page-numbers {
@@ -53,6 +54,7 @@
   transition: all 0.2s ease;
   min-width: 34px;
   white-space: nowrap;
+  flex-shrink: 0; /* Previene que los botones se achiquen y corten el texto al crecer la paginación */
 }
 
 .btn-page:hover:not(:disabled) {

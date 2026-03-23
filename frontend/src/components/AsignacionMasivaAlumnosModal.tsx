@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
+import TablePagination from './TablePagination';
 import { apiRequest } from '../config/api';
 import { useToast } from './Toast';
 import { useModalBackButton } from '../hooks/useModalBackButton';
@@ -36,24 +37,44 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'todos' | 'asignados'>('todos');
 
+  const [serverPersonas, setServerPersonas] = useState<Person[]>([]);
+  const [selectedPersonsDict, setSelectedPersonsDict] = useState<Record<number, Person>>({});
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
+
   // Botón atrás del navegador/sistema cierra el modal
   useModalBackButton(isOpen, onClose);
 
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      fetchPersonas();
+      fetchInitialAssignments().then(() => {
+        fetchServerPersonas(1, 10, '');
+      });
       setSearchTerm('');
       setActiveTab('todos');
+      setCurrentPage(1);
       return () => { document.body.style.overflow = ''; };
     }
   }, [isOpen]);
+
+  // Se escucha si cambian pagina o búsqueda y se está en tab "todos"
+  useEffect(() => {
+    if (isOpen && activeTab === 'todos') {
+      const timeoutId = setTimeout(() => {
+        fetchServerPersonas(currentPage, itemsPerPage, searchTerm);
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentPage, itemsPerPage, searchTerm, activeTab, isOpen]);
 
   const fetchAllPages = async (url: string) => {
     let allResults: any[] = [];
     let nextUrl: string | null = url;
     while (nextUrl) {
-      const res = await apiRequest(nextUrl);
+      const res: Response = await apiRequest(nextUrl);
       if (!res.ok) break;
       const data = await res.json();
       if (data.results) {
@@ -67,83 +88,116 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
     return allResults;
   };
 
-  const fetchPersonas = async () => {
+  const fetchInitialAssignments = async () => {
     setLoading(true);
     try {
-      const [listPersonas, listInscritos] = await Promise.all([
-        fetchAllPages('/personas/?page_size=500'),
-        fetchAllPages(`/persona-institucion/?curso=${cursoId}&page_size=500`)
-      ]);
+      const listInscritos = await fetchAllPages(`/persona-institucion/?curso=${cursoId}&page_size=500`);
       
-      const inscritosList = listInscritos;
       const initialSet = new Set<number>();
       const piMap: Record<number, number> = {};
+      const dict: Record<number, Person> = {};
 
-      inscritosList.forEach((pi: any) => {
-        const pId = typeof pi.persona === 'object' ? pi.persona.idPersona : pi.persona;
+      listInscritos.forEach((pi: any) => {
+        const pObj = typeof pi.persona === 'object' ? pi.persona : null;
+        const pId = pObj ? pObj.idPersona || pObj.id : pi.persona;
         initialSet.add(pId);
         piMap[pId] = pi.idPersonaInstitucion;
+
+        if (pObj) {
+            dict[pId] = {
+                idPersona: pId,
+                nombre: pObj.nombre || '',
+                apellido: pObj.apellido || '',
+                departamento: pObj.departamento || '',
+                foto: pObj.foto || null
+            };
+        }
       });
 
-      const list = listPersonas.map((p: any) => ({
-        idPersona: p.idPersona || p.id,
-        nombre: p.nombre,
-        apellido: p.apellido || '',
-        departamento: p.departamento || '',
-        foto: p.foto || null
-      }));
-
-        list.sort((a: any, b: any) => {
-          const aInscrito = initialSet.has(a.idPersona);
-          const bInscrito = initialSet.has(b.idPersona);
-          if (aInscrito && !bInscrito) return -1;
-          if (!aInscrito && bInscrito) return 1;
-          return a.nombre.localeCompare(b.nombre);
-        });
-
-      setPersonas(list);
       setSelectedIds(new Set(initialSet));
       setInitialSelectedIds(new Set(initialSet));
       setPersonInstitutions(piMap);
+      setSelectedPersonsDict(dict);
     } catch (e) {
-      showToast('Error cargando la lista de personas', 'error');
+      showToast('Error cargando iniciales', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchServerPersonas = async (page: number, size: number, search: string) => {
+    setLoading(true);
+    try {
+      let url = `/personas/?page=${page}&page_size=${size}`;
+      if (search.trim()) url += `&search=${encodeURIComponent(search.trim())}`;
+      
+      const res = await apiRequest(url);
+      if (res.ok) {
+        const data = await res.json();
+        const list = (data.results || data).map((p: any) => ({
+          idPersona: p.idPersona || p.id,
+          nombre: p.nombre,
+          apellido: p.apellido || '',
+          departamento: p.departamento || '',
+          foto: p.foto || null
+        }));
+        setServerPersonas(list);
+        setTotalRecords(data.count ?? list.length);
+      }
+    } catch (e) {
+      showToast('Error cargando la página de personas', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const filteredPersonas = useMemo(() => {
-    let list = activeTab === 'asignados'
-      ? personas.filter(p => selectedIds.has(p.idPersona))
-      : personas;
-    
-    if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase();
-      list = list.filter(p =>
-        `${p.nombre} ${p.apellido}`.toLowerCase().includes(q) ||
-        p.departamento?.toLowerCase().includes(q)
-      );
+    if (activeTab === 'asignados') {
+       let list = Array.from(selectedIds).map(id => selectedPersonsDict[id]).filter(Boolean);
+       if (searchTerm.trim()) {
+         const q = searchTerm.toLowerCase();
+         list = list.filter(p => `${p.nombre} ${p.apellido}`.toLowerCase().includes(q) || p.departamento?.toLowerCase().includes(q));
+       }
+       const startIndex = (currentPage - 1) * itemsPerPage;
+       return list.slice(startIndex, startIndex + itemsPerPage);
     }
-    return list;
-  }, [personas, selectedIds, searchTerm, activeTab]);
+    return serverPersonas;
+  }, [serverPersonas, selectedIds, selectedPersonsDict, searchTerm, activeTab, currentPage, itemsPerPage]);
 
-  const toggleSelection = (id: number) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
+  const displayedTotalRecords = activeTab === 'asignados' 
+    ? Array.from(selectedIds).map(id => selectedPersonsDict[id]).filter(Boolean).filter(p => {
+        if (!searchTerm.trim()) return true;
+        const q = searchTerm.toLowerCase();
+        return `${p.nombre} ${p.apellido}`.toLowerCase().includes(q) || p.departamento?.toLowerCase().includes(q);
+      }).length
+    : totalRecords;
+
+  const toggleSelection = (p: Person) => {
+    const id = p.idPersona;
+    const nextIds = new Set(selectedIds);
+    if (nextIds.has(id)) {
+        nextIds.delete(id);
+    } else {
+        nextIds.add(id);
+        setSelectedPersonsDict(prev => ({ ...prev, [id]: p }));
+    }
+    setSelectedIds(nextIds);
   };
 
   const toggleSelectAll = () => {
-    if (filteredPersonas.every(p => selectedIds.has(p.idPersona))) {
-      const next = new Set(selectedIds);
-      filteredPersonas.forEach(p => next.delete(p.idPersona));
-      setSelectedIds(next);
+    const dataSource = activeTab === 'asignados' ? filteredPersonas : serverPersonas;
+    const allSelected = dataSource.every(p => selectedIds.has(p.idPersona));
+    
+    const nextIds = new Set(selectedIds);
+    if (allSelected) {
+      dataSource.forEach(p => nextIds.delete(p.idPersona));
     } else {
-      const next = new Set(selectedIds);
-      filteredPersonas.forEach(p => next.add(p.idPersona));
-      setSelectedIds(next);
+      dataSource.forEach(p => {
+        nextIds.add(p.idPersona);
+        setSelectedPersonsDict(prev => ({ ...prev, [p.idPersona]: p }));
+      });
     }
+    setSelectedIds(nextIds);
   };
 
   const pendingToAdd = useMemo(() =>
@@ -239,8 +293,8 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
         {/* ── STATS BAR ── */}
         <div className="am-stats">
           <div className="am-stat am-stat-total">
-            <span className="am-stat-num">{personas.length}</span>
-            <span className="am-stat-lbl">Total personas</span>
+            <span className="am-stat-num">{totalRecords}</span>
+            <span className="am-stat-lbl">Total en BD</span>
           </div>
           <div className="am-stat-divider"></div>
           <div className="am-stat am-stat-assigned">
@@ -292,13 +346,13 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
           <div className="am-tabs">
             <button
               className={`am-tab ${activeTab === 'todos' ? 'active' : ''}`}
-              onClick={() => setActiveTab('todos')}
+              onClick={() => { setActiveTab('todos'); setCurrentPage(1); }}
             >
               Todos
             </button>
             <button
               className={`am-tab ${activeTab === 'asignados' ? 'active' : ''}`}
-              onClick={() => setActiveTab('asignados')}
+              onClick={() => { setActiveTab('asignados'); setCurrentPage(1); }}
             >
               Asignados <span className="am-tab-badge">{selectedIds.size}</span>
             </button>
@@ -332,7 +386,7 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
                   <span className="am-checkbox-custom"></span>
                 </label>
                 <span className="am-list-header-text">
-                  {filteredPersonas.length} persona{filteredPersonas.length !== 1 ? 's' : ''}
+                  Página actual: {filteredPersonas.length} elemento{filteredPersonas.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
@@ -347,14 +401,14 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
                     <li
                       key={p.idPersona}
                       className={`am-person ${isSelected ? 'selected' : ''} ${isNewlyAdded ? 'newly-added' : ''} ${isNewlyRemoved ? 'newly-removed' : ''}`}
-                      onClick={() => toggleSelection(p.idPersona)}
+                      onClick={() => toggleSelection(p)}
                     >
                       <label className="am-checkbox-wrap" onClick={e => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           className="am-checkbox"
                           checked={isSelected}
-                          onChange={() => toggleSelection(p.idPersona)}
+                          onChange={() => toggleSelection(p)}
                         />
                         <span className="am-checkbox-custom"></span>
                       </label>
@@ -392,6 +446,22 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
                   );
                 })}
               </ul>
+              {(!loading && displayedTotalRecords > 0) && (
+                <div style={{ marginTop: '16px', paddingBottom: '8px' }}>
+                  <TablePagination
+                      currentPage={currentPage}
+                      totalPages={Math.max(1, Math.ceil(displayedTotalRecords / itemsPerPage))}
+                      onPageChange={setCurrentPage}
+                      itemsPerPage={itemsPerPage}
+                      onItemsPerPageChange={(newCount) => {
+                          setItemsPerPage(newCount);
+                          setCurrentPage(1);
+                      }}
+                      totalItems={displayedTotalRecords}
+                      theme="blue"
+                  />
+                </div>
+              )}
             </>
           )}
         </div>
