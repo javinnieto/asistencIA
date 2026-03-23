@@ -12,6 +12,7 @@ interface Person {
   nombre: string;
   apellido: string;
   email: string;
+  
   telefono: string;
   departamento: string;
   cargo: string;

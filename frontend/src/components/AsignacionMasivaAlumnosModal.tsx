@@ -74,7 +74,7 @@ const AsignacionMasivaAlumnosModal: React.FC<AsignacionMasivaModalProps> = ({
     let allResults: any[] = [];
     let nextUrl: string | null = url;
     while (nextUrl) {
-      const res = await apiRequest(nextUrl);
+      const res: Response = await apiRequest(nextUrl);
       if (!res.ok) break;
       const data = await res.json();
       if (data.results) {
