@@ -156,8 +156,8 @@
 }
 
 .audit-dates-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
@@ -458,9 +458,5 @@
 
   .audit-card {
     padding: 14px;
-  }
-
-  .audit-dates-row {
-    grid-template-columns: 1fr;
   }
 }

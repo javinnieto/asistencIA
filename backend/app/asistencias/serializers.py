@@ -60,20 +60,26 @@ class CursoSerializer(serializers.ModelSerializer):
     cantidad_horarios = serializers.SerializerMethodField()
     
     def get_cantidad_alumnos(self, obj):
-        return obj.personainstitucion_set.filter(activo=True).count()
+        return getattr(obj, 'annotated_alumnos', obj.personainstitucion_set.filter(activo=True).count())
         
     def get_cantidad_horarios(self, obj):
-        return obj.horarios.filter(activo=True).count()
+        return getattr(obj, 'annotated_horarios', obj.horarios.filter(activo=True).count())
         
     class Meta:
         model = Curso
         fields = '__all__'
 
 
+class CursoLightSerializer(serializers.ModelSerializer):
+    horarios = HorarioSerializer(many=True, read_only=True)
+    class Meta:
+        model = Curso
+        fields = ['idCurso', 'nombre', 'horarios']
+
 class PersonaInstitucionSerializer(serializers.ModelSerializer):
     institucion = InstitucionSerializer(read_only=True)
     tipo = TipoPersonaSerializer(read_only=True)
-    curso = CursoSerializer(read_only=True)
+    curso = CursoLightSerializer(read_only=True)
     horarios_personalizados = HorarioSerializer(many=True, read_only=True)
     
     class Meta:
@@ -97,11 +103,7 @@ class EstadoAsistenciaSerializer(serializers.ModelSerializer):
 
 
 # --- Serializers "Light" (optimizados para vistas de lista) ---
-class CursoLightSerializer(serializers.ModelSerializer):
-    horarios = HorarioSerializer(many=True, read_only=True)
-    class Meta:
-        model = Curso
-        fields = ['idCurso', 'nombre', 'horarios']
+
 
 class TipoPersonaLightSerializer(serializers.ModelSerializer):
     class Meta:

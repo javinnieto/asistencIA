@@ -209,6 +209,13 @@ class TipoPersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
 class CursoViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Curso.objects.all()
     permission_classes = [PermisoCurso]
+    
+    def get_queryset(self):
+        from django.db.models import Count, Q
+        return Curso.objects.all().select_related('institucion').prefetch_related('horarios').annotate(
+            annotated_alumnos=Count('personainstitucion', filter=Q(personainstitucion__activo=True), distinct=True),
+            annotated_horarios=Count('horarios', filter=Q(horarios__activo=True), distinct=True)
+        )
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['institucion', 'activo']
     search_fields = ['nombre']
@@ -375,7 +382,12 @@ def sync_eliminar_persona_lector(persona_id):
 
 
 class PersonaViewSet(AuditLogMixin, viewsets.ModelViewSet):
-    queryset = Persona.objects.all()
+    queryset = Persona.objects.all().prefetch_related(
+        'roles__institucion',
+        'roles__tipo',
+        'roles__curso__horarios',
+        'roles__horarios_personalizados'
+    )
     permission_classes = [PermisoPersona]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo']

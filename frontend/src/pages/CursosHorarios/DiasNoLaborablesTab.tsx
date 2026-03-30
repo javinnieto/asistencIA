@@ -526,6 +526,7 @@ const DiasNoLaborablesTab: React.FC = () => {
                                         <label className="ch-label">Fecha inicio</label>
                                         <input
                                             type="date"
+                                            lang="es-AR"
                                             className="ch-input"
                                             style={{ colorScheme: 'dark' }}
                                             required
@@ -537,6 +538,7 @@ const DiasNoLaborablesTab: React.FC = () => {
                                         <label className="ch-label">Fecha fin <span style={{ color: '#64748b', fontWeight: 400 }}>(opcional)</span></label>
                                         <input
                                             type="date"
+                                            lang="es-AR"
                                             className="ch-input"
                                             style={{ colorScheme: 'dark' }}
                                             value={formData.fecha_fin || ''}

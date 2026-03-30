@@ -238,20 +238,30 @@ const AuditLog: React.FC = () => {
                 <div>
                   <label className="audit-filter-label">Rango de fechas</label>
                   <div className="audit-dates-row">
-                    <input
-                      type="date"
-                      className="audit-select"
-                      value={dateFrom}
-                      onChange={e => setDateFrom(e.target.value)}
-                      title="Desde"
-                    />
-                    <input
-                      type="date"
-                      className="audit-select"
-                      value={dateTo}
-                      onChange={e => setDateTo(e.target.value)}
-                      title="Hasta"
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '40px' }}>Desde:</span>
+                      <input
+                        type="date"
+                        lang="es-AR"
+                        className="audit-select"
+                        value={dateFrom}
+                        onChange={e => setDateFrom(e.target.value)}
+                        title="Desde"
+                        style={{ padding: '4px 8px', fontSize: '0.8rem', height: '32px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '40px' }}>Hasta:</span>
+                      <input
+                        type="date"
+                        lang="es-AR"
+                        className="audit-select"
+                        value={dateTo}
+                        onChange={e => setDateTo(e.target.value)}
+                        title="Hasta"
+                        style={{ padding: '4px 8px', fontSize: '0.8rem', height: '32px' }}
+                      />
+                    </div>
                   </div>
                 </div>
 
