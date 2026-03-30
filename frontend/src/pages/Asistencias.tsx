@@ -243,7 +243,9 @@ const Asistencias: React.FC = () => {
 
         if (pageForUrl > 1) cleanParams.set('page', pageForUrl.toString());
 
-        setSearchParams(cleanParams);
+        if (window.location.pathname.includes('/asistencias')) {
+          setSearchParams(cleanParams);
+        }
       }
     } catch (error) {
       console.error('Error cargando asistencias:', error);
@@ -443,12 +445,14 @@ const Asistencias: React.FC = () => {
           <div className="as-filter-group dates-group">
             <input
               type="date"
+              lang="es-AR"
               className="as-date-input"
               value={fechaInicio}
               onChange={e => setFechaInicio(e.target.value)}
             />
             <input
               type="date"
+              lang="es-AR"
               className="as-date-input"
               value={fechaFin}
               onChange={e => setFechaFin(e.target.value)}

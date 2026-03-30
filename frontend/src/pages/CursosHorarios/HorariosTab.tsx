@@ -414,6 +414,7 @@ const HorariosTab: React.FC = () => {
                                 </p>
                                 <input 
                                     type="date" 
+                                    lang="es-AR"
                                     className="ch-input" 
                                     style={{ colorScheme: 'dark' }} 
                                     value={configSemana.fecha_referencia_semana_a || ''} 

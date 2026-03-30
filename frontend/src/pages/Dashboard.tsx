@@ -287,6 +287,7 @@ const Dashboard: React.FC = () => {
                       <span style={{ color: '#64748b' }}>-</span>
                       <input
                           type="date"
+                          lang="es-AR"
                           className="ch-input border-0 bg-transparent text-white"
                           style={{ padding: '0 4px', fontSize: '0.85rem' }}
                           value={endDate}
