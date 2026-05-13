@@ -1,4 +1,4 @@
-á b# AsistencIA - Sistema de Gestión de Asistencias
+## AsistencIA
 
 Sistema automático de gestión de asistencias para instituciones educativas que utiliza reconocimiento facial y medición de temperatura.
 
@@ -87,59 +87,18 @@ docker compose logs -f frontend
 docker compose down
 ```
 
-### Reconstruir un servicio
-```bash
-docker compose build backend
-docker compose up -d backend
-```
-
-### Acceder a un contenedor
-```bash
-docker compose exec backend bash
-docker compose exec frontend sh
-```
-
-## 📝 Modelos de Datos
-
-### Persona
-- `id`: Identificador único
-- `nombre`: Nombre completo
-- `email`: Correo electrónico
-- `tipoPersona`: Estudiante, Profesor, Administrativo
-- `curso`: Curso al que pertenece (solo estudiantes)
-- `fechaRegistro`: Fecha de registro en el sistema
-
-### Asistencia
-- `id`: Identificador único
-- `persona`: Referencia a Persona
-- `fechaHora`: Fecha y hora del registro
-- `temperatura`: Temperatura medida
-- `estado`: Presente, Ausente, Tardanza
-- `observaciones`: Notas adicionales
-
-## 🔌 API Endpoints
-
-### Personas
-- `GET /api/personas/` - Listar todas las personas
-- `POST /api/personas/` - Crear nueva persona
-- `GET /api/personas/{id}/` - Obtener persona específica
-- `PUT /api/personas/{id}/` - Actualizar persona
-- `DELETE /api/personas/{id}/` - Eliminar persona
-
-### Asistencias
-- `GET /api/asistencias/` - Listar todas las asistencias
-- `POST /api/asistencias/` - Crear nueva asistencia
-- `GET /api/asistencias/{id}/` - Obtener asistencia específica
-- `PUT /api/asistencias/{id}/` - Actualizar asistencia
-- `DELETE /api/asistencias/{id}/` - Eliminar asistencia
-
 ## 🔐 Autenticación y Permisos
 
 El sistema incluye:
 - Autenticación basada en roles
 - Acceso diferenciado por tipo de usuario
-- Protección contra registros duplicados (15 minutos)
+- Protección contra registros duplicados (25 minutos)
 - Logs de auditoría
+
+
+## Para ingresar por primera vez
+
+Crear un superusario en Django. Con esos datos ingresar al sistema.
 
 ## 🌡️ Integración MQTT
 
@@ -147,25 +106,6 @@ El sistema está preparado para recibir datos del terminal biométrico vía MQTT
 - Broker: Mosquitto (puerto 1884)
 - Topics: `/asistencias/registro`
 - Datos: ID de persona, temperatura, timestamp
-
-## 🛠️ Desarrollo
-
-### Backend (Django)
-```bash
-docker compose exec backend bash
-python app/manage.py makemigrations
-python app/manage.py migrate
-python app/manage.py createsuperuser
-
-# Comandos específicos del proyecto
-python app/manage.py populate_db     # Poblar BD con datos de ejemplo
-python app/manage.py mqtt_listener   # Escuchar mensajes MQTT
-```
-
-### Superusuario por defecto
-- **Usuario**: javinnieto
-- **Contraseña**: admin123
-- **Acceso**: http://localhost:8000/admin
 
 ### Frontend (React)
 ```bash
